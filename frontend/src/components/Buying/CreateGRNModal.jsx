@@ -339,7 +339,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                 </div>
                 <button 
                   onClick={handleAddItem}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded  text-xs  hover:bg-blue-100 transition-colors border border-blue-200"
+                  className="flex items-center gap-2 p-2  bg-blue-50 text-blue-600 rounded  text-xs  hover:bg-blue-100 transition-colors border border-blue-200"
                 >
                   <Plus size={14} /> Add Line Item
                 </button>

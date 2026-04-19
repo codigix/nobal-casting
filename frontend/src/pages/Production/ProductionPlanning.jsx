@@ -1450,7 +1450,7 @@ export default function ProductionPlanning() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-2">
+    <div className="min-h-screen bg-slate-50 p-4">
       <div className="mx-auto space-y-2">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -2194,7 +2194,7 @@ Create Production Plan            </button>
                           const progressPercent = totalPlanQty > 0 ? Math.min(100, (issuedAcrossAllMRs / totalPlanQty) * 100) : 0;
                           
                           return (
-                            <div key={idx} className="bg-white p-3 rounded border border-indigo-100/50 shadow-sm hover:shadow-md transition-shadow">
+                            <div key={idx} className="bg-white p-2 rounded border border-indigo-100/50 shadow-sm hover:shadow-md transition-shadow">
                               <div className="flex justify-between items-start mb-2">
                                 <div>
                                   <p className="text-xs font-bold text-gray-900">{rm.item_code}</p>

@@ -257,7 +257,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
               disabled={loading || formData.items.length === 0}
               className="flex items-center gap-2"
             >
-              {loading ? <RefreshCw size={16} className="animate-spin" /> : <Clock size={16} />}
+              {loading ? <RefreshCw size={15} className="animate-spin" /> : <Clock size={15} />}
               Save as Draft
             </Button>
             <Button
@@ -266,7 +266,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
               disabled={loading || formData.items.length === 0}
               className="flex items-center gap-2"
             >
-              {loading ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+              {loading ? <RefreshCw size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
               Submit Request
             </Button>
           </div>
@@ -280,13 +280,13 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
           {/* Left: Configuration */}
           <div className="lg:col-span-1 space-y-2">
             <div className="bg-neutral-50 rounded border border-neutral-200 p-2 space-y-2">
-              <div className="flex items-center gap-2 pb-3 border-b border-neutral-200">
-                <div className="p-2 bg-blue-500 rounded  text-white">
-                  <ClipboardList size={20} />
+              <div className="flex items-center gap-2  border-b border-neutral-200">
+                <div className="p-1 bg-blue-500 rounded  text-white">
+                  <ClipboardList size={15} />
                 </div>
                 <div>
-                  <h3 className="text-xs  text-neutral-800 ">Request Details</h3>
-                  <p className="text-[10px] text-neutral-500 font-medium">Define MR basic parameters</p>
+                  <h3 className="text-sm  text-neutral-800 ">Request Details</h3>
+                  <p className="text-xs text-neutral-500 font-medium">Define MR basic parameters</p>
                 </div>
               </div>
 
@@ -299,7 +299,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                     name="department"
                     value={formData.department}
                     onChange={handleChange}
-                    className="w-full p-2.5 bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
+                    className="w-full p-2 bg-white border border-neutral-200 rounded  text-xs focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
                   >
                     <option value="">Select Department</option>
                     {departments.map(dept => <option key={dept} value={dept}>{dept}</option>)}
@@ -315,7 +315,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                     value={formData.requested_by_id}
                     onChange={handleChange}
                     disabled={!formData.department}
-                    className="w-full p-2.5 bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-blue-500/10 outline-none disabled:bg-neutral-100 transition-all"
+                    className="w-full p-2 bg-white border border-neutral-200 rounded  text-xs focus:ring-2 focus:ring-blue-500/10 outline-none disabled:bg-neutral-100 transition-all"
                   >
                     <option value="">{formData.department ? 'Select Requester' : 'Select Dept First'}</option>
                     {employees
@@ -338,12 +338,12 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                     name="required_by_date"
                     value={formData.required_by_date}
                     onChange={handleChange}
-                    className="w-full p-2.5 bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
+                    className="w-full p-2 bg-white border border-neutral-200 rounded  text-xs focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
                   />
                 </div>
 
                 <div className="pt-2">
-                  <label className="text-[11px]  text-neutral-500  mb-2 block">Purpose</label>
+                  <label className="text-xs  text-neutral-500  mb-2 block">Purpose</label>
                   <div className="grid grid-cols-1 gap-2">
                     {[
                       { id: 'purchase', label: 'Purchase Request', icon: <Package size={14} />, color: 'blue' },
@@ -355,7 +355,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                         type="button"
                         onClick={() => handleChange({ target: { name: 'purpose', value: p.id } })}
                         className={`
-                          flex items-center gap-3 p-3 border rounded  transition-all text-left
+                          flex items-center gap-3 p-2 border rounded  transition-all text-left
                           ${formData.purpose === p.id 
                             ? `border-${p.color}-500 bg-${p.color}-50 text-${p.color}-700  ` 
                             : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50'}
@@ -379,7 +379,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                       name="source_warehouse"
                       value={formData.source_warehouse}
                       onChange={handleChange}
-                      className="w-full p-2.5 bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
+                      className="w-full p-2 bg-white border border-neutral-200 rounded  text-xs focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
                     >
                       <option value="">Select Source Warehouse</option>
                       {warehouses.map(w => <option key={w.id} value={w.warehouse_name}>{w.warehouse_name}</option>)}
@@ -396,7 +396,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                       name="target_warehouse"
                       value={formData.target_warehouse}
                       onChange={handleChange}
-                      className="w-full p-2.5 bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
+                      className="w-full p-2 bg-white border border-neutral-200 rounded  text-xs focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
                     >
                       <option value="">Select Target Warehouse</option>
                       {warehouses.map(w => <option key={w.id} value={w.warehouse_name}>{w.warehouse_name}</option>)}
@@ -410,23 +410,23 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
           {/* Right: Items Table */}
           <div className="lg:col-span-2 space-y-2">
             <div className="bg-white rounded  border border-neutral-200   overflow-hidden">
-              <div className="px-5 py-4 border-b border-neutral-100 bg-neutral-50/30 flex items-center justify-between">
+              <div className="p-2 border-b border-neutral-100 bg-neutral-50/30 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-blue-100 text-blue-600 rounded ">
-                    <Package size={16} />
+                  <div className="p-1 bg-blue-100 text-blue-600 rounded ">
+                    <Package size={15} />
                   </div>
                   <h3 className="text-sm">Requested Items</h3>
                 </div>
-                <Badge variant="blue" className="px-2.5 py-1 text-[10px]">
+                <Badge variant="blue" className="p-1 text-xs">
                   {formData.items.length} Items Total
                 </Badge>
               </div>
 
-              <div className="p-5">
+              <div className="p-2">
                 {/* Item Entry Form */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-6 bg-neutral-50 p-4 rounded  border border-neutral-200">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-6 bg-neutral-50 p-2 rounded  border border-neutral-200">
                   <div className="md:col-span-5 space-y-1.5">
-                    <label className="text-[10px]  text-neutral-400 ">Item <span className="text-red-500">*</span></label>
+                    <label className="text-xs  text-neutral-400 ">Item <span className="text-red-500">*</span></label>
                     <select
                       value={newItem.item_code}
                       onChange={(e) => {
@@ -438,7 +438,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                           uom: item ? item.uom : 'pcs'
                         })
                       }}
-                      className="w-full p-2 bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-blue-500/10 outline-none"
+                      className="w-full p-2 bg-white border border-neutral-200 rounded  text-xs focus:ring-2 focus:ring-blue-500/10 outline-none"
                     >
                       <option value="">Select Item</option>
                       {(formData.purpose === 'material_issue' ? stockItems : items).map(i => (
@@ -447,31 +447,31 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                     </select>
                   </div>
                   <div className="md:col-span-3 space-y-1.5">
-                    <label className="text-[10px]  text-neutral-400 ">Quantity <span className="text-red-500">*</span></label>
+                    <label className="text-xs  text-neutral-400 ">Quantity <span className="text-red-500">*</span></label>
                     <input
                       type="number"
                       value={newItem.qty}
                       onChange={(e) => setNewItem({ ...newItem, qty: parseFloat(e.target.value) })}
                       placeholder="Qty"
-                      className="w-full p-2 bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-blue-500/10 outline-none"
+                      className="w-full p-2 bg-white border border-neutral-200 rounded  text-xs focus:ring-2 focus:ring-blue-500/10 outline-none"
                     />
                   </div>
                   <div className="md:col-span-2 space-y-1.5">
-                    <label className="text-[10px]  text-neutral-400 ">UOM</label>
+                    <label className="text-xs  text-neutral-400 ">UOM</label>
                     <input
                       type="text"
                       value={newItem.uom}
                       readOnly
-                      className="w-full p-2 bg-neutral-100 border border-neutral-200 rounded  text-sm text-neutral-500 font-medium"
+                      className="w-full p-2 bg-neutral-100 border border-neutral-200 rounded  text-xs text-neutral-500 font-medium"
                     />
                   </div>
                   <div className="md:col-span-2 flex items-end">
                     <button
                       type="button"
                       onClick={handleAddItem}
-                      className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded  flex items-center justify-center transition-colors  "
+                      className="w-full p-2 bg-blue-600 hover:bg-blue-700 text-white rounded  flex items-center justify-center transition-colors  "
                     >
-                      {editingItemIndex !== null ? <CheckCircle2 size={18} /> : <Plus size={18} />}
+                      {editingItemIndex !== null ? <CheckCircle2 size={15} /> : <Plus size={15} />}
                     </button>
                   </div>
                 </div>
@@ -489,7 +489,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                     <tbody className="divide-y divide-neutral-100">
                       {formData.items.length === 0 ? (
                         <tr>
-                          <td colSpan="3" className="px-4 py-12 text-center">
+                          <td colSpan="3" className="p-4 text-center">
                             <div className="flex flex-col items-center gap-2 text-neutral-400">
                               <Package size={32} strokeWidth={1.5} />
                               <p className="text-xs font-medium italic">No items added yet</p>
@@ -506,7 +506,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                               </div>
                             </td>
                             <td className="p-2  text-center">
-                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-neutral-100 rounded  text-neutral-700  text-xs">
+                              <div className="inline-flex items-center gap-1.5 p-1 bg-neutral-100 rounded  text-neutral-700  text-xs">
                                 {item.qty} {item.uom}
                               </div>
                             </td>
@@ -552,7 +552,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
             {/* Hint Box */}
             <div className="bg-blue-50 border border-blue-100 rounded  p-4 flex gap-3">
               <div className="text-blue-500 shrink-0">
-                <Info size={18} />
+                <Info size={15} />
               </div>
               <p className="text-xs text-blue-700 leading-relaxed">
                 <strong>Pro Tip:</strong> Setting the department to <strong>Production</strong> will automatically switch the purpose to <strong>Material Issue</strong>. Use <strong>Internal Transfer</strong> for moving stock between warehouses.

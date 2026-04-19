@@ -10,7 +10,6 @@ import CreateJobCardModal from '../../components/Production/CreateJobCardModal'
 import EditJobCardModal from '../../components/Production/EditJobCardModal'
 import ViewJobCardModal from '../../components/Production/ViewJobCardModal'
 import SubcontractDispatchModal from '../../components/Production/SubcontractDispatchModal'
-import SubcontractReceiptModal from '../../components/Production/SubcontractReceiptModal'
 import SchedulingGanttView from '../../components/Production/SchedulingGanttView'
 import { useToast } from '../../components/ToastContainer'
 import DataTable from '../../components/Table/DataTable'
@@ -80,7 +79,26 @@ const formatToLocalDisplay = (dateStr) => {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true
-  })
+  }).toUpperCase()
+}
+
+const formatScheduleTime = (dateStr) => {
+  const d = parseUTCDate(dateStr);
+  if (!d || isNaN(d.getTime())) return 'N/A';
+
+  // Format: DD/MM HH:MM AM/PM
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  
+  let hours = d.getHours()
+  const minutes = String(d.getMinutes()).padStart(2, '0')
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  
+  hours = hours % 12
+  hours = hours ? hours : 12 
+  const strHours = String(hours).padStart(2, '0')
+
+  return `${day}/${month} ${strHours}:${minutes}${ampm}`
 }
 
 const formatToUTC = (dateStr) => {
@@ -109,6 +127,7 @@ export default function JobCard() {
   const [filters, setFilters] = useState({
     status: '',
     search: '',
+    production_plan_id: '',
     day: '',
     month: '',
     year: ''
@@ -135,8 +154,6 @@ export default function JobCard() {
   // Subcontracting state
   const [showDispatchModal, setShowDispatchModal] = useState(false)
   const [dispatchingJobCard, setDispatchingJobCard] = useState(null)
-  const [showReceiptModal, setShowReceiptModal] = useState(false)
-  const [receivingJobCard, setReceivingJobCard] = useState(null)
   const [activeTab, setActiveTab] = useState('list') // 'list' or 'scheduling'
 
   const [conflictModalData, setConflictModalData] = useState(null)
@@ -250,6 +267,12 @@ export default function JobCard() {
 
   const handleStartJobCard = useCallback(async (jobCardId) => {
     try {
+      const currentCard = jobCards.find(c => c.job_card_id === jobCardId)
+      if (!currentCard) {
+        toast.addToast('Job card not found', 'error')
+        return
+      }
+
       const { canStart, reason } = canStartJobCard(jobCardId)
 
       if (!canStart) {
@@ -261,16 +284,31 @@ export default function JobCard() {
 
       const api = (await import('../../services/api')).default
 
+      toast.addToast('⏳ Checking sub-assembly readiness...', 'info')
+      const depRes = await api.get(`/production/work-orders/${currentCard.work_order_id}/dependencies`)
+      const dependencies = depRes.data?.data || depRes.data || []
+      
+      const missingDeps = dependencies.filter(dep => {
+        const finished = parseFloat(dep.child_accepted_qty || 0)
+        const planned = parseFloat(dep.child_planned_qty || 0)
+        return finished < planned
+      })
+
+      if (missingDeps.length > 0) {
+        const depNames = missingDeps.map(d => d.child_item_name || d.child_item_code).join(', ')
+        toast.addToast(`⚠️ Sub-assemblies not finished: ${depNames}. Proceeding anyway...`, 'warning')
+      }
+
       toast.addToast('⏳ Checking material status...', 'info')
       const materialStatusRes = await api.get(`/production/job-cards/${jobCardId}/material-request-status`)
       const materialStatus = materialStatusRes.data?.data
 
-      if (materialStatus.has_material_request && materialStatus.mr_status !== 'received' && materialStatus.mr_status !== 'completed') {
+      if (materialStatus?.has_material_request && materialStatus?.mr_status !== 'received' && materialStatus?.mr_status !== 'completed') {
         toast.addToast(
-          `ℹ️ Material request status: ${materialStatus.mr_status.to()}. Proceeding anyway...`,
+          `ℹ️ Material request status: ${String(materialStatus.mr_status || 'UNKNOWN').toUpperCase()}. Proceeding anyway...`,
           'info'
         )
-      } else if (!materialStatus.has_material_request) {
+      } else if (!materialStatus?.has_material_request) {
         toast.addToast('ℹ️ No material request found. Proceeding anyway...', 'info')
       }
 
@@ -285,7 +323,42 @@ export default function JobCard() {
       toast.addToast(errorMsg, 'error')
       setLoading(false)
     }
-  }, [canStartJobCard, navigate, toast])
+  }, [canStartJobCard, navigate, toast, jobCards])
+
+  const handleBulkStart = async () => {
+    try {
+      const filterWorkOrder = filters.search || searchParams.get('filter_work_order');
+      const filterPlan = filters.production_plan_id || searchParams.get('filter_plan') || searchParams.get('filter_production_plan');
+      
+      if (!filterPlan && !filterWorkOrder) {
+        toast.addToast('Please filter by Work Order or Production Plan to bulk start operations', 'warning');
+        return;
+      }
+
+      const confirmMsg = filterPlan 
+        ? `This will set ALL job cards for Production Plan ${filterPlan} to "in-progress". Proceed?`
+        : `This will set ALL job cards for Work Order ${filterWorkOrder} to "in-progress". Proceed?`;
+
+      if (!window.confirm(confirmMsg)) return;
+
+      setLoading(true);
+      let res;
+      if (filterPlan) {
+        res = await productionService.bulkStartPlanJobCards(filterPlan);
+      } else {
+        res = await productionService.bulkStartJobCards(filterWorkOrder);
+      }
+      
+      if (res.success) {
+        toast.addToast(res.message, 'success');
+        fetchJobCards();
+      }
+    } catch (err) {
+      toast.addToast(err.message || 'Failed to bulk start', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleViewJobCard = useCallback((jobCardId) => {
     setViewingJobCardId(jobCardId)
@@ -298,15 +371,6 @@ export default function JobCard() {
   }, [])
 
   const handleDispatchSuccess = useCallback(() => {
-    fetchJobCards()
-  }, [fetchJobCards])
-
-  const handleOpenReceiptModal = useCallback((card) => {
-    setReceivingJobCard(card)
-    setShowReceiptModal(true)
-  }, [])
-
-  const handleReceiptSuccess = useCallback(() => {
     fetchJobCards()
   }, [fetchJobCards])
 
@@ -441,7 +505,7 @@ export default function JobCard() {
     }
 
     return (
-      <div className="bg-slate-50/50 p-2 rounded border border-gray-100 hover:transition-all group relative">
+      <div className="bg-slate-50/50 p-2 z-0 rounded border border-gray-100 hover:transition-all group relative">
         <div className="absolute -right-4 -top-4 w-24 h-24 bg-white rounded  opacity-50 group-hover:scale-110 transition-transform" />
         <div className="relative flex justify-between items-start">
           <div className="">
@@ -616,7 +680,7 @@ export default function JobCard() {
                   </div>
                 </div>
 
-                <div className="bg-indigo-600 px-4 py-2.5 rounded flex items-center gap-3 shadow-md shadow-indigo-100 group hover:bg-indigo-700 transition-colors active:scale-95 cursor-pointer">
+                <div className="bg-indigo-600 p-2 .5 rounded flex items-center gap-3 shadow-md shadow-indigo-100 group hover:bg-indigo-700 transition-colors active:scale-95 cursor-pointer">
                   <div className="p-1.5 bg-white/20 rounded text-white">
                     <ClipboardList size={15} />
                   </div>
@@ -729,7 +793,7 @@ export default function JobCard() {
                         </button>
                       </>
                     ) : (
-                      <div className="text-center py-10 text-slate-400 text-xs  italic bg-slate-50 rounded border border-dashed border-slate-200">
+                      <div className="text-center py-10 text-slate-400 text-xs   bg-slate-50 rounded border border-dashed border-slate-200">
                         No free slots found for today.
                       </div>
                     )}
@@ -853,27 +917,25 @@ export default function JobCard() {
           <Eye size={14} />
         </button>
 
-        {card.execution_mode === 'OUTSOURCE' && (
-          <>
-            {!card.outward_challan_id && (
-              <button
-                onClick={() => handleDispatch(card)}
-                className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
-                title="Vendor Dispatch"
-              >
-                <Truck size={14} />
-              </button>
-            )}
-            {card.outward_challan_id && (
-              <button
-                onClick={() => handleOpenReceiptModal(card)}
-                className="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all"
-                title="Vendor Receipt"
-              >
-                <Package size={14} />
-              </button>
-            )}
-          </>
+        {(card.execution_mode || '').toUpperCase() === 'OUTSOURCE' && (
+          <button
+            onClick={() => handleDispatch(card)}
+            disabled={
+              card.status === 'completed' || 
+              (parseFloat(card.planned_quantity || 0) > 0 && parseFloat(card.total_dispatched || 0) >= parseFloat(card.planned_quantity || 0)) ||
+              parseFloat(card.max_allowed_quantity || 0) <= 0
+            }
+            className={`p-1 rounded transition-all ${
+              card.status === 'completed' || 
+              (parseFloat(card.planned_quantity || 0) > 0 && parseFloat(card.total_dispatched || 0) >= parseFloat(card.planned_quantity || 0)) ||
+              parseFloat(card.max_allowed_quantity || 0) <= 0
+                ? 'text-gray-300 cursor-not-allowed bg-transparent opacity-50' 
+                : 'text-blue-600 hover:bg-blue-50 bg-blue-50/50'
+            }`}
+            title={parseFloat(card.max_allowed_quantity || 0) <= 0 ? "Waiting for units from previous operation" : "Vendor Dispatch"}
+          >
+            <Truck size={14} />
+          </button>
         )}
 
         {['ready', 'draft', 'pending', 'open'].includes((card.status || '').toLowerCase()) && card.execution_mode !== 'OUTSOURCE' && (
@@ -910,82 +972,87 @@ export default function JobCard() {
         </button>
       </div>
     )
-  }, [handleViewJobCard, navigate, handleEditJobCard, handleDelete, handleStartJobCard, handleDispatch, handleOpenReceiptModal])
+  }, [handleViewJobCard, navigate, handleEditJobCard, handleDelete, handleStartJobCard, handleDispatch])
 
   const columns = useMemo(() => [
     {
-      key: 'job_card_id',
-      label: 'ID / Project / Priority',
-      render: (val, row) => {
-        const parts = (val || '').split('-')
-        const displayId = parts.length > 4 ? `${parts[0]}-${parts[4]}-..${parts[parts.length - 2].slice(-4)}-${parts[parts.length - 1]}` : val
-
-        const priorityColors = {
-          high: 'bg-rose-50 text-rose-600 border-rose-200',
-          medium: 'bg-amber-50 text-amber-600 border-amber-200',
-          low: 'bg-blue-50 text-blue-600 border-blue-200'
-        }
-        const priority = row.priority || 'Medium'
-        const color = priorityColors[priority.toLowerCase()] || priorityColors.medium
-
-        return (
-          <div className="flex flex-col gap-0.5">
-            <div className="flex  flex-col justify-between gap-2">
-              <span className="text-xs  text-indigo-600 " title={`Job Card: ${val}`}>
-                {displayId}
-              </span>
-              <span className={`p-1 rounded w-fit border text-xs  leading-none ${color}`}>
-                {priority}
-              </span>
+      key: 'project_name',
+      label: 'Project',
+      render: (val, row, isFirst) => {
+        if (!isFirst) {
+          return (
+            <div className="flex items-center gap-2 pl-4 opacity-40">
+              <div className="w-px h-4 bg-gray-300" />
+              <span className="text-[10px] text-gray-400 font-medium italic">same project</span>
             </div>
-            {/* <span className="text-xs text-slate-700 mt-1">{row.project_name || 'No Project'}</span> */}
+          )
+        }
+        return (
+          <div className="flex flex-col gap-1 py-1">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-8 bg-indigo-600 rounded" />
+              <div className="flex flex-col">
+                <span className="text-xs  text-indigo-700  ">{val || 'General'}</span>
+                <span className="text-[10px] text-gray-500 font-medium">Ref: {row.sales_order_id || 'Internal'}</span>
+              </div>
+            </div>
           </div>
         )
       }
     },
     {
       key: 'operation',
-      label: 'Operation & Status',
+      label: 'Operation/ID',
       render: (val, row) => {
+        const parts = (row.job_card_id || '').split('-')
+        const displayId = parts.length > 4 ? `${parts[0]}-${parts[2]}-..${parts[parts.length - 2].slice(-4)}-${parts[parts.length - 1]}` : row.job_card_id
+
         return (
-          <div className="">
+          <div className="flex flex-col gap-1.5 cursor-pointer group/op" onClick={() => handleViewJobCard(row.job_card_id)}>
             <div className="flex flex-col">
-              <span className="text-xs  text-gray-900">{val}</span>
-              <span className="text-[10px] text-gray-400 truncate max-w-[150px]">{row.item_name || 'Generic Item'}</span>
+              <span className="text-xs  text-gray-900 group-hover/op:text-indigo-600 transition-colors tracking-tight">{val}</span>
             </div>
-            <StatusBadge status={row.status} />
+            <div className="flex  flex-col">
+              <StatusBadge 
+                status={
+                  (['in-progress', 'ready'].includes(row.status) && parseFloat(row.max_allowed_quantity || 0) <= 0 && parseFloat(row.produced_quantity || 0) <= 0 && parseFloat(row.sent_qty || 0) <= 0)
+                    ? 'Waiting'
+                    : row.status
+                } 
+              />
+              <span className="text-xs text-indigo-400  group-hover/op:opacity-100 transition-opacity" title={`Job Card: ${row.job_card_id}`}>
+                {displayId}
+              </span>
+             
+            </div>
           </div>
         )
       }
     },
-    // {
-    //   key: 'material_status',
-    //   label: 'Material Status',
-    //   render: (val, row) => {
-    //     const mrStatus = row.material_status || 'pending'
-    //     const colorMap = {
-    //       pending: { bg: 'bg-slate-50', text: 'text-slate-600', label: 'No MR' },
-    //       requested: { bg: 'bg-blue-50', text: 'text-blue-600', label: 'Requested' },
-    //       received: { bg: 'bg-emerald-50', text: 'text-emerald-600', label: 'Received' },
-    //       completed: { bg: 'bg-indigo-50', text: 'text-indigo-600', label: 'Completed' }
-    //     }
-    //     const config = colorMap[mrStatus] || colorMap.pending
-
-    //     return (
-    //       <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs  ${config.bg} ${config.text}`}>
-    //         {config.label}
-    //         {row.mr_id && (
-    //           <span className="text-xs  opacity-75" title={row.mr_id}>
-    //             ({row.mr_id.slice(-6)})
-    //           </span>
-    //         )}
-    //       </div>
-    //     )
-    //   }
-    // },
+    {
+      key: 'item_name',
+      label: 'Item group',
+      render: (val, row) => {
+        const isSubAsm = (row.item_group || '').toLowerCase().includes('sub-assembly') || (row.work_order_id || '').includes('-SA-')
+        const isFG = (row.item_group || '').toLowerCase().includes('finished good') || (row.work_order_id || '').includes('-FG-')
+        
+        return (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
+              
+              <span className="text-xs  text-gray-900 leading-tight" title={val}>{val || 'N/A'}</span>
+            </div>
+            <div className="flex  flex-col gap-2">
+              {isSubAsm && <span className="text-[10px] text-amber-500 p-1 rounded w-fit    leading-none">Sub-Assembly</span>}
+              {isFG && <span className="text-[10px] text-indigo-500 p-1 w-fit rounded    leading-none">Finished Good</span>}
+            </div>
+          </div>
+        )
+      }
+    },
     {
       key: 'execution_mode',
-      label: 'Execution Mode',
+      label: 'Execution',
       render: (val, row) => {
         const isSubcontract = (val || '').toLowerCase() === 'outsource' || (val || '').toLowerCase() === 'subcontract'
         return (
@@ -999,143 +1066,128 @@ export default function JobCard() {
       }
     },
     {
-      key: 'production_metrics',
-      label: 'Production Status (P / A / T)',
+      key: 'assignment',
+      label: 'Assignment',
       render: (_, row) => {
-        const target = parseFloat(row.planned_quantity) || 0
-        const produced = parseFloat(row.produced_quantity) || 0
-        const accepted = parseFloat(row.accepted_quantity) || 0
-        const progress = target > 0 ? Math.min((produced / target) * 100, 100) : 0
-
-        return (
-          <div className="flex flex-col gap-1  py-1">
-            <div className="flex justify-between items-end">
-              <div className="flex flex-col">
-                <span className="text-[9px] text-gray-400    mb-0.5">Yield Metrics</span>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex items-baseline gap-0.5">
-                    <span className="text-xs  text-slate-700" title="Produced">{formatQuantity(produced)}</span>
-                    <span className="text-xs text-slate-300 font-light">/</span>
-                    <span className="text-xs  text-emerald-600" title="Accepted">{formatQuantity(accepted)}</span>
-                    <span className="text-xs text-slate-300 font-light">/</span>
-                    <span className="text-xs  text-indigo-600" title="Target">{formatQuantity(target)}</span>
-                  </div>
-                  <span className="text-[9px] text-gray-400 ">units</span>
-                </div>
-              </div>
-              <div className="flex flex-col items-end">
-                <span className={`text-[10px]  p-1 rounded ${progress >= 100 ? 'bg-emerald-100 text-emerald-700' :
-                  progress > 0 ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-100 text-gray-600'
-                  }`}>
-                  {Math.round(progress)}%
-                </span>
-              </div>
-            </div>
-
-            <div className="relative w-full bg-gray-100 rounded  h-1 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]">
-              <div
-                className={`h-full transition-all duration-700 cubic-bezier(0.4, 0, 0.2, 1) ${progress >= 100 ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]' :
-                  progress > 50 ? 'bg-gradient-to-r from-indigo-500 to-blue-400 shadow-[0_0_12px_rgba(99,102,241,0.3)]' :
-                    'bg-gradient-to-r from-blue-500 to-sky-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]'
-                  }`}
-                style={{ width: `${progress}%` }}
-              />
-              {/* Animated highlight */}
-              {progress > 0 && progress < 100 && (
-                <div
-                  className="absolute top-0 bottom-0 w-8 bg-white/20 skew-x-[-20deg] animate-[shimmer_2s_infinite]"
-                  style={{ left: '-20%' }}
-                />
-              )}
-            </div>
-
-            {/* Quality Index */}
-            {produced > 0 && (
-              <div className="flex items-center gap-2 mt-0.5">
-                <div className="flex-1 h-1 bg-gray-50 rounded  overflow-hidden flex">
-                  <div
-                    className="h-full bg-emerald-400"
-                    style={{ width: `${(accepted / produced) * 100}%` }}
-                  />
-                  <div
-                    className="h-full bg-rose-400"
-                    style={{ width: `${((produced - accepted) / produced) * 100}%` }}
-                  />
-                </div>
-                <span className="text-xs  text-gray-400  ">
-                  Quality: {Math.round((accepted / produced) * 100)}%
-                </span>
-              </div>
-            )}
-          </div>
-        )
-      }
-    },
-    {
-      key: 'machine_name',
-      label: 'Workstation / Status',
-      render: (val, row) => {
         const isSubcontract = (row.execution_mode || '').toLowerCase() === 'outsource' || (row.execution_mode || '').toLowerCase() === 'subcontract'
+        
+        // Assignee part
+        let assignee;
+        if (isSubcontract) {
+          assignee = getVendorName(row.vendor_id, row) || 'Unassigned Vendor'
+        } else {
+          assignee = getOperatorName(row.operator_id, row) || row.operator_name || 'Unassigned'
+        }
+
+        // Workstation part
+        let workstation;
+        let wsStatus;
         if (isSubcontract) {
           let challanType = ''
           if (row.notes?.startsWith('[Challan Type:')) {
             const match = row.notes.match(/^\[Challan Type: ([^\]]+)\]/)
             if (match) challanType = match[1]
           }
-          return (
-            <span className="text-xs text-purple-600 ">{challanType || 'Subcontract'}</span>
-          )
-        }
-
-        const wsName = getWorkstationName(row.machine_id, row) || val || 'N/A'
-        const isAllocated = row.machine_status === 'allocated'
-
-        return (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-gray-700 ">{wsName}</span>
-            {row.machine_id && (
+          workstation = challanType || 'Subcontract'
+        } else {
+          workstation = getWorkstationName(row.machine_id, row) || row.machine_name || 'N/A'
+          const isAllocated = row.machine_status === 'allocated'
+          if (row.machine_id) {
+            wsStatus = (
               <div className="flex items-center gap-1.5">
                 <div className={`w-1.5 h-1.5 rounded  ${isAllocated ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
-                <span className={`text-xs  ${isAllocated ? 'text-amber-600' : 'text-emerald-600'}`}>
+                <span className={`text-[10px]  ${isAllocated ? 'text-amber-600' : 'text-emerald-600'}`}>
                   {isAllocated ? 'Allocated' : 'Available'}
                 </span>
-                {isAllocated && row.machine_current_jc && row.machine_current_jc !== row.job_card_id && (
-                  <span className="text-xs text-gray-400 italic">(by {row.machine_current_jc.slice(-6)})</span>
-                )}
               </div>
+            )
+          }
+        }
+
+        return (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col">
+              <span className="text-xs text-gray-900 font-medium">{workstation}</span>
+              {wsStatus}
+            </div>
+            <div className="flex items-center gap-1.5 text-indigo-600">
+              
+              <span className="text-[11px] font-medium">{assignee}</span>
+            </div>
+          </div>
+        )
+      }
+    },
+    {
+      key: 'quantities',
+      label: 'accepted/planned',
+      render: (_, row) => {
+        const planned = parseFloat(row.planned_quantity || 0)
+        const produced = parseFloat(row.produced_quantity || 0)
+        const accepted = parseFloat(row.accepted_quantity || 0)
+        
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-4 border-y border-gray-50 py-0.5">
+              <span className="text-xs font-medium">
+                <span className="text-emerald-600">{accepted.toLocaleString()}</span> / <span className="text-gray-900">{planned.toLocaleString()}</span>
+              </span>
+            </div>
+          </div>
+        )
+      }
+    },
+    {
+      key: 'dependency_status',
+      label: 'Dependency',
+      render: (_, row) => {
+        const total = parseInt(row.total_dependencies || 0)
+        const completed = parseInt(row.completed_dependencies || 0)
+        
+        if (total === 0) return <span className="text-xs text-gray-400 ">No Dependencies</span>
+
+        const progress = (completed / total) * 100
+        const isReady = completed >= total
+
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between items-center">
+              <span className={`text-[10px]    ${isReady ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {isReady ? 'Ready to Start' : 'Pending Sub-Assembly'}
+              </span>
+              <span className="text-xs  text-gray-500">{completed}/{total}</span>
+            </div>
+            <div className="w-full bg-gray-100 h-1  overflow-hidden border border-gray-200/50">
+              <div 
+                className={`h-full transition-all duration-500 ${isReady ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-amber-500'}`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            {!isReady && (
+              <span className="text-[9px] text-gray-400 ">
+                Waiting for {total - completed} component{total - completed > 1 ? 's' : ''}
+              </span>
             )}
           </div>
         )
       }
     },
     {
-      key: 'operator_name',
-      label: 'Assignee',
-      render: (val, row) => {
-        const isSubcontract = (row.execution_mode || '').toLowerCase() === 'outsource' || (row.execution_mode || '').toLowerCase() === 'subcontract'
-        if (isSubcontract) {
-          return (
-            <span className="text-xs  text-purple-700">
-              {getVendorName(row.vendor_id, row) || 'Unassigned Vendor'}
-            </span>
-          )
-        }
-
-        return (
-          <span className="text-xs text-gray-700">{getOperatorName(row.operator_id, row) || val || 'Unassigned'}</span>
-        )
-      }
-    },
-    {
       key: 'scheduled_start_date',
-      label: 'Schedule (Start - End)',
+      label: 'Schedule',
       render: (val, row) => {
-        if (!val && !row.scheduled_end_date) return <span className="text-[10px] w-fit text-gray-400">Not Scheduled</span>
+        if (!val && !row.scheduled_end_date) return <span className="text-xs w-fit text-gray-400">Not Scheduled</span>
 
         return (
-          <div className="flex gap-2 flex-col w-full">
-            <span className="text-xs  text-slate-600">S: {formatToLocalDisplay(val)}</span> 
-            <span className="text-xs text-slate-400">E: {formatToLocalDisplay(row.scheduled_end_date)}</span>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-medium text-slate-400 w-4">S:</span>
+              <span className="text-xs text-slate-600 whitespace-nowrap">{formatScheduleTime(val)}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-medium text-slate-400 w-4">E:</span>
+              <span className="text-xs text-slate-500 whitespace-nowrap">{formatScheduleTime(row.scheduled_end_date)}</span>
+            </div>
           </div>
         )
       }
@@ -1174,16 +1226,18 @@ export default function JobCard() {
 
   // 9. Main Render
   return (
-    <div className="bg-[#fbfcfd] p-3 flex flex-col ">
+    <div className="bg-[#fbfcfd] p-4 flex flex-col ">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-xl border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
 
             <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-xl text-gray-900">Job Cards</h1>
-                
+              <div className="flex items-center gap-1 mb-1">
+                <h1 className="text-xl text-gray-900">
+                  {filters.production_plan_id ? `Job Cards for Plan: ${filters.production_plan_id}` : 
+                   filters.search ? `Job Cards for WO: ${filters.search}` : 'Job Cards'}
+                </h1>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">Manufacturing Intelligence</span>
@@ -1209,6 +1263,14 @@ export default function JobCard() {
             >
               <Trash size={15} className="group-hover:rotate-12 transition-transform" />
               <span className="text-xs">Clear Data</span>
+            </button>
+            <button
+              onClick={handleBulkStart}
+              className="group flex items-center gap-2 p-2 py-2 text-amber-600 hover:bg-amber-50 rounded transition-all duration-300"
+              title="Start all operations for the filtered Plan/Work Order"
+            >
+              <Zap size={15} className="group-hover:scale-110 transition-transform" />
+              <span className="text-xs">Start All Ops</span>
             </button>
             <button
               onClick={() => { setEditingId(null); setPreSelectedWorkOrderId(null); setShowModal(true) }}
@@ -1322,114 +1384,17 @@ export default function JobCard() {
             </div>
 
             {/* Data Table */}
-            {loading ? (
-              <div className="flex-1 flex flex-col items-center justify-center bg-white rounded border border-gray-100">
-                <div className="relative">
-                  <div className="w-20 h-20 border-4 border-indigo-100 border-t-indigo-600 rounded  animate-spin" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Activity className="w-8 h-8 text-indigo-600 animate-pulse" />
-                  </div>
-                </div>
-                <h3 className="mt-8 text-xl text-gray-900">Syncing Production Queue</h3>
-                <p className="mt-2 text-sm text-gray-400">Retrieving live operational data...</p>
-              </div>
-            ) : jobCards.length > 0 ? (
-              <div className="flex-1 overflow-auto pr-2 pb-4">
-                <div className="rounded border border-gray-100  bg-white ">
-                  <table className="w-full text-left border-collapse table-fixed">
-                    <thead className="bg-gray-50/50 backdrop-blur-md sticky top-0  border-b border-gray-100">
-                      <tr>
-                        {columns.map(col => (
-                          <th 
-                            key={col.key} 
-                            className={`p-1 text-xs text-slate-400  font-medium ${
-                              col.key === 'actions' 
-                                ? 'sticky right-0  bg-gray-50/95 backdrop-blur-md border-l border-gray-100 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]' 
-                                : ''
-                            }`}
-                            style={{ 
-                              width: col.key === 'actions' ? '120px' : 
-                                     col.key === 'job_card_id' ? '150px' :
-                                     col.key === 'operation' ? '180px' :
-                                     col.key === 'status' ? '100px' :
-                                     col.key === 'execution_mode' ? '80px' :
-                                     col.key === 'production_metrics' ? '200px' :
-                                     col.key === 'machine_name' ? '150px' :
-                                     col.key === 'operator_name' ? '100px' :
-                                     col.key === 'scheduled_start_date' ? '150px' : 'auto'
-                            }}
-                          >
-                            {col.label}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {(() => {
-                        const rows = [];
-                        let lastWoId = null;
-                        
-                        jobCards.forEach((card, idx) => {
-                          if (card.work_order_id !== lastWoId) {
-                            const isSubAsm = (card.work_order_id || '').includes('-SA-');
-                            rows.push(
-                              <tr key={`header-${card.work_order_id}`} className="bg-slate-50/50">
-                                <td colSpan={columns.length} className="p-4 py-2 ">
-                                  <div className="flex items-center gap-3">
-                                    <div className={`w-2.5 h-2.5 rounded-md ${isSubAsm ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]' : 'bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.3)]'}`} />
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs  text-slate-800 ">{card.item_name || card.item_code}</span>
-                                      <span className={`text-xs  p-1 rounded   ${isSubAsm ? 'bg-amber-100/50 text-amber-700' : 'bg-indigo-100/50 text-indigo-700'}`}>
-                                        {isSubAsm ? 'Sub-Assembly' : 'Finished Good'}
-                                      </span>
-                                      <div className="w-1 h-1 rounded bg-slate-300 mx-1" />
-                                      <span className="text-xs text-slate-400  er" title="Work Order Reference">{card.work_order_id}</span>
-                                      {card.project_name && (
-                                        <>
-                                          <div className="w-1 h-1 rounded bg-slate-300 mx-1" />
-                                          <span className="text-xs  text-indigo-500  ">{card.project_name}</span>
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                            lastWoId = card.work_order_id;
-                          }
-                          
-                          rows.push(
-                            <tr key={card.job_card_id} className="hover:bg-indigo-50/20 transition-all group">
-                              {columns.map(col => (
-                                <td 
-                                  key={col.key} 
-                                  className={`p-2 align-center m-auto border-l border-gray-50/50 first:border-l-0  ${
-                                    col.key === 'actions' 
-                                      ? 'sticky right-0  bg-white group-hover:bg-indigo-50/95 border-l border-gray-100 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]' 
-                                      : ''
-                                  }`}
-                                >
-                                  {col.render ? col.render(card[col.key], card) : card[col.key]}
-                                </td>
-                              ))}
-                            </tr>
-                          );
-                        });
-                        return rows;
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <div className="flex-1 bg-white rounded flex flex-col items-center justify-center p-2 text-center border border-gray-100">
-                <div className="w-24 h-24 bg-gray-50 rounded flex items-center justify-center mx-auto mb-8">
-                  <ClipboardList className="text-gray-300" size={48} />
-                </div>
-                <h3 className="text-xl text-gray-900 mb-2">Operational Pipeline Empty</h3>
-                <p className="text-sm text-gray-400 max-w-md mx-auto">No job cards were found matching your filters. Create a new work order to begin production tracking.</p>
-              </div>
-            )}
+            <div className="flex-1 overflow-hidden bg-white rounded border border-gray-100 shadow-sm mt-4">
+              <DataTable 
+                columns={columns}
+                data={jobCards}
+                loading={loading}
+                pagination={true}
+                pageSize={10}
+                groupBy="project_name"
+                getRowClassName={(row, idx, isFirst) => isFirst ? 'group-header bg-indigo-50/40' : 'bg-white'}
+              />
+            </div>
           </>
         ) : (
           <div className="flex-1 overflow-y-auto">
@@ -1522,13 +1487,6 @@ export default function JobCard() {
         onClose={() => setShowDispatchModal(false)}
         jobCard={dispatchingJobCard}
         onDispatchSuccess={handleDispatchSuccess}
-      />
-
-      <SubcontractReceiptModal
-        isOpen={showReceiptModal}
-        onClose={() => setShowReceiptModal(false)}
-        jobCard={receivingJobCard}
-        onReceiptSuccess={handleReceiptSuccess}
       />
 
       {renderConflictModal()}

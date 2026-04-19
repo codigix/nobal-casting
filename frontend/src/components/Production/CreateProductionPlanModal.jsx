@@ -219,7 +219,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
                     name="priority"
                     value={formData.priority}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-xs"
+                    className="w-full p-2  border border-slate-200 rounded  focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-xs"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>

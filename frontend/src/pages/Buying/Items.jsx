@@ -209,9 +209,7 @@ export default function Items() {
         {/* Modern Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 dark:bg-slate-900  ">
           <div className="flex items-center gap-4">
-            <div className="bg-blue-600 p-3 rounded   shadow-blue-600/20">
-              <Database className="text-white" size={15} />
-            </div>
+           
             <div>
               <div className="flex items-center gap-2 text-xs  text-blue-600 dark:text-blue-400  ">
                 <span>Buying</span>

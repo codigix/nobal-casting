@@ -1,0 +1,1 @@
+SELECT * FROM production_plan_fg WHERE plan_id = 'PP-1776409106217';

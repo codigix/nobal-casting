@@ -350,7 +350,8 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
       
       fetchTimeLogs()
     } catch (err) {
-      toast.addToast(err.message || 'Failed to add time log', 'error')
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to add time log';
+      toast.addToast(errorMsg, 'error')
     } finally {
       setLoading(false)
     }

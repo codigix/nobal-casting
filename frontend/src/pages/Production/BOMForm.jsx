@@ -194,6 +194,7 @@ export default function BOMForm() {
     vendor_rate_per_unit: '0',
     vendor_name: '',
     subcontract_warehouse: '',
+    source_warehouse: '',
     target_warehouse: '',
     notes: ''
   })
@@ -1194,6 +1195,9 @@ export default function BOMForm() {
   }
 
   const calculateOperationCost = (cycleTime, setupTime, hourlyRate, executionMode, vendorRate) => {
+    if (executionMode === 'DISPATCH') {
+      return 0
+    }
     if (executionMode === 'OUTSOURCE') {
       // For outsource, cost is per unit (we assume quantity 1 for BOM base cost)
       return parseFloat(vendorRate) || 0
@@ -1234,6 +1238,7 @@ export default function BOMForm() {
       vendor_rate_per_unit: '0',
       vendor_name: '',
       subcontract_warehouse: '',
+      source_warehouse: '',
       target_warehouse: '',
       notes: ''
     })
@@ -2506,6 +2511,7 @@ export default function BOMForm() {
                                 >
                                   <option value="IN_HOUSE">In-House</option>
                                   <option value="OUTSOURCE">Outsource</option>
+                                  <option value="DISPATCH">Dispatch</option>
                                 </select>
                               </FieldWrapper>
                             </div>
@@ -2572,6 +2578,47 @@ export default function BOMForm() {
                                   </FieldWrapper>
                                 </div>
                                 <div className="md:col-span-2">
+                                  <FieldWrapper label="Cost (₹)">
+                                    <input
+                                      type="number"
+                                      value={newOperation.operating_cost}
+                                      readOnly
+                                      className="w-full rounded border border-slate-200 bg-slate-50  p-2 text-xs focus:outline-none "
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                              </>
+                            ) : newOperation.execution_mode === 'DISPATCH' ? (
+                              <>
+                                <div className="md:col-span-3">
+                                  <FieldWrapper label="Source Warehouse">
+                                    <SearchableSelect
+                                      value={newOperation.source_warehouse}
+                                      onChange={(value) => setNewOperation({ ...newOperation, source_warehouse: value })}
+                                      options={warehousesList.filter(wh => wh && (wh.warehouse_name || wh.name)).map(wh => ({
+                                        label: wh.warehouse_name || wh.name,
+                                        value: wh.warehouse_name || wh.name
+                                      }))}
+                                      placeholder="Select Source"
+                                      className="glass-input"
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                                <div className="md:col-span-3">
+                                  <FieldWrapper label="Target Warehouse">
+                                    <SearchableSelect
+                                      value={newOperation.target_warehouse}
+                                      onChange={(value) => setNewOperation({ ...newOperation, target_warehouse: value })}
+                                      options={warehousesList.filter(wh => wh && (wh.warehouse_name || wh.name)).map(wh => ({
+                                        label: wh.warehouse_name || wh.name,
+                                        value: wh.warehouse_name || wh.name
+                                      }))}
+                                      placeholder="Select Target"
+                                      className="glass-input"
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                                <div className="md:col-span-3">
                                   <FieldWrapper label="Cost (₹)">
                                     <input
                                       type="number"
@@ -2689,8 +2736,8 @@ export default function BOMForm() {
                                         <div className="text-xs   text-slate-900 ">{op.operation_name}</div>
                                       </td>
                                       <td className="p-2  text-center">
-                                        <span className={`inline-flex items-center px-3 py-1 rounded text-[9px]      ${op.execution_mode === 'OUTSOURCE' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
-                                          {op.execution_mode === 'OUTSOURCE' ? 'Outsource' : 'In-House'}
+                                        <span className={`inline-flex items-center px-3 py-1 rounded text-[9px]      ${op.execution_mode === 'OUTSOURCE' ? 'bg-amber-50 text-amber-600 border border-amber-100' : op.execution_mode === 'DISPATCH' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                                          {op.execution_mode === 'OUTSOURCE' ? 'Outsource' : op.execution_mode === 'DISPATCH' ? 'Dispatch' : 'In-House'}
                                         </span>
                                       </td>
                                       {operations.some(op => op.execution_mode === 'OUTSOURCE') && (
@@ -2701,15 +2748,16 @@ export default function BOMForm() {
                                         </td>
                                       )}
                                       <td className="p-2  text-right">
-                                        <div className="text-xs   text-slate-900">{op.execution_mode === 'OUTSOURCE' ? '-' : parseFloat(op.operation_time || 0).toFixed(2)}</div>
+                                        <div className="text-xs   text-slate-900">{op.execution_mode === 'OUTSOURCE' || op.execution_mode === 'DISPATCH' ? '-' : parseFloat(op.operation_time || 0).toFixed(2)}</div>
                                       </td>
                                       <td className="p-2  text-right">
-                                        <div className="text-xs   text-slate-900">{op.execution_mode === 'OUTSOURCE' ? '-' : parseFloat(op.setup_time || 0).toFixed(2)}</div>
+                                        <div className="text-xs   text-slate-900">{op.execution_mode === 'OUTSOURCE' || op.execution_mode === 'DISPATCH' ? '-' : parseFloat(op.setup_time || 0).toFixed(2)}</div>
                                       </td>
                                       <td className="p-2  text-right">
                                         <div className="text-xs   text-slate-700">
                                           ₹{op.execution_mode === 'OUTSOURCE' 
                                             ? parseFloat(op.vendor_rate_per_unit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })
+                                            : op.execution_mode === 'DISPATCH' ? '0.00'
                                             : parseFloat(op.hourly_rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                         </div>
                                       </td>
@@ -2717,8 +2765,10 @@ export default function BOMForm() {
                                         <div className="text-xs   text-slate-900  bg-slate-100 rounded px-2 py-0.5 inline-block min-w-[60px]">₹{parseFloat(op.operating_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                                       </td>
                                       <td className="p-2 ">
-                                        <div className="text-xs   text-slate-700">
-                                          {op.execution_mode === 'OUTSOURCE' ? (op.subcontract_warehouse || '-') : (op.target_warehouse || '-')}
+                                        <div className="text-xs   text-slate-700 italic max-w-[120px] truncate">
+                                          {op.execution_mode === 'DISPATCH' 
+                                            ? `${op.source_warehouse} → ${op.target_warehouse}`
+                                            : op.execution_mode === 'OUTSOURCE' ? (op.subcontract_warehouse || '-') : (op.target_warehouse || '-')}
                                         </div>
                                       </td>
                                       <td className="p-2  text-center">

@@ -18,7 +18,7 @@
     warning: 'bg-yellow-600 text-white hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-600',
     info: 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600',
     danger: 'bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600',
-    outline: 'border-2 border-primary-600 text-primary-600 hover:bg-primary-50 dark:border-primary-400 dark:text-primary-400 dark:hover:bg-primary-900/20',
+    outline: 'border border-primary-600 text-primary-600 hover:bg-primary-50 dark:border-primary-400 dark:text-primary-400 dark:hover:bg-primary-900/20',
     ghost: 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/20',
     icon: 'text-primary-600 hover:bg-primary-100 dark:text-primary-300 dark:hover:bg-primary-900/20',
     'icon-success': 'text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20',
@@ -28,9 +28,9 @@
   }
 
   const sizes = {
-    sm: 'px-2 text-xs',
+    sm: 'p-2 text-xs',
     md: 'p-2 text-base',
-    lg: 'p-6  py-2 text-lg',
+    lg: 'p-2 text-lg',
   }
 
   return (

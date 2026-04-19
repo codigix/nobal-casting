@@ -239,9 +239,9 @@ class ProductionModel {
     }
   }
 
-  async revalidateWorkOrderStatus(wo_id) {
+  async revalidateWorkOrderStatus(wo_id, connection = null) {
     try {
-      const workOrder = await this.getWorkOrderById(wo_id);
+      const workOrder = await this.getWorkOrderById(wo_id, connection);
       if (!workOrder) return;
 
       // Only revalidate if in Draft or Ready
@@ -250,7 +250,7 @@ class ProductionModel {
         return;
       }
 
-      const dependencies = await this.getWorkOrderDependencies(wo_id, 'child');
+      const dependencies = await this.getWorkOrderDependencies(wo_id, 'child', connection);
       
       // If no dependencies, it's a leaf node or standalone, it can be Ready if materials are allocated
       if (!dependencies || dependencies.length === 0) {
@@ -268,7 +268,7 @@ class ProductionModel {
         }
 
         // Check inventory for the child item
-        const [stock] = await this.db.query(
+        const [stock] = await (connection || this.db).query(
           'SELECT SUM(available_qty) as available FROM stock_balance WHERE item_code = ?',
           [dep.item_code]
         );
@@ -290,14 +290,14 @@ class ProductionModel {
       if (newStatus === 'Ready' && workOrder.status === 'Draft') {
         // Automatically attempt to allocate materials when moving to Ready
         try {
-          const [items] = await this.db.query('SELECT * FROM work_order_item WHERE wo_id = ?', [wo_id]);
-          const [existingAlloc] = await this.db.query('SELECT item_code FROM material_allocation WHERE work_order_id = ?', [wo_id]);
+          const [items] = await (connection || this.db).query('SELECT * FROM work_order_item WHERE wo_id = ?', [wo_id]);
+          const [existingAlloc] = await (connection || this.db).query('SELECT item_code FROM material_allocation WHERE work_order_id = ?', [wo_id]);
           const allocatedCodes = existingAlloc.map(a => a.item_code);
           
           const toAllocate = items.filter(i => !allocatedCodes.includes(i.item_code));
           if (toAllocate.length > 0) {
             const InventoryModel = (await import('./InventoryModel.js')).default;
-            const inventoryModel = new InventoryModel(this.db);
+            const inventoryModel = new InventoryModel(connection || this.db);
             await inventoryModel.allocateMaterialsForWorkOrder(wo_id, toAllocate.map(i => ({
               item_code: i.item_code,
               required_qty: i.required_qty,
@@ -311,7 +311,7 @@ class ProductionModel {
       }
 
       if (newStatus !== workOrder.status) {
-        await this.db.query('UPDATE work_order SET status = ? WHERE wo_id = ?', [newStatus, wo_id]);
+        await (connection || this.db).query('UPDATE work_order SET status = ? WHERE wo_id = ?', [newStatus, wo_id]);
         console.log(`Work Order ${wo_id} status updated to ${newStatus} based on dependencies`);
       }
 
@@ -322,20 +322,20 @@ class ProductionModel {
       }
 
       // Recalculate cost roll-up
-      await this.calculateWorkOrderRollupCost(wo_id);
+      await this.calculateWorkOrderRollupCost(wo_id, connection);
 
     } catch (error) {
       console.error(`Error revalidating status for WO ${wo_id}:`, error);
     }
   }
 
-  async calculateWorkOrderRollupCost(wo_id) {
+  async calculateWorkOrderRollupCost(wo_id, connection = null) {
     try {
-      const workOrder = await this.getWorkOrderById(wo_id);
+      const workOrder = await this.getWorkOrderById(wo_id, connection);
       if (!workOrder) return;
 
       // 1. Get Operation Costs (from this WO's operations)
-      const [opResult] = await this.db.query(
+      const [opResult] = await (connection || this.db).query(
         'SELECT SUM(operating_cost) as total_op_cost FROM work_order_operation WHERE wo_id = ?',
         [wo_id]
       );
@@ -343,12 +343,12 @@ class ProductionModel {
 
       // 2. Get Material Costs
       // This includes Raw Materials (from work_order_item) AND Child Sub-Assemblies
-      const dependencies = await this.getWorkOrderDependencies(wo_id, 'child');
+      const dependencies = await this.getWorkOrderDependencies(wo_id, 'child', connection);
       let materialCost = 0;
 
       // Add costs from child Work Orders (Sub-Assemblies)
       for (const dep of dependencies) {
-        const [childCosts] = await this.db.query(
+        const [childCosts] = await (connection || this.db).query(
           'SELECT total_cost FROM work_order WHERE wo_id = ?',
           [dep.child_wo_id]
         );
@@ -361,13 +361,13 @@ class ProductionModel {
       let rmQuery = 'SELECT item_code, required_qty FROM work_order_item WHERE wo_id = ?';
       const rmParams = [wo_id];
       
-      const [items] = await this.db.query(rmQuery, rmParams);
+      const [items] = await (connection || this.db).query(rmQuery, rmParams);
       
       for (const item of items) {
         // Check if this item is a child sub-assembly we already counted
         const isChild = dependencies.some(d => d.item_code === item.item_code);
         if (!isChild) {
-          const [valuation] = await this.db.query(
+          const [valuation] = await (connection || this.db).query(
             'SELECT valuation_rate FROM item WHERE item_code = ?',
             [item.item_code]
           );
@@ -379,19 +379,19 @@ class ProductionModel {
       const totalCost = operationCost + materialCost;
       const unitCost = totalCost / (parseFloat(workOrder.quantity) || 1);
 
-      await this.db.query(
+      await (connection || this.db).query(
         'UPDATE work_order SET operation_cost = ?, material_cost = ?, total_cost = ?, unit_cost = ? WHERE wo_id = ?',
         [operationCost, materialCost, totalCost, unitCost, wo_id]
       );
 
       // If this WO has a parent, trigger revalidation and cost roll-up for the parent too
-      const [parents] = await this.db.query(
+      const [parents] = await (connection || this.db).query(
         'SELECT parent_wo_id FROM work_order_dependency WHERE child_wo_id = ?',
         [wo_id]
       );
       
       for (const p of parents) {
-        await this.revalidateWorkOrderStatus(p.parent_wo_id);
+        await this.revalidateWorkOrderStatus(p.parent_wo_id, connection);
       }
 
     } catch (error) {
@@ -399,12 +399,14 @@ class ProductionModel {
     }
   }
 
-  async getWorkOrderDependencies(wo_id, type = 'child') {
+  async getWorkOrderDependencies(wo_id, type = 'child', connection = null) {
     try {
       const column = type === 'child' ? 'parent_wo_id' : 'child_wo_id'
-      const [dependencies] = await this.db.query(
+      const [dependencies] = await (connection || this.db).query(
         `SELECT d.*, wo.status as child_status, wo.item_code as child_item_code, wo.quantity as child_planned_qty,
-         (SELECT accepted_quantity FROM job_card jc WHERE jc.work_order_id = d.child_wo_id ORDER BY CAST(operation_sequence AS DECIMAL(18,6)) DESC LIMIT 1) as child_finished_qty
+         (SELECT produced_quantity FROM job_card jc WHERE jc.work_order_id = d.child_wo_id ORDER BY CAST(operation_sequence AS DECIMAL(18,6)) DESC LIMIT 1) as child_produced_qty,
+         (SELECT accepted_quantity FROM job_card jc WHERE jc.work_order_id = d.child_wo_id ORDER BY CAST(operation_sequence AS DECIMAL(18,6)) DESC LIMIT 1) as child_accepted_qty,
+         (SELECT transferred_quantity FROM job_card jc WHERE jc.work_order_id = d.child_wo_id ORDER BY CAST(operation_sequence AS DECIMAL(18,6)) DESC LIMIT 1) as child_transferred_qty
          FROM work_order_dependency d
          JOIN work_order wo ON d.child_wo_id = wo.wo_id
          WHERE d.${column} = ?`,
@@ -690,9 +692,9 @@ class ProductionModel {
     }
   }
 
-  async getWorkOrderById(wo_id) {
+  async getWorkOrderById(wo_id, connection = null) {
     try {
-      const [workOrders] = await this.db.query(
+      const [workOrders] = await (connection || this.db).query(
         `SELECT 
           wo.*, 
           i.name as item_name,
@@ -829,11 +831,11 @@ class ProductionModel {
     }
   }
 
-  async updateWorkOrder(wo_id, data) {
+  async updateWorkOrder(wo_id, data, connection = null) {
     try {
       // 1. Validation for status transition
       if (data.status !== undefined) {
-        await this.validateWorkOrderStatusTransition(wo_id, data.status);
+        await this.validateWorkOrderStatusTransition(wo_id, data.status, connection);
       }
 
       const fields = []
@@ -858,12 +860,12 @@ class ProductionModel {
       // Reconciliation check before completing
       if (data.status && data.status.toLowerCase() === 'completed') {
         const InventoryModel = (await import('./InventoryModel.js')).default;
-        const inventoryModel = new InventoryModel(this.db);
+        const inventoryModel = new InventoryModel(connection || this.db);
         
         // Auto-reconcile consumables first
-        await inventoryModel.reconcileMaterials(wo_id, data.updated_by || 1);
+        await inventoryModel.reconcileMaterials(wo_id, data.updated_by || 1, connection);
 
-        const [items] = await this.db.query(
+        const [items] = await (connection || this.db).query(
           'SELECT item_code, item_type, issued_qty, consumed_qty, returned_qty, scrap_qty FROM work_order_item WHERE wo_id = ?',
           [wo_id]
         )
@@ -889,18 +891,18 @@ class ProductionModel {
 
       values.push(wo_id)
       const query = `UPDATE work_order SET ${fields.join(', ')} WHERE wo_id = ?`
-      await this.db.query(query, values)
+      await (connection || this.db).query(query, values)
 
       // Sync Job Cards if quantity or priority changed
       if (data.quantity !== undefined) {
-        await this.db.query(
+        await (connection || this.db).query(
           'UPDATE job_card SET planned_quantity = ? WHERE work_order_id = ?',
           [data.quantity, wo_id]
         )
       }
 
       if (data.priority !== undefined) {
-        await this.db.query(
+        await (connection || this.db).query(
           'UPDATE job_card SET priority = ? WHERE work_order_id = ?',
           [data.priority, wo_id]
         )
@@ -908,20 +910,20 @@ class ProductionModel {
 
       // Sync Sales Order status if status or sales_order_id changed
       if (data.status || data.sales_order_id !== undefined) {
-        const workOrder = await this.getWorkOrderById(wo_id)
+        const workOrder = await this.getWorkOrderById(wo_id, connection)
         if (workOrder && workOrder.sales_order_id) {
-          await this.syncSalesOrderStatus(workOrder.sales_order_id)
+          await this.syncSalesOrderStatus(workOrder.sales_order_id, connection)
         }
         
         // If status changed to Completed, revalidate any parent Work Orders
         const normalizedStatus = (data.status || '').toLowerCase();
         if (normalizedStatus === 'completed' || normalizedStatus === 'draft') {
-          const [parents] = await this.db.query(
+          const [parents] = await (connection || this.db).query(
             'SELECT parent_wo_id FROM work_order_dependency WHERE child_wo_id = ?',
             [wo_id]
           );
           for (const p of parents) {
-            await this.revalidateWorkOrderStatus(p.parent_wo_id);
+            await this.revalidateWorkOrderStatus(p.parent_wo_id, connection);
           }
         }
       }
@@ -1876,7 +1878,8 @@ async deleteAllBOMRawMaterials(bom_id) {
           ws.last_job_card_id as machine_current_jc,
           CONCAT(em.first_name, ' ', em.last_name) as operator_name,
           s.name as vendor_name,
-          sso.project_name
+          sso.project_name,
+          sso.created_at as project_created_at
         FROM job_card jc
         LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
         LEFT JOIN item i ON wo.item_code = i.item_code
@@ -1931,6 +1934,8 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       query += `
         ORDER BY 
+          COALESCE(sso.created_at, jc.created_at) DESC,
+          sso.project_name ASC,
           COALESCE(wo.production_plan_id, jc.work_order_id) DESC,
           CASE 
             WHEN jc.work_order_id LIKE '%-SA-%' THEN 1 
@@ -1948,9 +1953,9 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async getJobCardDetails(job_card_id) {
+  async getJobCardDetails(job_card_id, connection = null) {
     try {
-      const [jobCards] = await this.db.query(`
+      const [jobCards] = await (connection || this.db).query(`
         SELECT 
           jc.*, 
           wo.item_code, 
@@ -2003,13 +2008,16 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async reconcileMaterialIssue(jobCardId, issueData, userId) {
-    let connection;
+  async reconcileMaterialIssue(jobCardId, issueData, userId, connection = null) {
+    let isInternalTransaction = false;
     try {
-      connection = await this.db.getConnection();
-      await connection.beginTransaction();
+      if (!connection) {
+        connection = await this.db.getConnection();
+        await connection.beginTransaction();
+        isInternalTransaction = true;
+      }
 
-      const jobCard = await this.getJobCardDetails(jobCardId);
+      const jobCard = await this.getJobCardDetails(jobCardId, connection);
       if (!jobCard) throw new Error('Job card not found');
 
       const StockBalanceModel = (await import('./StockBalanceModel.js')).default;
@@ -2051,14 +2059,16 @@ async deleteAllBOMRawMaterials(bom_id) {
         [jobCardId]
       );
 
-      await connection.commit();
+      if (isInternalTransaction) {
+        await connection.commit();
+      }
       return { success: true };
     } catch (error) {
-      if (connection) await connection.rollback();
+      if (isInternalTransaction && connection) await connection.rollback();
       console.error('Error reconciling material issue:', error);
       throw error;
     } finally {
-      if (connection) connection.release();
+      if (isInternalTransaction && connection) connection.release();
     }
   }
 
@@ -2280,11 +2290,14 @@ async deleteAllBOMRawMaterials(bom_id) {
     return true;
   }
 
-  async createJobCard(data) {
-    let connection;
+  async createJobCard(data, connection = null) {
+    let isInternalTransaction = false;
     try {
-      connection = await this.db.getConnection();
-      await connection.beginTransaction();
+      if (!connection) {
+        connection = await this.db.getConnection();
+        await connection.beginTransaction();
+        isInternalTransaction = true;
+      }
 
       // Validate allocation before creating
       await this.validateAllocation(data, null, connection);
@@ -2323,7 +2336,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       
       // Sync Work Order progress
       if (data.work_order_id) {
-        await this.checkAndUpdateWorkOrderProgress(data.work_order_id);
+        await this.checkAndUpdateWorkOrderProgress(data.work_order_id, connection);
       }
 
       return { ...data, status: finalStatus };
@@ -2335,11 +2348,14 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async updateJobCard(job_card_id, data) {
-    let connection;
+  async updateJobCard(job_card_id, data, connection = null) {
+    let isInternalTransaction = false;
     try {
-      connection = await this.db.getConnection();
-      await connection.beginTransaction();
+      if (!connection) {
+        connection = await this.db.getConnection();
+        await connection.beginTransaction();
+        isInternalTransaction = true;
+      }
 
       const [current] = await connection.query(
         'SELECT machine_id, operator_id, scheduled_start_date, scheduled_end_date, work_order_id, operation_sequence, status FROM job_card WHERE job_card_id = ? FOR UPDATE', 
@@ -2417,21 +2433,34 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (data.cycle_time !== undefined && data.cycle_time !== null) { fields.push('cycle_time = ?'); values.push(data.cycle_time) }
       if (data.operating_cost !== undefined && data.operating_cost !== null) { fields.push('operating_cost = ?'); values.push(data.operating_cost) }
 
+      // Shipment/Logistics details
+      if (data.carrier_name !== undefined) { fields.push('carrier_name = ?'); values.push(data.carrier_name) }
+      if (data.tracking_number !== undefined) { fields.push('tracking_number = ?'); values.push(data.tracking_number) }
+      if (data.dispatch_date !== undefined) { fields.push('dispatch_date = ?'); values.push(this._formatMySQLDate(data.dispatch_date)) }
+      if (data.shipping_notes !== undefined) { fields.push('shipping_notes = ?'); values.push(data.shipping_notes) }
+      if (data.is_partial !== undefined) { fields.push('is_partial = ?'); values.push(data.is_partial) }
+
       if (fields.length > 0) {
         values.push(job_card_id)
         const query = `UPDATE job_card SET ${fields.join(', ')} WHERE job_card_id = ?`
         await connection.query(query, values)
       }
 
-      await connection.commit();
-
-      // Post-commit syncs
+      // Sync quantities within the same transaction if connection provided
       await this._syncJobCardQuantities(job_card_id, { 
         autoTransfer: data.transfer_to_next_op === true || data.autoTransfer === true,
         nextJobCardId: data.next_job_card_id,
         nextOperatorId: data.next_operator_id,
-        nextMachineId: data.next_machine_id
-      })
+        nextMachineId: data.next_machine_id,
+        is_shipment: data.is_shipment === true || data.is_shipment === 'true',
+        source_warehouse_id: data.source_warehouse_id,
+        target_warehouse_id: data.target_warehouse_id,
+        dispatch_qty: data.dispatch_qty
+      }, connection)
+
+      if (isInternalTransaction) {
+        await connection.commit();
+      }
 
       if (data.status !== undefined || schedulingChanged) {
         const workOrderId = current[0].work_order_id;
@@ -2659,9 +2688,9 @@ async deleteAllBOMRawMaterials(bom_id) {
     };
   }
 
-  async checkAndUpdateWorkOrderProgress(work_order_id) {
+  async checkAndUpdateWorkOrderProgress(work_order_id, connection = null) {
     try {
-      const [jobCards] = await this.db.query(
+      const [jobCards] = await (connection || this.db).query(
         'SELECT * FROM job_card WHERE work_order_id = ? ORDER BY operation_sequence ASC',
         [work_order_id]
       )
@@ -2684,16 +2713,16 @@ async deleteAllBOMRawMaterials(bom_id) {
         return status === 'ready'
       })
 
-      const workOrder = await this.getWorkOrderById(work_order_id)
+      const workOrder = await this.getWorkOrderById(work_order_id, connection)
       const workOrderStatus = (workOrder?.status || '').toLowerCase()
 
       if (hasStarted && firstJobScheduled) {
         if (workOrderStatus !== 'in-progress' && workOrderStatus !== 'in_progress' && workOrderStatus !== 'completed') {
-          await this.updateWorkOrder(work_order_id, { status: 'In-Progress' })
+          await this.updateWorkOrder(work_order_id, { status: 'In-Progress' }, connection)
           
           // Sync Sales Order status
           if (workOrder && workOrder.sales_order_id) {
-            await this.syncSalesOrderStatus(workOrder.sales_order_id)
+            await this.syncSalesOrderStatus(workOrder.sales_order_id, connection)
           }
           
           return true
@@ -2702,7 +2731,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         // If some cards are ready but WO is still draft, we should still sync SO status 
         // because SO status can move to 'under_production'
         if (workOrder && workOrder.sales_order_id) {
-          await this.syncSalesOrderStatus(workOrder.sales_order_id)
+          await this.syncSalesOrderStatus(workOrder.sales_order_id, connection)
         }
       }
 
@@ -2712,9 +2741,9 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async checkAndUpdateWorkOrderCompletion(work_order_id) {
+  async checkAndUpdateWorkOrderCompletion(work_order_id, connection = null) {
     try {
-      const [jobCards] = await this.db.query(
+      const [jobCards] = await (connection || this.db).query(
         'SELECT status FROM job_card WHERE work_order_id = ?',
         [work_order_id]
       )
@@ -2726,15 +2755,15 @@ async deleteAllBOMRawMaterials(bom_id) {
       const allCompleted = jobCards.every(card => (card.status || '').toLowerCase() === 'completed')
       
       if (allCompleted) {
-        await this.updateWorkOrder(work_order_id, { status: 'Completed' })
+        await this.updateWorkOrder(work_order_id, { status: 'Completed' }, connection)
         
         // NEW: Backflush inventory when work order is completed
-        const workOrder = await this.getWorkOrderById(work_order_id)
+        const workOrder = await this.getWorkOrderById(work_order_id, connection)
         if (workOrder) {
           // Update item valuation rate with the actual unit cost from the work order
           if (workOrder.unit_cost > 0) {
             try {
-              await this.db.query(
+              await (connection || this.db).query(
                 'UPDATE item SET valuation_rate = ? WHERE item_code = ?',
                 [workOrder.unit_cost, workOrder.item_code]
               );
@@ -2745,7 +2774,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           }
 
           try {
-            await this.backflushInventory(work_order_id, workOrder.quantity, 1)
+            await this.backflushInventory(work_order_id, workOrder.quantity, 1, connection)
           } catch (backflushError) {
             console.error(`Backflushing failed for Work Order ${work_order_id}:`, backflushError.message)
           }
@@ -2753,13 +2782,13 @@ async deleteAllBOMRawMaterials(bom_id) {
         
         // Sync Sales Order status
         if (workOrder && workOrder.sales_order_id) {
-          await this.syncSalesOrderStatus(workOrder.sales_order_id)
+          await this.syncSalesOrderStatus(workOrder.sales_order_id, connection)
         }
 
         // NEW: Check if parent Work Order can now be set to 'ready'
         if (workOrder && workOrder.parent_wo_id) {
           const parentWoId = workOrder.parent_wo_id;
-          const [incompleteChildren] = await this.db.query(
+          const [incompleteChildren] = await (connection || this.db).query(
             'SELECT COUNT(*) as count FROM work_order WHERE parent_wo_id = ? AND status != ?',
             [parentWoId, 'Completed']
           );
@@ -2767,19 +2796,22 @@ async deleteAllBOMRawMaterials(bom_id) {
           if (incompleteChildren && incompleteChildren[0].count === 0) {
             // All sub-assemblies for the parent are completed!
             // Set the parent's first Job Card to 'ready'
-            const [firstJobCard] = await this.db.query(
+            const [firstJobCard] = await (connection || this.db).query(
               'SELECT job_card_id FROM job_card WHERE work_order_id = ? ORDER BY operation_sequence ASC LIMIT 1',
               [parentWoId]
             );
 
             if (firstJobCard && firstJobCard.length > 0) {
-              await this.db.query(
+              await (connection || this.db).query(
                 "UPDATE job_card SET status = 'ready' WHERE job_card_id = ? AND status = 'draft'",
                 [firstJobCard[0].job_card_id]
               );
               console.log(`Parent Work Order ${parentWoId} is now ready to start. First Job Card set to ready.`);
             }
           }
+          
+          // Also check and update parent completion status
+          await this.checkAndUpdateWorkOrderCompletion(parentWoId, connection);
         }
         
         return true
@@ -2791,10 +2823,10 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async syncSalesOrderStatus(sales_order_id) {
+  async syncSalesOrderStatus(sales_order_id, connection = null) {
     if (!sales_order_id) return false
     try {
-      const [workOrders] = await this.db.query(
+      const [workOrders] = await (connection || this.db).query(
         'SELECT status, wo_id FROM work_order WHERE sales_order_id = ?',
         [sales_order_id]
       )
@@ -2808,15 +2840,15 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       // Check if any linked production plan is in_progress
       // We'll sync them first to be sure
-      const [linkedPlans] = await this.db.query(
+      const [linkedPlans] = await (connection || this.db).query(
         'SELECT plan_id FROM production_plan WHERE sales_order_id = ?',
         [sales_order_id]
       )
       for (const plan of linkedPlans) {
-        await this.syncProductionPlanStatus(plan.plan_id)
+        await this.syncProductionPlanStatus(plan.plan_id, connection)
       }
 
-      const [productionPlans] = await this.db.query(
+      const [productionPlans] = await (connection || this.db).query(
         'SELECT status FROM production_plan WHERE sales_order_id = ? AND status IN (?, ?)',
         [sales_order_id, 'in_progress', 'under_production']
       )
@@ -2830,7 +2862,7 @@ async deleteAllBOMRawMaterials(bom_id) {
 
         // Also check job cards if WO is draft to see if any are ready
         if (woStatus === 'draft') {
-          const [jobCards] = await this.db.query(
+          const [jobCards] = await (connection || this.db).query(
             'SELECT status FROM job_card WHERE work_order_id = ?',
             [wo.wo_id]
           );
@@ -2848,7 +2880,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         newSOStatus = 'under_production'
       }
 
-      const [currentSO] = await this.db.query(
+      const [currentSO] = await (connection || this.db).query(
         'SELECT status, created_by FROM selling_sales_order WHERE sales_order_id = ?',
         [sales_order_id]
       )
@@ -2858,7 +2890,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         if (currentStatus !== newSOStatus) {
             const advancedStatuses = ['dispatched', 'delivered', 'cancelled']
             if (!advancedStatuses.includes(currentStatus)) {
-                await this.db.query(
+                await (connection || this.db).query(
                     'UPDATE selling_sales_order SET status = ?, updated_at = NOW() WHERE sales_order_id = ?',
                     [newSOStatus, sales_order_id]
                 )
@@ -2893,10 +2925,10 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async ensureSubcontractWarehouse() {
-    const [rows] = await this.db.query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['SUBCONTRACT_WIP']);
+  async ensureSubcontractWarehouse(connection = null) {
+    const [rows] = await (connection || this.db).query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['SUBCONTRACT_WIP']);
     if (rows.length === 0) {
-      const [result] = await this.db.query(
+      const [result] = await (connection || this.db).query(
         `INSERT INTO warehouses (warehouse_code, warehouse_name, warehouse_type, is_active, created_by) 
          VALUES (?, ?, ?, TRUE, 1)`,
         ['SUBCONTRACT_WIP', 'Subcontracting WIP', 'Work in Progress']
@@ -2906,21 +2938,24 @@ async deleteAllBOMRawMaterials(bom_id) {
     return rows[0].id;
   }
 
-  async handleSubcontractDispatch(job_card_id, user_id, dispatchItems = [], outward_challan_id = null) {
-    let connection;
+  async handleSubcontractDispatch(job_card_id, user_id, dispatchItems = [], outward_challan_id = null, dispatch_quantity = null, connection = null) {
+    let isInternalTransaction = false;
     try {
-      connection = await this.db.getConnection();
-      await connection.beginTransaction();
+      if (!connection) {
+        connection = await this.db.getConnection();
+        await connection.beginTransaction();
+        isInternalTransaction = true;
+      }
 
-      const jobCard = await this.getJobCardDetails(job_card_id);
+      const jobCard = await this.getJobCardDetails(job_card_id, connection);
       if (!jobCard) throw new Error('Job card not found');
       if (jobCard.execution_mode !== 'OUTSOURCE') throw new Error('Job card is not an outsource operation');
 
-      const workOrder = await this.getWorkOrderById(jobCard.work_order_id);
+      const workOrder = await this.getWorkOrderById(jobCard.work_order_id, connection);
       const mainItemCode = workOrder.item_code;
-      const mainQuantity = jobCard.planned_quantity;
+      const mainQuantity = parseFloat(dispatch_quantity || jobCard.planned_quantity || 0);
 
-      const subcontractWH = await this.ensureSubcontractWarehouse();
+      const subcontractWH = await this.ensureSubcontractWarehouse(connection);
       
       const StockBalanceModel = (await import('./StockBalanceModel.js')).default;
       const StockLedgerModel = (await import('./StockLedgerModel.js')).default;
@@ -2939,7 +2974,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         // Resolve source warehouse
         let sourceWHId = 5; // Default WIP
         if (item.source_warehouse) {
-          sourceWHId = await this.getWarehouseId(item.source_warehouse);
+          sourceWHId = await this.getWarehouseId(item.source_warehouse, connection);
         } else {
           const [sourceWHRows] = await connection.query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['WH-WIP']);
           if (sourceWHRows.length > 0) sourceWHId = sourceWHRows[0].id;
@@ -2990,20 +3025,29 @@ async deleteAllBOMRawMaterials(bom_id) {
         [mainQuantity, 'SENT_TO_VENDOR', 'in-progress', outward_challan_id, job_card_id]
       );
 
-      await connection.commit();
+      if (isInternalTransaction) {
+        await connection.commit();
+      }
       return true;
     } catch (error) {
-      if (connection) await connection.rollback();
+      if (isInternalTransaction && connection) await connection.rollback();
       throw error;
     } finally {
-      if (connection) connection.release();
+      if (isInternalTransaction && connection) connection.release();
     }
   }
 
-  async handleSubcontractReceipt(job_card_id, data, user_id) {
+  async handleSubcontractReceipt(job_card_id, data, user_id, connection = null) {
+    let isInternalTransaction = false;
     try {
+      if (!connection) {
+        connection = await this.db.getConnection();
+        await connection.beginTransaction();
+        isInternalTransaction = true;
+      }
+
       const { received_qty, accepted_qty, rejected_qty } = data;
-      const jobCardData = await this.getJobCardDetails(job_card_id);
+      const jobCardData = await this.getJobCardDetails(job_card_id, connection);
       if (!jobCardData) throw new Error('Job card not found');
 
       if (parseFloat(accepted_qty) + parseFloat(rejected_qty) > parseFloat(received_qty)) {
@@ -3013,20 +3057,20 @@ async deleteAllBOMRawMaterials(bom_id) {
         throw new Error('Received quantity cannot exceed remaining Sent quantity');
       }
 
-      const workOrder = await this.getWorkOrderById(jobCardData.work_order_id);
+      const workOrder = await this.getWorkOrderById(jobCardData.work_order_id, connection);
       const itemCode = workOrder.item_code;
-      const subcontractWH = await this.ensureSubcontractWarehouse();
+      const subcontractWH = await this.ensureSubcontractWarehouse(connection);
 
       // Identify if it's the last operation
-      const [opRows] = await this.db.query(
+      const [opRows] = await connection.query(
         'SELECT MAX(operation_sequence) as last_seq FROM job_card WHERE work_order_id = ?',
         [jobCardData.work_order_id]
       );
       const isLastOp = jobCardData.operation_sequence === opRows[0].last_seq;
 
       // Target Warehouse
-      const [fgWHRows] = await this.db.query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['WH-FG']);
-      const [wipWHRows] = await this.db.query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['WH-WIP']);
+      const [fgWHRows] = await connection.query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['WH-FG']);
+      const [wipWHRows] = await connection.query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['WH-WIP']);
       const targetWH = isLastOp ? (fgWHRows[0]?.id || 1) : (wipWHRows[0]?.id || 5);
 
       const StockBalanceModel = (await import('./StockBalanceModel.js')).default;
@@ -3037,7 +3081,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       await StockBalanceModel.upsert(itemCode, subcontractWH, {
         current_qty: -received_qty,
         is_increment: true
-      }, this.db);
+      }, connection);
 
       await StockLedgerModel.create({
         item_code: itemCode,
@@ -3050,14 +3094,14 @@ async deleteAllBOMRawMaterials(bom_id) {
         reference_name: job_card_id,
         remarks: `Received back from vendor for ${jobCardData.operation}`,
         created_by: user_id || 1
-      }, this.db);
+      }, connection);
 
       // Add to Target (Accepted items)
       if (accepted_qty > 0) {
         await StockBalanceModel.upsert(itemCode, targetWH, {
           current_qty: accepted_qty,
           is_increment: true
-        }, this.db);
+        }, connection);
 
         await StockLedgerModel.create({
           item_code: itemCode,
@@ -3070,18 +3114,18 @@ async deleteAllBOMRawMaterials(bom_id) {
           reference_name: job_card_id,
           remarks: `Accepted items from vendor for ${jobCardData.operation}`,
           created_by: user_id || 1
-        }, this.db);
+        }, connection);
       }
 
       // Add to Scrap (Rejected items)
       if (rejected_qty > 0) {
-        const [scrapWHRows] = await this.db.query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['WH-SCRAP']);
+        const [scrapWHRows] = await connection.query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['WH-SCRAP']);
         const scrapWH = scrapWHRows[0]?.id || 4;
 
         await StockBalanceModel.upsert(itemCode, scrapWH, {
           current_qty: rejected_qty,
           is_increment: true
-        }, this.db);
+        }, connection);
 
         await StockLedgerModel.create({
           item_code: itemCode,
@@ -3094,11 +3138,11 @@ async deleteAllBOMRawMaterials(bom_id) {
           reference_name: job_card_id,
           remarks: `Rejected items from vendor for ${jobCardData.operation}`,
           created_by: user_id || 1
-        }, this.db);
+        }, connection);
       }
 
       // 0. Get FRESH job card details AFTER createInwardChallan might have triggered a sync
-      const freshJobCardInfo = await this.getJobCardDetails(job_card_id);
+      const freshJobCardInfo = await this.getJobCardDetails(job_card_id, connection);
       if (!freshJobCardInfo) throw new Error('Job card not found');
 
       const newTotalReceived = parseFloat(freshJobCardInfo.received_qty) || 0;
@@ -3119,42 +3163,49 @@ async deleteAllBOMRawMaterials(bom_id) {
         operating_cost: totalAccepted * (parseFloat(freshJobCardInfo.vendor_rate_per_unit) || 0),
         subcontract_status: isFullyReceived ? 'RECEIVED' : 'PARTIALLY_RECEIVED',
         status: isFullyReceived ? 'completed' : 'in-progress'
-      });
+      }, connection);
 
       // Update next job card if this one is completed
       if (isFullyReceived) {
-        await this._activateNextJobCard(freshJobCardInfo.work_order_id, freshJobCardInfo.operation_sequence || 0, totalAccepted);
-        await this.checkAndUpdateWorkOrderCompletion(freshJobCardInfo.work_order_id);
+        await this._activateNextJobCard(freshJobCardInfo.work_order_id, freshJobCardInfo.operation_sequence || 0, totalAccepted, connection);
+        await this.checkAndUpdateWorkOrderCompletion(freshJobCardInfo.work_order_id, connection);
       }
 
+      if (isInternalTransaction) {
+        await connection.commit();
+      }
       return true;
     } catch (error) {
+      if (isInternalTransaction && connection) await connection.rollback();
       throw error;
+    } finally {
+      if (isInternalTransaction && connection) connection.release();
     }
   }
 
-  async _activateNextJobCard(work_order_id, currentSequence, acceptedQty) {
+  async _activateNextJobCard(work_order_id, currentSequence, acceptedQty, forceInProgress = false, connection = null) {
     const seq = parseFloat(currentSequence) || 0;
-    const [nextJobCards] = await this.db.query(
+    const [nextJobCards] = await (connection || this.db).query(
       'SELECT job_card_id, status FROM job_card WHERE work_order_id = ? AND CAST(operation_sequence AS DECIMAL(18,6)) > CAST(? AS DECIMAL(18,6)) ORDER BY CAST(operation_sequence AS DECIMAL(18,6)) ASC LIMIT 1',
       [work_order_id, seq]
     );
 
     if (nextJobCards && nextJobCards.length > 0) {
-      await this._activateNextJobCardForDirectLink(nextJobCards[0].job_card_id, acceptedQty);
+      await this._activateNextJobCardForDirectLink(nextJobCards[0].job_card_id, acceptedQty, forceInProgress, connection);
     }
   }
 
-  async _activateNextJobCardForDirectLink(nextJobCardId, acceptedQty) {
+  async _activateNextJobCardForDirectLink(nextJobCardId, acceptedQty, forceInProgress = false, connection = null) {
     // Only update if current status is draft, open, or pending
-    const [current] = await this.db.query('SELECT status FROM job_card WHERE job_card_id = ?', [nextJobCardId]);
+    const [current] = await (connection || this.db).query('SELECT status FROM job_card WHERE job_card_id = ?', [nextJobCardId]);
     if (current.length > 0) {
       const statusNorm = (current[0].status || '').toLowerCase().replace(/\s+/g, '-').trim();
       if (['draft', 'ready', 'open', 'pending'].includes(statusNorm)) {
+        const nextStatus = (forceInProgress || acceptedQty > 0) ? 'in-progress' : 'ready';
         await this.updateJobCard(nextJobCardId, {
-          status: 'ready',
-          planned_quantity: acceptedQty
-        });
+          status: nextStatus,
+          actual_start_date: nextStatus === 'in-progress' ? new Date() : null
+        }, connection);
       }
     }
   }
@@ -3326,7 +3377,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           operation_sequence: operation.sequence || opSeq,
           machine_id: operation.default_workstation || operation.workstation || operation.workstation_type || operation.machine_id || '',
           operator_id: null,
-          planned_quantity: isFirst ? plannedQty : 0,
+          planned_quantity: plannedQty,
           setup_time: setupTime,
           cycle_time: cycleTime,
           operation_time: effectiveOpTime,
@@ -3904,18 +3955,29 @@ async deleteAllBOMRawMaterials(bom_id) {
     return `${year}-${month}-${day}`;
   }
 
-  async _syncJobCardQuantities(jobCardId, options = {}) {
+  async _syncJobCardQuantities(jobCardId, options = {}, connection = null) {
     try {
       const { 
         autoTransfer = false, 
+        transfer_to_next_op = false,
         nextJobCardId = null,
         nextOperatorId = null,
-        nextMachineId = null
+        nextMachineId = null,
+        is_shipment = false,
+        source_warehouse_id = null,
+        target_warehouse_id = null,
+        dispatch_qty = 0,
+        carrier_name = null,
+        tracking_number = null,
+        dispatch_date = null,
+        shipping_notes = null,
+        is_partial = false
       } = options;
+      const isExplicitTransfer = autoTransfer || transfer_to_next_op;
       const normShift = (s) => String(s || '').trim().toUpperCase().replace(/^SHIFT\s+/, '');
 
       // 0. Get current job card details for stock delta calculation
-      const [currentJC] = await this.db.query(
+      const [currentJC] = await (connection || this.db).query(
         'SELECT job_card_id, work_order_id, operation, operation_sequence, produced_quantity, accepted_quantity, rejected_quantity, scrap_quantity, hourly_rate, operation_time, operation_type, machine_id, execution_mode FROM job_card WHERE job_card_id = ?',
         [jobCardId]
       );
@@ -3923,7 +3985,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       const jcDetails = currentJC[0];
 
       // 1. Get all time logs for this job card (Join with operator_master to get valid operator_id)
-      const [timeLogs] = await this.db.query(
+      const [timeLogs] = await (connection || this.db).query(
         `SELECT tl.completed_qty, tl.rejected_qty, tl.scrap_qty, tl.shift, tl.log_date, tl.day_number, tl.time_in_minutes, tl.employee_id, om.operator_id 
          FROM time_log tl
          LEFT JOIN operator_master om ON tl.employee_id = om.employee_id
@@ -3932,19 +3994,19 @@ async deleteAllBOMRawMaterials(bom_id) {
       );
 
       // 2. Get all rejection entries for this job card
-      const [rejections] = await this.db.query(
+      const [rejections] = await (connection || this.db).query(
         'SELECT rejected_qty, scrap_qty, accepted_qty, shift, log_date, day_number, status, rejection_reason FROM rejection_entry WHERE job_card_id = ?',
         [jobCardId]
       );
 
       // 3. Get all inward challans for this job card
-      const [challans] = await this.db.query(
+      const [challans] = await (connection || this.db).query(
         'SELECT quantity_received, quantity_accepted, quantity_rejected, received_date FROM inward_challan WHERE job_card_id = ?',
         [jobCardId]
       );
 
       // 4. Get all production entries for this job card
-      const [prodEntries] = await this.db.query(
+      const [prodEntries] = await (connection || this.db).query(
         'SELECT entry_id, quantity_produced, accepted_quantity, quantity_rejected, scrap_quantity, shift_no, entry_date, hours_worked, operator_id, remarks FROM production_entry WHERE job_card_id = ?',
         [jobCardId]
       );
@@ -4001,7 +4063,8 @@ async deleteAllBOMRawMaterials(bom_id) {
         
         shifts[key].rejectionProduced += entryProduced;
 
-        if (rej.status === 'Approved') {
+        // Count accepted quantity if quality entry is Approved OR Pending (Allows immediate transfer after logging)
+        if (rej.status === 'Approved' || rej.status === 'Pending') {
           shifts[key].rejectionAccepted += aQty;
           shifts[key].rejectionRejected += rQty;
           shifts[key].rejectionScrap += sQty;
@@ -4065,8 +4128,21 @@ async deleteAllBOMRawMaterials(bom_id) {
         shiftTotalRejected += Math.max(s.rejected, s.rejectionRejected, manual.rejected);
         shiftTotalScrap += Math.max(s.scrap, s.rejectionScrap, manual.scrap);
         
-        // Accepted quantity comes from Approved Quality Entries or MANUAL Production Entries
-        shiftTotalAccepted += Math.max(s.rejectionAccepted, manual.accepted);
+        // Accepted quantity logic:
+        // 1. If we have Approved rejections/quality data, use it
+        // 2. Otherwise, if we have manual production entries, use its accepted qty
+        // 3. STRICT: If no quality gate recorded, accepted quantity is 0 until QC is done
+        let accepted = 0;
+        if (s.rejectionProduced > 0) {
+          accepted = s.rejectionAccepted;
+        } else if (manual.produced > 0) {
+          accepted = manual.accepted;
+        } else {
+          // Changed from optimistic fallback (accepted = shiftProduced) to strict 0
+          accepted = 0; 
+        }
+        
+        shiftTotalAccepted += accepted;
       });
 
       // Add challan quantities (usually for outsourced operations)
@@ -4098,6 +4174,13 @@ async deleteAllBOMRawMaterials(bom_id) {
       // or from Inward Challans (for outsourced/received items).
       // This ensures the next stage receives ONLY what has been explicitly verified.
       let totalAccepted = shiftTotalAccepted + totalChallanAccepted;
+      
+      // For shipments, we can optionally treat dispatched quantity as "accepted" 
+      // if no direct work logs exist, to maintain progress bar integrity
+      if (is_shipment && totalAccepted === 0 && dispatch_qty > 0) {
+        totalAccepted = dispatch_qty;
+      }
+
       let totalLoss = totalRejected + totalScrap;
 
       // --- CALCULATE ACTUAL OPERATING COST ---
@@ -4117,7 +4200,7 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       // 3. Update Job Card
       const isOutsource = jcDetails.execution_mode === 'OUTSOURCE';
-      await this.db.query(
+      await (connection || this.db).query(
         `UPDATE job_card SET 
           produced_quantity = ?, 
           rejected_quantity = ?, 
@@ -4139,7 +4222,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       );
 
       // Sync Work Order Totals
-      await this._syncWorkOrderTotals(jcDetails.work_order_id);
+      await this._syncWorkOrderTotals(jcDetails.work_order_id, connection);
 
       // --- UPDATE PRODUCTION ENTRIES FOR OEE ---
       // For each shift, ensure there is a production_entry record representing the latest aggregated data
@@ -4153,14 +4236,14 @@ async deleteAllBOMRawMaterials(bom_id) {
         });
 
       if (validShiftEntries.length > 0) {
-        await this.db.query(
+        await (connection || this.db).query(
           `DELETE FROM production_entry 
            WHERE job_card_id = ? 
            AND (entry_date, shift_no) NOT IN (${validShiftEntries.join(',')})`,
           [jobCardId]
         );
       } else {
-        await this.db.query(
+        await (connection || this.db).query(
           'DELETE FROM production_entry WHERE job_card_id = ?',
           [jobCardId]
         );
@@ -4169,7 +4252,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       // Validate machine_id against machine_master before inserting into production_entry
       let syncMachineId = jcDetails.machine_id || null;
       if (syncMachineId && syncMachineId !== 'OUTSOURCED' && syncMachineId !== 'UNASSIGNED') {
-        const [machines] = await this.db.query(
+        const [machines] = await (connection || this.db).query(
           'SELECT machine_id FROM machine_master WHERE machine_id = ?',
           [syncMachineId]
         );
@@ -4187,7 +4270,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           const shiftNo = s.shift === 'B' ? 2 : (s.shift === 'C' ? 3 : 1);
           
           // Check if a production entry already exists for this Job Card, Date and Shift
-          const [existing] = await this.db.query(
+          const [existing] = await (connection || this.db).query(
             'SELECT entry_id FROM production_entry WHERE job_card_id = ? AND entry_date = ? AND shift_no = ?',
             [jobCardId, s.date, shiftNo]
           );
@@ -4200,7 +4283,7 @@ async deleteAllBOMRawMaterials(bom_id) {
 
           if (existing && existing.length > 0) {
             // Update existing entry
-            await this.db.query(
+            await (connection || this.db).query(
               `UPDATE production_entry SET 
                 quantity_produced = ?, 
                 accepted_quantity = ?, 
@@ -4214,7 +4297,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           } else {
             // Create new entry
             const entryId = `ENTRY-SYNC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            await this.db.query(
+            await (connection || this.db).query(
               `INSERT INTO production_entry (entry_id, work_order_id, job_card_id, machine_id, operator_id, entry_date, shift_no, quantity_produced, accepted_quantity, quantity_rejected, scrap_quantity, hours_worked, remarks)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [entryId, jcDetails.work_order_id, jobCardId, syncMachineId, s.operator_id, s.date, shiftNo, 
@@ -4225,11 +4308,11 @@ async deleteAllBOMRawMaterials(bom_id) {
       }
 
       // 4. Update Work Order Operation
-      const [jcRows] = await this.db.query('SELECT work_order_id, operation, operation_sequence FROM job_card WHERE job_card_id = ?', [jobCardId]);
+      const [jcRows] = await (connection || this.db).query('SELECT work_order_id, operation, operation_sequence FROM job_card WHERE job_card_id = ?', [jobCardId]);
       if (jcRows.length > 0) {
         const jc = jcRows[0];
         // Note: Using accepted_quantity for completed_qty in work_order_operation
-        await this.db.query(
+        await (connection || this.db).query(
           `UPDATE work_order_operation SET 
             completed_qty = ?, 
             process_loss_qty = ?
@@ -4241,27 +4324,27 @@ async deleteAllBOMRawMaterials(bom_id) {
         // This allows partial quantities to flow to the next operation immediately
         
         // ALWAYS use the latest transferred_quantity from the DB to calculate delta
-        const [freshJC] = await this.db.query('SELECT transferred_quantity, status FROM job_card WHERE job_card_id = ?', [jobCardId]);
+        const [freshJC] = await (connection || this.db).query('SELECT transferred_quantity, status FROM job_card WHERE job_card_id = ?', [jobCardId]);
         const currentTransferred = parseFloat(freshJC[0]?.transferred_quantity || 0);
 
         // Formula: transferable_qty = current_operation.accepted_qty − current_operation.transferred_qty
-        let transferableQty = totalAccepted - currentTransferred;
+        let transferableQty = is_shipment ? (dispatch_qty || 0) : (totalAccepted - currentTransferred);
 
         // If we have deleted production, we must reverse the transfer
-        const isReduction = transferableQty < 0;
+        const isReduction = !is_shipment && transferableQty < 0;
 
         let next;
         if (nextJobCardId) {
-          const [rows] = await this.db.query(
-            'SELECT job_card_id, status, planned_quantity FROM job_card WHERE job_card_id = ?',
+          const [rows] = await (connection || this.db).query(
+            'SELECT job_card_id, status, planned_quantity, machine_id FROM job_card WHERE job_card_id = ?',
             [nextJobCardId]
           );
           if (rows.length > 0) next = rows[0];
         }
 
         if (!next) {
-          const [nextJCs] = await this.db.query(
-            `SELECT job_card_id, status, planned_quantity FROM job_card 
+          const [nextJCs] = await (connection || this.db).query(
+            `SELECT job_card_id, status, planned_quantity, machine_id FROM job_card 
              WHERE work_order_id = ? AND CAST(operation_sequence AS DECIMAL(18,6)) > CAST(? AS DECIMAL(18,6))
              ORDER BY CAST(operation_sequence AS DECIMAL(18,6)) ASC LIMIT 1`,
             [jc.work_order_id, jc.operation_sequence]
@@ -4269,17 +4352,20 @@ async deleteAllBOMRawMaterials(bom_id) {
           if (nextJCs && nextJCs.length > 0) next = nextJCs[0];
         }
 
-        if (next || isReduction) {
+        if (next || isReduction || isExplicitTransfer) {
           if (transferableQty !== 0) {
             // 1. Update current job card's transferred_quantity
-            await this.db.query(
+            await (connection || this.db).query(
               'UPDATE job_card SET transferred_quantity = GREATEST(0, COALESCE(transferred_quantity, 0) + ?), updated_at = NOW() WHERE job_card_id = ?',
               [transferableQty, jobCardId]
             );
 
-            // 2. Adjust next job card's planned_quantity if it exists
+            // 2. Adjust next job card's input_qty if it exists
             if (next) {
-              const nextUpdateFields = ['planned_quantity = GREATEST(0, planned_quantity + ?)', 'updated_at = NOW()'];
+              const nextUpdateFields = [
+                'input_qty = GREATEST(0, input_qty + ?)',
+                'updated_at = NOW()'
+              ];
               const nextUpdateValues = [transferableQty];
 
               if (nextOperatorId) {
@@ -4293,24 +4379,40 @@ async deleteAllBOMRawMaterials(bom_id) {
 
               // If it was draft/ready/open and we now have available items, move it to ready or in-progress
               const nextStatusNorm = this._normalizeStatus(next.status);
-              if (['draft', 'open', 'pending'].includes(nextStatusNorm)) {
-                if (transferableQty > 0) {
+              let nextNewStatus = null;
+              if (['draft', 'open', 'pending', 'ready'].includes(nextStatusNorm)) {
+                if (transferableQty > 0 || isExplicitTransfer) {
+                  // Requirement: When explicitly transferring units (autoTransfer), move next op to in-progress
+                  // Also move to in-progress if we are transferring any quantity and it's currently not started
+                  nextNewStatus = isExplicitTransfer ? 'in-progress' : 'ready';
                   nextUpdateFields.push('status = ?');
-                  nextUpdateValues.push('ready');
+                  nextUpdateValues.push(nextNewStatus);
+                  
+                  if (nextNewStatus === 'in-progress') {
+                    nextUpdateFields.push('actual_start_date = COALESCE(actual_start_date, CURRENT_TIMESTAMP)');
+                  }
                 }
               }
 
               nextUpdateValues.push(next.job_card_id);
-              await this.db.query(
+              await (connection || this.db).query(
                 `UPDATE job_card SET ${nextUpdateFields.join(', ')} WHERE job_card_id = ?`,
                 nextUpdateValues
               );
+
+              // Update workstation status if moving to in-progress
+              if (nextNewStatus === 'in-progress' && next.machine_id) {
+                await (connection || this.db).query(
+                  'UPDATE workstation SET status = "Busy", last_job_card_id = ?, updated_at = CURRENT_TIMESTAMP WHERE name = ?',
+                  [next.job_card_id, next.machine_id]
+                );
+              }
             }
           }
         } else {
           // No next job card in same WO - Check for Parent WO dependency
           // If this is the last operation of a child WO, we might want to update the parent
-          const [opRows] = await this.db.query(
+          const [opRows] = await (connection || this.db).query(
             'SELECT MAX(CAST(operation_sequence AS DECIMAL(18,6))) as last_seq FROM job_card WHERE work_order_id = ?',
             [jc.work_order_id]
           );
@@ -4319,14 +4421,14 @@ async deleteAllBOMRawMaterials(bom_id) {
           
           if (isLastOp) {
             // Find parent Work Order
-            const [dependencies] = await this.db.query(
+            const [dependencies] = await (connection || this.db).query(
               'SELECT parent_wo_id, item_code, required_qty FROM work_order_dependency WHERE child_wo_id = ?',
               [jc.work_order_id]
             );
             
             for (const dep of dependencies) {
               // Update parent WO first job card planned quantity?
-              const [parentFirstJC] = await this.db.query(
+              const [parentFirstJC] = await (connection || this.db).query(
                 `SELECT job_card_id, status FROM job_card 
                  WHERE work_order_id = ? 
                  ORDER BY CAST(operation_sequence AS DECIMAL(18,6)) ASC LIMIT 1`,
@@ -4335,12 +4437,12 @@ async deleteAllBOMRawMaterials(bom_id) {
               
               if (parentFirstJC) {
                 // Trigger re-validation of parent WO status
-                await this.revalidateWorkOrderStatus(dep.parent_wo_id);
+                await this.revalidateWorkOrderStatus(dep.parent_wo_id, connection);
                 
                 // Also update parent's first job card planned quantity based on what's now available from children
-                const maxProducible = await this._getMaxAllowedQuantity(parentFirstJC.job_card_id);
+                const maxProducible = await this._getMaxAllowedQuantity(parentFirstJC.job_card_id, connection);
                 if (maxProducible > 0) {
-                  await this.db.query(
+                  await (connection || this.db).query(
                     'UPDATE job_card SET planned_quantity = ? WHERE job_card_id = ? AND status IN ("draft", "open", "pending")',
                     [maxProducible, parentFirstJC.job_card_id]
                   );
@@ -4351,9 +4453,9 @@ async deleteAllBOMRawMaterials(bom_id) {
         }
 
         // Also update work order progress, completion and COST ROLL-UP
-        await this.checkAndUpdateWorkOrderProgress(jc.work_order_id);
-        await this.checkAndUpdateWorkOrderCompletion(jc.work_order_id);
-        await this.rollUpJobCardCost(jobCardId);
+        await this.checkAndUpdateWorkOrderProgress(jc.work_order_id, connection);
+        await this.checkAndUpdateWorkOrderCompletion(jc.work_order_id, connection);
+        await this.rollUpJobCardCost(jobCardId, connection);
       }
 
       // 5. Automatic Inventory Updates
@@ -4362,14 +4464,23 @@ async deleteAllBOMRawMaterials(bom_id) {
       const deltaRejected = totalRejected - (parseFloat(jcDetails.rejected_quantity) || 0);
       const deltaScrap = totalScrap - (parseFloat(jcDetails.scrap_quantity) || 0);
 
-      if (deltaProduced !== 0 || deltaAccepted !== 0 || deltaRejected !== 0 || deltaScrap !== 0) {
-        await this._handleStockUpdates(jcDetails, deltaProduced, deltaAccepted, deltaRejected, deltaScrap);
+      if (deltaProduced !== 0 || deltaAccepted !== 0 || deltaRejected !== 0 || deltaScrap !== 0 || is_shipment) {
+        await this._handleStockUpdates(jcDetails, deltaProduced, deltaAccepted, deltaRejected, deltaScrap, connection, is_shipment, {
+          source_warehouse_id,
+          target_warehouse_id,
+          dispatch_qty,
+          carrier_name,
+          tracking_number,
+          dispatch_date,
+          shipping_notes,
+          is_partial
+        });
       }
 
       // 6. Trigger OEE Recalculation
       for (const s of Object.values(shifts)) {
         if (s.hasSourceData) {
-          await this._triggerOEERecalculation(jobCardId, s.date, s.shift);
+          await this._triggerOEERecalculation(jobCardId, s.date, s.shift, connection);
         }
       }
 
@@ -4380,7 +4491,7 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async _handleStockUpdates(jc, deltaProduced, deltaAccepted, deltaRejected, deltaScrap) {
+  async _handleStockUpdates(jc, deltaProduced, deltaAccepted, deltaRejected, deltaScrap, connection = null, is_shipment = false, dispatchData = {}) {
     try {
       const StockBalanceModel = (await import('./StockBalanceModel.js')).default;
       const StockLedgerModel = (await import('./StockLedgerModel.js')).default;
@@ -4389,35 +4500,40 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       // Helper to get warehouse ID by code
       const getWH = async (code, fallbackId) => {
-        const [rows] = await this.db.query('SELECT id FROM warehouses WHERE warehouse_code = ?', [code]);
+        const [rows] = await (connection || this.db).query('SELECT id FROM warehouses WHERE warehouse_code = ?', [code]);
         return rows.length > 0 ? rows[0].id : fallbackId;
       };
 
       // 1. Get Work Order Details
-      const [woRows] = await this.db.query('SELECT item_code, quantity FROM work_order WHERE wo_id = ?', [wo_id]);
+      const [woRows] = await (connection || this.db).query(`
+        SELECT wo.item_code, wo.quantity, wo.sales_order_id, sso.project_name 
+        FROM work_order wo
+        LEFT JOIN selling_sales_order sso ON wo.sales_order_id = sso.sales_order_id
+        WHERE wo.wo_id = ?
+      `, [wo_id]);
       if (woRows.length === 0) return;
       const wo = woRows[0];
       const woTotalQty = parseFloat(wo.quantity) || 1;
 
       // 2. Identify if it's first or last operation
-      const [opRows] = await this.db.query(
-        'SELECT MIN(operation_sequence) as first_seq, MAX(operation_sequence) as last_seq FROM job_card WHERE work_order_id = ?',
+      const [opRows] = await (connection || this.db).query(
+        'SELECT MIN(CAST(operation_sequence AS DECIMAL(18,6))) as first_seq, MAX(CAST(operation_sequence AS DECIMAL(18,6))) as last_seq FROM job_card WHERE work_order_id = ?',
         [wo_id]
       );
       
-      const isFirstOp = jc.operation_sequence === opRows[0].first_seq || (!jc.operation_sequence && !opRows[0].first_seq);
-      const isLastOp = jc.operation_sequence === opRows[0].last_seq || (!jc.operation_sequence && !opRows[0].last_seq);
+      const isFirstOp = parseFloat(jc.operation_sequence) === parseFloat(opRows[0].first_seq);
+      const isLastOp = parseFloat(jc.operation_sequence) === parseFloat(opRows[0].last_seq);
 
       // 3. Handle Raw Material Consumption (on First Operation)
       if (isFirstOp && deltaProduced !== 0) {
         // Check if material_allocation exists for this work order
-        const [allocations] = await this.db.query(
+        const [allocations] = await (connection || this.db).query(
           'SELECT allocation_id, item_code FROM material_allocation WHERE work_order_id = ?',
           [wo_id]
         );
         const hasAllocations = allocations && allocations.length > 0;
 
-        const [items] = await this.db.query('SELECT * FROM work_order_item WHERE wo_id = ?', [wo_id]);
+        const [items] = await (connection || this.db).query('SELECT * FROM work_order_item WHERE wo_id = ?', [wo_id]);
         for (const item of items) {
           const consumptionQty = (deltaProduced / woTotalQty) * (parseFloat(item.required_qty) || 0);
           if (consumptionQty === 0) continue;
@@ -4425,7 +4541,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           // If allocations exist, we update the allocation record instead of direct stock deduction
           // This follows the Allocate -> Track -> Finalize flow to prevent double deduction
           if (hasAllocations) {
-            await this.db.query(
+            await (connection || this.db).query(
               'UPDATE material_allocation SET consumed_qty = consumed_qty + ?, status = "partial" WHERE work_order_id = ? AND item_code = ?',
               [consumptionQty, wo_id, item.item_code]
             );
@@ -4437,7 +4553,7 @@ async deleteAllBOMRawMaterials(bom_id) {
               current_qty: -consumptionQty,
               is_increment: true,
               last_issue_date: new Date()
-            }, this.db);
+            }, (connection || this.db));
 
             await StockLedgerModel.create({
               item_code: item.item_code,
@@ -4450,12 +4566,12 @@ async deleteAllBOMRawMaterials(bom_id) {
               reference_name: jc.job_card_id,
               remarks: `Direct Consumption for ${wo_id} (Operation: ${jc.operation})`,
               created_by: 1
-            }, this.db);
+            }, (connection || this.db));
 
             // Create Stock Movement entry
             try {
-              const transaction_no = await StockMovementModel.generateTransactionNo(this.db);
-              await this.db.query(
+              const transaction_no = await StockMovementModel.generateTransactionNo(connection || this.db);
+              await (connection || this.db).query(
                 `INSERT INTO stock_movements (
                   transaction_no, item_code, warehouse_id, movement_type, quantity, 
                   reference_type, reference_name, notes, status, created_by, approved_by, approved_at
@@ -4477,7 +4593,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           }
 
           // ALWAYS update consumed_qty in work_order_item for real-time COST ROLL-UP
-          await this.db.query(
+          await (connection || this.db).query(
             'UPDATE work_order_item SET consumed_qty = consumed_qty + ? WHERE wo_id = ? AND item_code = ?',
             [consumptionQty, wo_id, item.item_code]
           );
@@ -4497,7 +4613,7 @@ async deleteAllBOMRawMaterials(bom_id) {
             current_qty: deltaAccepted,
             is_increment: true,
             last_receipt_date: new Date()
-          }, this.db);
+          }, (connection || this.db));
 
           await StockLedgerModel.create({
             item_code: wo.item_code,
@@ -4510,7 +4626,7 @@ async deleteAllBOMRawMaterials(bom_id) {
             reference_name: jc.job_card_id,
             remarks: `Direct Finished production from ${wo_id} (Operation: ${jc.operation})`,
             created_by: 1
-          }, this.db);
+          }, (connection || this.db));
         } else if (isLastOp) {
           // Last Operation of a sequence: Add to FG, Deduct from WIP
           // 1. Add to FG
@@ -4518,7 +4634,7 @@ async deleteAllBOMRawMaterials(bom_id) {
             current_qty: deltaAccepted,
             is_increment: true,
             last_receipt_date: new Date()
-          }, this.db);
+          }, (connection || this.db));
 
           await StockLedgerModel.create({
             item_code: wo.item_code,
@@ -4531,13 +4647,13 @@ async deleteAllBOMRawMaterials(bom_id) {
             reference_name: jc.job_card_id,
             remarks: `Final production receipt for ${wo_id} (Operation: ${jc.operation})`,
             created_by: 1
-          }, this.db);
+          }, (connection || this.db));
 
           // 2. Deduct from WIP (since it's now FG)
           await StockBalanceModel.upsert(wo.item_code, wipWarehouseId, {
             current_qty: -deltaAccepted,
             is_increment: true
-          }, this.db);
+          }, (connection || this.db));
 
           await StockLedgerModel.create({
             item_code: wo.item_code,
@@ -4550,14 +4666,14 @@ async deleteAllBOMRawMaterials(bom_id) {
             reference_name: jc.job_card_id,
             remarks: `WIP cleared for ${wo_id} (Final Operation: ${jc.operation})`,
             created_by: 1
-          }, this.db);
+          }, (connection || this.db));
         } else if (isFirstOp) {
           // First Operation of a sequence: Add to WIP
           await StockBalanceModel.upsert(wo.item_code, wipWarehouseId, {
             current_qty: deltaAccepted,
             is_increment: true,
             last_receipt_date: new Date()
-          }, this.db);
+          }, (connection || this.db));
 
           await StockLedgerModel.create({
             item_code: wo.item_code,
@@ -4570,7 +4686,7 @@ async deleteAllBOMRawMaterials(bom_id) {
             reference_name: jc.job_card_id,
             remarks: `Initial WIP production from ${wo_id} (Operation: ${jc.operation})`,
             created_by: 1
-          }, this.db);
+          }, (connection || this.db));
         }
         // Intermediate Ops: No stock ledger entries for accepted qty (Internal WIP moves within same warehouse)
       }
@@ -4582,7 +4698,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           current_qty: deltaRejected,
           is_increment: true,
           last_receipt_date: new Date()
-        }, this.db);
+        }, (connection || this.db));
 
         await StockLedgerModel.create({
           item_code: wo.item_code,
@@ -4595,7 +4711,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           reference_name: jc.job_card_id,
           remarks: `Rejected items from ${wo_id}`,
           created_by: 1
-        }, this.db);
+        }, (connection || this.db));
       }
 
       // 6. Handle Scrap (Move to SCRAP Yard)
@@ -4605,7 +4721,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           current_qty: deltaScrap,
           is_increment: true,
           last_receipt_date: new Date()
-        }, this.db);
+        }, (connection || this.db));
 
         await StockLedgerModel.create({
           item_code: wo.item_code,
@@ -4618,7 +4734,99 @@ async deleteAllBOMRawMaterials(bom_id) {
           reference_name: jc.job_card_id,
           remarks: `Scrap from ${wo_id}`,
           created_by: 1
-        }, this.db);
+        }, (connection || this.db));
+      }
+
+      // 7. Handle Dispatch / Shipment
+      if (is_shipment && dispatchData.dispatch_qty > 0) {
+        let sourceWH = dispatchData.source_warehouse_id;
+        if (!sourceWH || !/^\d+$/.test(String(sourceWH))) {
+          sourceWH = await getWH(sourceWH || 'WH-FG', 1);
+        }
+
+        let targetWH = dispatchData.target_warehouse_id;
+        if (targetWH && !/^\d+$/.test(String(targetWH))) {
+          targetWH = await getWH(targetWH, 1);
+        }
+
+        const qty = parseFloat(dispatchData.dispatch_qty);
+
+        // Deduct from Source Warehouse
+        await StockBalanceModel.upsert(wo.item_code, sourceWH, {
+          current_qty: -qty,
+          is_increment: true,
+          last_issue_date: new Date()
+        }, (connection || this.db));
+
+        // Create Stock Ledger entry for Dispatch (OUT)
+        const dispatchStatus = jc.status === 'completed' && qty >= (parseFloat(jc.planned_quantity) || 0) ? 'Fully Dispatch' : 'Partial Dispatch';
+        const projectName = wo.project_name || 'N/A';
+        const totalPlanUnits = woTotalQty;
+
+        await StockLedgerModel.create({
+          item_code: wo.item_code,
+          warehouse_id: sourceWH,
+          transaction_date: new Date(),
+          transaction_type: (jc.execution_mode === 'SUBCONTRACT' ? 'Subcontract Dispatch' : 'Dispatch').trim(),
+          qty_in: 0,
+          qty_out: qty,
+          reference_doctype: 'Job Card',
+          reference_name: jc.job_card_id,
+          remarks: `Dispatch for ${wo_id} | Project: ${projectName} | Status: ${dispatchStatus} | Plan Units: ${totalPlanUnits}`,
+          created_by: 1
+        }, (connection || this.db));
+
+        // Create Selling Delivery Note for Shipment
+        if (wo.sales_order_id) {
+          try {
+            const delivery_note_id = `DN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            const dispatchDate = new Date().toISOString().split('T')[0];
+            
+            await (connection || this.db).query(
+              `INSERT INTO selling_delivery_note 
+               (delivery_note_id, sales_order_id, job_card_id, delivery_date, quantity, status, remarks, carrier_name, tracking_number, is_partial, created_by)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                delivery_note_id,
+                wo.sales_order_id,
+                jc.job_card_id,
+                dispatchData.dispatch_date || dispatchDate,
+                qty,
+                'delivered',
+                dispatchData.shipping_notes || `Auto-generated from Job Card ${jc.job_card_id} | Project: ${projectName}`,
+                dispatchData.carrier_name,
+                dispatchData.tracking_number,
+                dispatchData.is_partial ? 1 : 0,
+                1
+              ]
+            );
+          } catch (dnError) {
+            console.error('Failed to create selling delivery note:', dnError);
+            // Non-critical, we don't throw here to avoid failing the whole update
+          }
+        }
+
+        // If target warehouse is provided (e.g. for subcontracting), add to Target
+        if (targetWH) {
+          await StockBalanceModel.upsert(wo.item_code, targetWH, {
+            current_qty: qty,
+            is_increment: true,
+            last_receipt_date: new Date()
+          }, (connection || this.db));
+
+          await StockLedgerModel.create({
+            item_code: wo.item_code,
+            warehouse_id: targetWH,
+            transaction_date: new Date(),
+            transaction_type: (jc.execution_mode === 'SUBCONTRACT' ? 'Subcontract Receipt' : 'Transfer').trim(),
+            qty_in: qty,
+            qty_out: 0,
+            reference_doctype: 'Job Card',
+            reference_name: jc.job_card_id,
+            remarks: `Received at target warehouse from dispatch`,
+            created_by: 1
+          }, (connection || this.db));
+        }
       }
 
     } catch (error) {
@@ -4627,12 +4835,12 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async _getMaxAllowedQuantity(jobCardId) {
+  async _getMaxAllowedQuantity(jobCardId, connection = null, returnDetails = false) {
     try {
-      const jobCard = await this.getJobCardDetails(jobCardId);
-      if (!jobCard) return 0;
+      const jobCard = await this.getJobCardDetails(jobCardId, connection);
+      if (!jobCard) return returnDetails ? { quantity: 0, bottleneck: 'Job card not found' } : 0;
 
-      const [opRows] = await this.db.query(
+      const [opRows] = await (connection || this.db).query(
         'SELECT MIN(operation_sequence) as first_seq FROM job_card WHERE work_order_id = ?',
         [jobCard.work_order_id]
       );
@@ -4641,9 +4849,10 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       // Multi-level dependency check: If it's the first operation, constrain by child WO production
       if (isFirstOp) {
-        const dependencies = await this.getWorkOrderDependencies(jobCard.work_order_id, 'child');
+        const dependencies = await this.getWorkOrderDependencies(jobCard.work_order_id, 'child', connection);
         if (dependencies && dependencies.length > 0) {
           let minConstraint = Infinity;
+          let bottleneckInfo = null;
           const parentTotalQty = parseFloat(jobCard.planned_quantity) || 1;
 
           for (const dep of dependencies) {
@@ -4651,21 +4860,30 @@ async deleteAllBOMRawMaterials(bom_id) {
             const qtyPerParent = parseFloat(dep.required_qty) / parentTotalQty;
             
             // Current child production (using finished quantity from child WO)
-            const acceptedChildQty = parseFloat(dep.child_finished_qty) || 0;
+            const acceptedChildQty = parseFloat(dep.child_accepted_qty) || 0;
             
             const constraint = acceptedChildQty / qtyPerParent;
-            if (constraint < minConstraint) minConstraint = constraint;
+            if (constraint < minConstraint) {
+              minConstraint = constraint;
+              bottleneckInfo = `${dep.child_item_code} (${dep.child_wo_id})`;
+            }
           }
 
           if (minConstraint !== Infinity) {
-            // Return the minimum of parent's own planned qty and child-imposed constraint
-            return Math.min(parentTotalQty, minConstraint);
+            const finalQty = Math.min(parentTotalQty, minConstraint);
+            if (returnDetails) {
+              return { 
+                quantity: finalQty, 
+                bottleneck: finalQty < parentTotalQty ? `Constrained by sub-assembly production: ${bottleneckInfo}` : null 
+              };
+            }
+            return finalQty;
           }
         }
       }
 
-      const [previousCards] = await this.db.query(
-        'SELECT accepted_quantity, produced_quantity, rejected_quantity, scrap_quantity FROM job_card WHERE work_order_id = ? AND operation_sequence < ? ORDER BY operation_sequence DESC LIMIT 1',
+      const [previousCards] = await (connection || this.db).query(
+        'SELECT operation, accepted_quantity, produced_quantity, rejected_quantity, scrap_quantity FROM job_card WHERE work_order_id = ? AND operation_sequence < ? ORDER BY operation_sequence DESC LIMIT 1',
         [jobCard.work_order_id, jobCard.operation_sequence || 0]
       );
 
@@ -4675,24 +4893,35 @@ async deleteAllBOMRawMaterials(bom_id) {
         
         // If the previous operation has started producing, we cap by its accepted quantity
         if (prevProduced > 0) {
-          return typeof prev.accepted_quantity !== 'undefined' && prev.accepted_quantity !== null
+          const qty = typeof prev.accepted_quantity !== 'undefined' && prev.accepted_quantity !== null
             ? parseFloat(prev.accepted_quantity)
             : (parseFloat(prev.produced_quantity) || 0) - (parseFloat(prev.rejected_quantity) || 0) - (parseFloat(prev.scrap_quantity) || 0);
+          
+          if (returnDetails) {
+            return {
+              quantity: qty,
+              bottleneck: `Capped by previous operation: ${prev.operation}`
+            };
+          }
+          return qty;
         }
-        // Fall through to planned_quantity if previous hasn't started yet
       }
 
-      return parseFloat(jobCard.planned_quantity) || 0;
+      const finalPlanned = parseFloat(jobCard.planned_quantity) || 0;
+      return returnDetails ? { quantity: finalPlanned, bottleneck: null } : finalPlanned;
     } catch (error) {
       console.error('Error in _getMaxAllowedQuantity:', error);
-      return 0;
+      return returnDetails ? { quantity: 0, bottleneck: error.message } : 0;
     }
   }
 
   async createTimeLog(data) {
     try {
       data.log_date = this._formatDate(data.log_date || new Date());
-      const maxAllowed = await this._getMaxAllowedQuantity(data.job_card_id);
+      const maxAllowedDetails = await this._getMaxAllowedQuantity(data.job_card_id, null, true);
+      const maxAllowed = maxAllowedDetails.quantity;
+      const bottleneck = maxAllowedDetails.bottleneck;
+      
       const currentJobCard = await this.getJobCardDetails(data.job_card_id);
       
       const newQty = parseFloat(data.completed_qty || 0);
@@ -4724,9 +4953,11 @@ async deleteAllBOMRawMaterials(bom_id) {
       const currentTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced, totalRejectionProduced) - totalRejectedAndScrap;
       const newTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced + newProduced, totalRejectionProduced) - totalRejectedAndScrap;
       
-      const plannedQuantity = parseFloat(currentJobCard.planned_quantity) || 0;
-      if (newTotalProduced > plannedQuantity + 0.0001) {
-         throw new Error(`Quantity Validation Error: Total produced (${newTotalProduced.toFixed(2)}) cannot exceed planned quantity (${plannedQuantity.toFixed(2)}).`);
+      const targetLimit = Math.max(parseFloat(currentJobCard.planned_quantity) || 0, maxAllowed);
+      
+      if (newTotalProduced > targetLimit + 0.0001) {
+        let extraInfo = bottleneck ? ` This is ${bottleneck.toLowerCase()}.` : '';
+        throw new Error(`Quantity Validation Error: Total produced (${newTotalProduced.toFixed(2)}) cannot exceed target limit (${targetLimit.toFixed(2)}).${extraInfo}`);
       }
 
       // Convert times to 24-hour format for database storage and overlap detection
@@ -4913,7 +5144,10 @@ async deleteAllBOMRawMaterials(bom_id) {
   async createRejection(data) {
     try {
       data.log_date = this._formatDate(data.log_date || new Date());
-      const maxAllowed = await this._getMaxAllowedQuantity(data.job_card_id);
+      const maxAllowedDetails = await this._getMaxAllowedQuantity(data.job_card_id, null, true);
+      const maxAllowed = maxAllowedDetails.quantity;
+      const bottleneck = maxAllowedDetails.bottleneck;
+      
       const currentJobCard = await this.getJobCardDetails(data.job_card_id);
       
       // Calculate how much this entry would increase total production
@@ -4931,18 +5165,9 @@ async deleteAllBOMRawMaterials(bom_id) {
       
       const tolerance = 0.001; 
       if (newTotalAccepted > (maxAllowed * (1 + tolerance)) + 0.0001) {
-        const prevOpDetails = await this.db.query(
-          'SELECT operation, accepted_quantity FROM job_card WHERE work_order_id = ? AND operation_sequence < ? ORDER BY operation_sequence DESC LIMIT 1',
-          [currentJobCard.work_order_id, currentJobCard.operation_sequence]
-        );
-        
-        let extraInfo = '';
-        if (prevOpDetails[0] && prevOpDetails[0].length > 0) {
-          const prev = prevOpDetails[0][0];
-          extraInfo = ` This is capped by the accepted quantity (${parseFloat(prev.accepted_quantity).toFixed(2)}) from the previous operation (${prev.operation}).`;
-        }
+        let extraInfo = bottleneck ? ` This is ${bottleneck.toLowerCase()}.` : '';
 
-        throw new Error(`Quantity Validation Error: Total accepted quantity (${newTotalAccepted.toFixed(2)}) would exceed target limit (${maxAllowed.toFixed(2)}).${extraInfo} Please adjust rejected quantities to match the original job card target.`);
+        throw new Error(`Quantity Validation Error: Total accepted quantity (${newTotalAccepted.toFixed(2)}) would exceed target limit (${maxAllowed.toFixed(2)}).${extraInfo} Please adjust quantities or update previous operations.`);
       }
 
       const rejectionId = `REJ-${Date.now()}`
@@ -5319,15 +5544,22 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async endOperation(jobCardId, data) {
+  async endOperation(jobCardId, data, connection = null) {
+    let isInternalTransaction = false;
     try {
+      if (!connection) {
+        connection = await this.db.getConnection();
+        await connection.beginTransaction();
+        isInternalTransaction = true;
+      }
+
       const { actual_end_date, next_operation_id, notes, created_by } = data
 
       // Ensure quantities and costs are synced one last time
-      await this._syncJobCardQuantities(jobCardId);
+      await this._syncJobCardQuantities(jobCardId, {}, connection);
 
       // Requirement 140: Quality entry is mandatory before Job Card completion
-      const jobCard = await this.getJobCardDetails(jobCardId)
+      const jobCard = await this.getJobCardDetails(jobCardId, connection)
       if (!jobCard) {
         throw new Error('Job card not found')
       }
@@ -5338,73 +5570,80 @@ async deleteAllBOMRawMaterials(bom_id) {
       }
 
       // 2. Check for mandatory Quality Inspection Result or Rejection Entry
-      const [inspections] = await this.db.query(
+      const [inspections] = await connection.query(
         "SELECT inspection_id FROM inspection_result WHERE reference_type = 'Job Card' AND reference_id = ?",
         [jobCardId]
       )
       
-      const [rejections] = await this.db.query(
+      const [rejections] = await connection.query(
         "SELECT rejection_id FROM rejection_entry WHERE job_card_id = ?",
         [jobCardId]
       )
 
       if ((!inspections || inspections.length === 0) && (!rejections || rejections.length === 0)) {
-        // If no formal inspection and no rejection entries, we at least expect some accepted quantity to have been logged via Time Logs
-        // but the prompt says "Quality entry is mandatory". 
-        // We'll enforce that either an inspection or a rejection entry (which captures quality state) must exist.
-        // If all pieces were accepted without rejections, a "Pass" inspection should be recorded.
         throw new Error(`Quality Validation Error: Quality entry is mandatory before Job Card completion. Please record an Inspection Result or a Rejection Entry for Job Card ${jobCardId}.`)
       }
 
       const eventTimestamp = new Date(actual_end_date).toISOString().replace('Z', '').replace('T', ' ')
-      await this.db.query(
+      await connection.query(
         `INSERT INTO operation_execution_log 
           (job_card_id, event_type, event_timestamp, notes, created_by)
          VALUES (?, 'END', ?, ?, ?)`,
         [jobCardId, eventTimestamp, notes || null, created_by || 1]
       )
 
-      await this.db.query(
+      await connection.query(
         `UPDATE job_card SET actual_end_date = ?, status = 'completed', next_operation_id = ? WHERE job_card_id = ?`,
         [eventTimestamp, next_operation_id || null, jobCardId]
       )
 
-      // AUTO: Mark next assigned operation as "ready"
+      // AUTO: Mark next assigned operation as "in-progress" if units are transferred
       if (next_operation_id) {
-        await this._activateNextJobCardForDirectLink(next_operation_id, jobCard.accepted_quantity || jobCard.accepted_qty || 0);
+        await this._activateNextJobCardForDirectLink(next_operation_id, jobCard.accepted_quantity || jobCard.accepted_qty || 0, true, connection);
       } else {
-        await this._activateNextJobCard(jobCard.work_order_id, jobCard.operation_sequence || 0, jobCard.accepted_quantity || jobCard.accepted_qty || 0);
+        await this._activateNextJobCard(jobCard.work_order_id, jobCard.operation_sequence || 0, jobCard.accepted_quantity || jobCard.accepted_qty || 0, true, connection);
       }
 
       // Sync Work Order and Sales Order status
-      const jobCardCompleted = await this.getJobCardDetails(jobCardId)
+      const jobCardCompleted = await this.getJobCardDetails(jobCardId, connection)
       if (jobCardCompleted && jobCardCompleted.work_order_id) {
-        await this.rollUpJobCardCost(jobCardId)
-        await this.checkAndUpdateWorkOrderCompletion(jobCardCompleted.work_order_id)
+        await this.rollUpJobCardCost(jobCardId, connection)
+        await this.checkAndUpdateWorkOrderCompletion(jobCardCompleted.work_order_id, connection)
+      }
+
+      if (isInternalTransaction) {
+        await connection.commit();
       }
 
       return { success: true, message: 'Operation ended successfully' }
     } catch (error) {
+      if (isInternalTransaction && connection) {
+        await connection.rollback();
+      }
       throw error
+    } finally {
+      if (isInternalTransaction && connection) {
+        connection.release();
+      }
     }
   }
 
-  async rollUpJobCardCost(jobCardId) {
+  async rollUpJobCardCost(jobCardId, connection = null) {
     try {
-      const jobCard = await this.getJobCardDetails(jobCardId);
+      const jobCard = await this.getJobCardDetails(jobCardId, connection);
       if (!jobCard || !jobCard.work_order_id) return;
 
       const woId = jobCard.work_order_id;
 
       // 1. Get all operating costs from completed Job Cards for this Work Order
-      const [opCostRow] = await this.db.query(
+      const [opCostRow] = await (connection || this.db).query(
         "SELECT SUM(operating_cost) as total_op_cost FROM job_card WHERE work_order_id = ?",
         [woId]
       );
       const totalOpCost = parseFloat(opCostRow[0].total_op_cost) || 0;
 
       // 2. Get total material cost (based on what's been consumed so far)
-      const [matCostRow] = await this.db.query(
+      const [matCostRow] = await (connection || this.db).query(
         `SELECT SUM(wi.consumed_qty * i.valuation_rate) as total_mat_cost 
          FROM work_order_item wi
          LEFT JOIN item i ON wi.item_code = i.item_code
@@ -5416,11 +5655,11 @@ async deleteAllBOMRawMaterials(bom_id) {
       const totalCost = totalOpCost + totalMatCost;
 
       // 3. Update Work Order
-      const [wo] = await this.db.query("SELECT quantity FROM work_order WHERE wo_id = ?", [woId]);
+      const [wo] = await (connection || this.db).query("SELECT quantity FROM work_order WHERE wo_id = ?", [woId]);
       const quantity = wo.length > 0 ? (parseFloat(wo[0].quantity) || 1) : 1;
       const unitCost = totalCost / quantity;
 
-      await this.db.query(
+      await (connection || this.db).query(
         "UPDATE work_order SET total_cost = ?, unit_cost = ? WHERE wo_id = ?",
         [totalCost, unitCost, woId]
       );
@@ -5636,8 +5875,123 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
+  async getAllOutwardChallans(filters = {}) {
+    try {
+      let query = `
+        SELECT oc.*, jc.operation, wo.sales_order_id, sso.project_name
+        FROM outward_challan oc
+        LEFT JOIN job_card jc ON oc.job_card_id = jc.job_card_id
+        LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
+        LEFT JOIN selling_sales_order sso ON wo.sales_order_id = sso.sales_order_id
+        WHERE 1=1
+      `;
+      const values = [];
+
+      if (filters.project_name) {
+        query += " AND sso.project_name = ?";
+        values.push(filters.project_name);
+      }
+      if (filters.operation) {
+        query += " AND jc.operation = ?";
+        values.push(filters.operation);
+      }
+      if (filters.vendor_id) {
+        query += " AND oc.vendor_id = ?";
+        values.push(filters.vendor_id);
+      }
+
+      query += " ORDER BY oc.created_at DESC";
+      const [challans] = await this.db.query(query, values);
+      return challans || [];
+    } catch (error) {
+      console.error('Error in getAllOutwardChallans:', error);
+      throw error;
+    }
+  }
+
+  async getAllInwardChallans(filters = {}) {
+    try {
+      let query = `
+        SELECT ic.*, jc.operation, wo.sales_order_id, sso.project_name
+        FROM inward_challan ic
+        LEFT JOIN job_card jc ON ic.job_card_id = jc.job_card_id
+        LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
+        LEFT JOIN selling_sales_order sso ON wo.sales_order_id = sso.sales_order_id
+        WHERE 1=1
+      `;
+      const values = [];
+
+      if (filters.project_name) {
+        query += " AND sso.project_name = ?";
+        values.push(filters.project_name);
+      }
+      if (filters.operation) {
+        query += " AND jc.operation = ?";
+        values.push(filters.operation);
+      }
+      if (filters.vendor_id) {
+        query += " AND ic.vendor_id = ?";
+        values.push(filters.vendor_id);
+      }
+
+      query += " ORDER BY ic.created_at DESC";
+      const [challans] = await this.db.query(query, values);
+      return challans || [];
+    } catch (error) {
+      console.error('Error in getAllInwardChallans:', error);
+      throw error;
+    }
+  }
+
+  async getChallanProjectNames() {
+    try {
+      const query = `
+        SELECT DISTINCT sso.project_name 
+        FROM selling_sales_order sso
+        JOIN work_order wo ON sso.sales_order_id = wo.sales_order_id
+        JOIN job_card jc ON wo.wo_id = jc.work_order_id
+        WHERE jc.job_card_id IN (SELECT job_card_id FROM outward_challan UNION SELECT job_card_id FROM inward_challan)
+        AND sso.project_name IS NOT NULL AND sso.project_name != ''
+      `;
+      const [rows] = await this.db.query(query);
+      return rows.map(r => r.project_name);
+    } catch (error) {
+      console.error('Error in getChallanProjectNames:', error);
+      throw error;
+    }
+  }
+
+  async getChallanOperations() {
+    try {
+      const query = `
+        SELECT DISTINCT jc.operation 
+        FROM job_card jc
+        WHERE jc.job_card_id IN (SELECT job_card_id FROM outward_challan UNION SELECT job_card_id FROM inward_challan)
+        AND jc.operation IS NOT NULL AND jc.operation != ''
+      `;
+      const [rows] = await this.db.query(query);
+      return rows.map(r => r.operation);
+    } catch (error) {
+      console.error('Error in getChallanOperations:', error);
+      throw error;
+    }
+  }
+
   async deleteOutwardChallan(challanNumber) {
     try {
+      // Get challan details before deletion
+      const [challanRows] = await this.db.query('SELECT job_card_id, dispatch_quantity FROM outward_challan WHERE challan_number = ?', [challanNumber]);
+      
+      if (challanRows.length > 0) {
+        const { job_card_id, dispatch_quantity } = challanRows[0];
+        
+        // Update job card sent_qty
+        await this.db.query(
+          'UPDATE job_card SET sent_qty = GREATEST(0, sent_qty - ?), subcontract_status = IF(sent_qty - ? <= 0, "READY", "PARTIALLY_RECEIVED") WHERE job_card_id = ?',
+          [dispatch_quantity, dispatch_quantity, job_card_id]
+        );
+      }
+
       await this.db.query('DELETE FROM outward_challan WHERE challan_number = ?', [challanNumber])
       return true
     } catch (error) {
@@ -5766,13 +6120,13 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async updateJobCardStatus(jobCardId, newStatus) {
+  async updateJobCardStatus(jobCardId, newStatus, connection = null) {
     try {
       const normalizedStatus = ((newStatus || '').toLowerCase().replace(/\s+/g, '-')).trim()
       
       // NEW: Validation before starting a Job Card
       if (normalizedStatus === 'in-progress') {
-        const [jc] = await this.db.query(
+        const [jc] = await (connection || this.db).query(
           'SELECT work_order_id, operation_sequence, operation FROM job_card WHERE job_card_id = ?',
           [jobCardId]
         );
@@ -5798,13 +6152,13 @@ async deleteAllBOMRawMaterials(bom_id) {
             }
             
             // 2. Check Material Allocation
-            const [allocations] = await this.db.query(
+            const [allocations] = await (connection || this.db).query(
               'SELECT item_code, status, allocated_qty FROM material_allocation WHERE work_order_id = ?',
               [work_order_id]
             );
             
             if (allocations && allocations.length > 0) {
-              const [requiredItems] = await this.db.query(
+              const [requiredItems] = await (connection || this.db).query(
                 'SELECT item_code, required_qty FROM work_order_item WHERE wo_id = ?',
                 [work_order_id]
               );
@@ -5841,7 +6195,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       }
 
       const updateQuery = `UPDATE job_card SET status = ?, updated_at = CURRENT_TIMESTAMP${dateFields.length > 0 ? ', ' + dateFields.join(', ') : ''} WHERE job_card_id = ?`;
-      await this.db.query(updateQuery, [normalizedStatus, jobCardId]);
+      await (connection || this.db).query(updateQuery, [normalizedStatus, jobCardId]);
 
       // Machine Allocation Logic
       const [jcDetails] = await this.db.query(
@@ -5987,10 +6341,10 @@ async deleteAllBOMRawMaterials(bom_id) {
       throw error
     }
   }
-  async syncProductionPlanStatus(plan_id) {
+  async syncProductionPlanStatus(plan_id, connection = null) {
     if (!plan_id) return null;
     try {
-      const [workOrders] = await this.db.query(
+      const [workOrders] = await (connection || this.db).query(
         'SELECT status FROM work_order WHERE production_plan_id = ?',
         [plan_id]
       );
@@ -6013,7 +6367,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         newStatus = 'in_progress';
       }
 
-      const [currentPlan] = await this.db.query(
+      const [currentPlan] = await (connection || this.db).query(
         'SELECT status FROM production_plan WHERE plan_id = ?',
         [plan_id]
       );
@@ -6021,7 +6375,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (currentPlan && currentPlan.length > 0) {
         const currentStatus = (currentPlan[0].status || '').toLowerCase();
         if (currentStatus !== newStatus) {
-          await this.db.query(
+          await (connection || this.db).query(
             'UPDATE production_plan SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE plan_id = ?',
             [newStatus, plan_id]
           );
@@ -6035,9 +6389,9 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async _syncWorkOrderTotals(workOrderId) {
+  async _syncWorkOrderTotals(workOrderId, connection = null) {
     try {
-      const [jobCards] = await this.db.query(
+      const [jobCards] = await (connection || this.db).query(
         'SELECT produced_quantity, accepted_quantity, rejected_quantity, scrap_quantity, planned_quantity, operation_sequence FROM job_card WHERE work_order_id = ? ORDER BY operation_sequence ASC',
         [workOrderId]
       );
@@ -6066,7 +6420,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       // For now, let's use the simplest: (Accepted Qty of Last Op / Planned Qty of Last Op) * 100
       const progress = plannedQty > 0 ? Math.min(100, (finalAccepted / plannedQty) * 100) : 0;
 
-      await this.db.query(
+      await (connection || this.db).query(
         `UPDATE work_order SET 
           total_produced_qty = ?, 
           total_accepted_qty = ?, 
@@ -6083,12 +6437,12 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async _triggerOEERecalculation(jobCardId, logDate, shift) {
+  async _triggerOEERecalculation(jobCardId, logDate, shift, connection = null) {
     try {
       if (!jobCardId || !logDate || !shift) return;
       const OEEModel = (await import('./OEEModel.js')).default;
-      const oeeModel = new OEEModel(this.db);
-      await oeeModel.calculateAndSaveJobCardOEE(jobCardId, logDate, shift);
+      const oeeModel = new OEEModel(connection || this.db);
+      await oeeModel.calculateAndSaveJobCardOEE(jobCardId, logDate, shift, connection);
     } catch (error) {
       console.error('Error triggering OEE recalculation:', error);
     }

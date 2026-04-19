@@ -403,7 +403,7 @@ export default function SalesInvoice() {
                 <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               </button>
               <div className="h-6 w-px bg-slate-200 mx-2" />
-              <button className="flex items-center gap-2 px-4 py-2 text-slate-600 bg-white border border-slate-200 rounded  text-xs  hover:bg-slate-50 transition-all">
+              <button className="flex items-center gap-2 p-2  text-slate-600 bg-white border border-slate-200 rounded  text-xs  hover:bg-slate-50 transition-all">
                 <Filter size={14} />
                 Advance Filter
               </button>

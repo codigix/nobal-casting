@@ -6,6 +6,7 @@ import Badge from '../../components/Badge/Badge'
 import Card from '../../components/Card/Card'
 import DataTable from '../../components/Table/DataTable'
 import Modal, { useModal } from '../../components/Modal/Modal'
+import SearchableSelect from '../../components/SearchableSelect'
 import {
   Plus, Trash2, Package, X, Calendar, Search, Warehouse, Tag,
   Database, Grid3x3, List, Eye, Edit2, TrendingUp, TrendingDown,
@@ -24,9 +25,6 @@ export default function StockEntries() {
   const [editingId, setEditingId] = useState(null)
   const [warehouses, setWarehouses] = useState([])
   const [items, setItems] = useState([])
-  const [grnRequests, setGrnRequests] = useState([])
-  const [grnWithEntries, setGrnWithEntries] = useState(new Set())
-  const [selectedGRN, setSelectedGRN] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [warehouseFilter, setWarehouseFilter] = useState('')
@@ -66,13 +64,11 @@ export default function StockEntries() {
     fetchStatistics()
     fetchWarehouses()
     fetchItems()
-    fetchApprovedGRNs()
   }, [])
 
   useEffect(() => {
     if (!formModal.isOpen) {
       resetForm()
-      setSelectedGRN(null)
     }
   }, [formModal.isOpen])
 
@@ -85,43 +81,12 @@ export default function StockEntries() {
     }
   }
 
-  const fetchApprovedGRNs = async () => {
-    try {
-      const [grnRes, entriesRes] = await Promise.all([
-        api.get('/grn-requests?status=approved'),
-        api.get('/stock/entries')
-      ])
-
-      const grns = grnRes.data.data || []
-      const entriesData = entriesRes.data.data || []
-
-      const grnNosWithEntries = new Set(
-        entriesData
-          .filter(entry => entry.reference_doctype === 'GRN')
-          .map(entry => entry.reference_name)
-      )
-
-      setGrnRequests(grns)
-      setGrnWithEntries(grnNosWithEntries)
-    } catch (err) {
-      console.error('Failed to fetch approved GRNs:', err)
-    }
-  }
-
   const fetchEntries = async () => {
     try {
       setLoading(true)
       const response = await api.get('/stock/entries')
       const entriesData = response.data.data || []
       setEntries(entriesData)
-
-      const grnNosWithEntries = new Set(
-        entriesData
-          .filter(entry => entry.reference_doctype === 'GRN')
-          .map(entry => entry.reference_name)
-      )
-      setGrnWithEntries(grnNosWithEntries)
-
       setError(null)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch stock entries')
@@ -149,43 +114,9 @@ export default function StockEntries() {
     }
   }
 
-  const handleGRNSelectInForm = (grnId) => {
-    const grn = grnRequests.find(g => g.id === parseInt(grnId))
-    if (!grn) return
-
-    setSelectedGRN(grn)
-
-    const grnItems = (grn.items || []).map(item => ({
-      _key: `grn_${item.id}`,
-      item_code: item.item_code,
-      item_name: item.item_name,
-      qty: Number(item.accepted_qty) || 0,
-      grn_item_id: item.id,
-      batch_no: item.batch_no || '',
-      valuation_rate: Number(item.valuation_rate) || 0,
-      uom: 'Kg'
-    }))
-
-    setFormData(prev => ({
-      ...prev,
-      entry_type: 'Material Receipt',
-      purpose: `GRN: ${grn.grn_no}`,
-      reference_doctype: 'GRN',
-      reference_name: grn.grn_no,
-      remarks: grn.notes || '',
-      grn_id: grnId
-    }))
-
-    setEntryItems(grnItems)
-  }
-
   const handleChange = (e) => {
     const { name, value } = e.target
-    if (name === 'grn_id') {
-      handleGRNSelectInForm(value)
-    } else {
-      setFormData({ ...formData, [name]: value })
-    }
+    setFormData({ ...formData, [name]: value })
   }
 
   const handleAddItem = () => {
@@ -219,7 +150,6 @@ export default function StockEntries() {
         ...formData,
         from_warehouse_id: formData.from_warehouse_id ? Number(formData.from_warehouse_id) : null,
         to_warehouse_id: formData.to_warehouse_id ? Number(formData.to_warehouse_id) : null,
-        grn_id: formData.grn_id ? Number(formData.grn_id) : null,
         items: cleanItems
       }
 
@@ -285,11 +215,9 @@ export default function StockEntries() {
       purpose: '',
       reference_doctype: '',
       reference_name: '',
-      remarks: '',
-      grn_id: ''
+      remarks: ''
     })
     setEntryItems([])
-    setSelectedGRN(null)
     setEditingId(null)
   }
 
@@ -309,13 +237,14 @@ export default function StockEntries() {
 
   const getTypeIcon = (type) => {
     switch (type) {
-      case 'Material Receipt':
+      case 'Purchase':
         return <Package size={20} className="text-green-500" />
-      case 'Material Transfer':
+      case 'Transfer':
         return <Database size={20} className="text-blue-500" />
-      case 'Material Issue':
+      case 'Issue':
         return <Tag size={20} className="text-orange-500" />
       case 'Manufacturing Return':
+      case 'Other':
         return <Package size={20} className="text-purple-500" />
       default:
         return <Package size={20} className="text-gray-500" />
@@ -324,13 +253,14 @@ export default function StockEntries() {
 
   const getTypeColor = (type) => {
     switch (type) {
-      case 'Material Receipt':
+      case 'Purchase':
         return 'from-green-50 to-green-100'
-      case 'Material Transfer':
+      case 'Transfer':
         return 'from-blue-50 to-blue-100'
-      case 'Material Issue':
+      case 'Issue':
         return 'from-orange-50 to-orange-100'
       case 'Manufacturing Return':
+      case 'Other':
         return 'from-purple-50 to-purple-100'
       default:
         return 'from-gray-50 to-gray-100'
@@ -368,15 +298,15 @@ export default function StockEntries() {
         // Determine source warehouse based on entry type
         let sourceWarehouse = row.from_warehouse_name
         let destWarehouse = row.to_warehouse_name
-        
+
         // For Stock Receipt (from purchase), check if it's from a PO
-        if (row.entry_type === 'Stock Receipt') {
+        if (row.entry_type === 'Purchase') {
           let sourceLabel = 'Purchase'
           let sourceColor = 'text-amber-600 dark:text-amber-400 font-medium'
-          
+
           // Check if we have explicit reference information
           const hasReference = row.reference_doctype && row.reference_doctype.trim() && row.reference_name && row.reference_name.trim()
-          
+
           if (hasReference) {
             const docType = row.reference_doctype.toUpperCase().trim()
             if (docType === 'PO' || docType === 'PURCHASE ORDER') {
@@ -390,7 +320,7 @@ export default function StockEntries() {
               sourceColor = 'text-blue-600 dark:text-blue-400 font-medium'
             }
           }
-          
+
           return (
             <div className="flex items-center gap-2 text-xs">
               <span className={sourceColor}>
@@ -403,9 +333,9 @@ export default function StockEntries() {
             </div>
           )
         }
-        
+
         // For Stock Issue, destination is not set, show only source
-        if (row.entry_type === 'Stock Issue') {
+        if (row.entry_type === 'Issue') {
           return (
             <div className="flex items-center gap-2 text-xs">
               <span className={sourceWarehouse ? "text-neutral-900 dark:text-white font-medium" : "text-neutral-400"}>
@@ -416,7 +346,7 @@ export default function StockEntries() {
             </div>
           )
         }
-        
+
         // For Stock Transfer, show both
         return (
           <div className="flex items-center gap-2 text-xs">
@@ -497,14 +427,13 @@ export default function StockEntries() {
             setEditingId(row.id || row.entry_id)
             setFormData({
               entry_date: row.entry_date?.split('T')[0],
-              entry_type: row.entry_type,
+              entry_type: row.original_entry_type || row.entry_type,
               from_warehouse_id: row.from_warehouse_id || '',
               to_warehouse_id: row.to_warehouse_id || '',
               purpose: row.purpose || '',
               reference_doctype: row.reference_doctype || '',
               reference_name: row.reference_name || '',
-              remarks: row.remarks || '',
-              grn_id: row.grn_id || ''
+              remarks: row.remarks || ''
             })
             api.get(`/stock/entries/${row.id || row.entry_id}`).then(res => {
               setEntryItems(res.data.data.items.map(it => ({ ...it, _key: `ext_${it.id}` })))
@@ -651,132 +580,69 @@ export default function StockEntries() {
           size="2xl"
           footer={
             <div className="flex justify-end gap-2 w-full">
-              <Button variant="secondary" onClick={formModal.close}>
+              <Button variant="secondary" onClick={formModal.close} className='p-2'>
                 Cancel
               </Button>
-              <Button variant="primary" type="submit" form="manual-entry-form" loading={loading} className="bg-amber-500 hover:bg-amber-600">
+              <Button variant="primary" type="submit" form="manual-entry-form" loading={loading} className="bg-amber-500 p-2 hover:bg-amber-600">
                 Create Entry
               </Button>
             </div>
           }
         >
           <form id="manual-entry-form" onSubmit={handleSubmit} className="space-y-2 py-2">
-            <div className="form-group">
-              <label className="text-[11px]  text-neutral-500  tracking-wider mb-1 block">
-                Select GRN Request (Optional)
-              </label>
-              <select
-                name="grn_id"
-                value={formData.grn_id}
-                onChange={handleChange}
-                className="w-full px-3 py-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
-              >
-                <option value="">-- Manual Entry --</option>
-                {grnRequests.map(grn => {
-                  const hasEntry = grnWithEntries.has(grn.grn_no)
-                  return (
-                    <option
-                      key={grn.id}
-                      value={grn.id}
-                      disabled={hasEntry}
-                      style={{ color: hasEntry ? '#999' : 'inherit' }}
-                    >
-                      {grn.grn_no} - {grn.supplier_name} ({grn.items?.length} items)
-                      {hasEntry ? ' (Already Processed)' : ''}
-                    </option>
-                  )
-                })}
-              </select>
-              <div className="mt-1.5 text-[10px] text-neutral-500 flex items-center gap-3">
-                <span>Available GRNs: <span className=" text-neutral-700 dark:text-neutral-300">{grnRequests.filter(g => !grnWithEntries.has(g.grn_no)).length}</span></span>
-                <span className="w-1 h-1 rounded  bg-neutral-300" />
-                <span>Processed: <span className=" text-neutral-700 dark:text-neutral-300">{grnWithEntries.size}</span></span>
-              </div>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 
-            {selectedGRN && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-xs p-3">
-                <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">
-                  GRN: <span className="">{selectedGRN.grn_no}</span> | PO: <span className="">{selectedGRN.po_no}</span> | Supplier: <span className="">{selectedGRN.supplier_name}</span>
-                </p>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[11px]  text-neutral-500  tracking-wider">
-                  Entry Date *
-                </label>
-                <input
-                  type="date"
-                  name="entry_date"
-                  value={formData.entry_date}
-                  onChange={handleChange}
+              <div className="col-span-2">
+                <SearchableSelect
+                  label="Entry Type"
+                  value={formData.entry_type}
+                  onChange={(val) => setFormData({ ...formData, entry_type: val })}
                   required
-                  className="w-full px-3 py-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  options={[
+                    { value: "Material Transfer", label: "Transfer" },
+                    { value: "Material Receipt", label: "Purchase" },
+                    { value: "Purchase", label: "Purchase" },
+                    { value: "Material Issue", label: "Issue" },
+                    { value: "Manufacturing Return", label: "Manufacturing Return" },
+                    { value: "Repack", label: "Repack" },
+                    { value: "Scrap Entry", label: "Scrap Entry" },
+                  ]}
+                  placeholder="Select Type"
+                  containerClassName="bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px]  text-neutral-500  tracking-wider">
-                  Entry Type *
-                </label>
-                <select
-                  name="entry_type"
-                  value={formData.entry_type}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  <option value="">Select Type</option>
-                  <option value="Material Transfer">Material Transfer</option>
-                  <option value="Material Receipt">Material Receipt</option>
-                  <option value="Material Issue">Material Issue</option>
-                  <option value="Manufacturing Return">Manufacturing Return</option>
-                  <option value="Repack">Repack</option>
-                  <option value="Scrap Entry">Scrap Entry</option>
-                </select>
+              {!['Purchase', 'Material Receipt'].includes(formData.entry_type) && (
+                <div className="col-span-1">
+                  <SearchableSelect
+                    label="From Warehouse"
+                    value={formData.from_warehouse_id}
+                    onChange={(val) => setFormData({ ...formData, from_warehouse_id: val })}
+                    options={warehouses.map(wh => ({
+                      value: String(wh.id),
+                      label: wh.warehouse_name
+                    }))}
+                    placeholder="Select Source Warehouse"
+                    containerClassName="bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700"
+                  />
+                </div>
+              )}
+              <div className={['Purchase', 'Material Receipt'].includes(formData.entry_type) ? "col-span-2" : "col-span-1"}>
+                <SearchableSelect
+                  label={['Purchase', 'Material Receipt'].includes(formData.entry_type) ? 'Store Warehouse' : 'To Warehouse'}
+                  value={formData.to_warehouse_id}
+                  onChange={(val) => setFormData({ ...formData, to_warehouse_id: val })}
+                  required={['Material Receipt', 'Purchase'].includes(formData.entry_type)}
+                  options={warehouses.map(wh => ({
+                    value: String(wh.id),
+                    label: wh.warehouse_name
+                  }))}
+                  placeholder={['Purchase', 'Material Receipt'].includes(formData.entry_type) ? 'Select Store Warehouse' : 'Select Destination Warehouse'}
+                  containerClassName="bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700"
+                />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[11px]  text-neutral-500  tracking-wider">
-                  From Warehouse
-                </label>
-                <select
-                  name="from_warehouse_id"
-                  value={formData.from_warehouse_id}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  <option value="">Select Source Warehouse</option>
-                  {warehouses.map(wh => (
-                    <option key={wh.id} value={String(wh.id)}>
-                      {wh.warehouse_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px]  text-neutral-500  tracking-wider">
-                  To Warehouse {formData.entry_type === 'Material Receipt' && '*'}
-                </label>
-                <select
-                  name="to_warehouse_id"
-                  value={formData.to_warehouse_id}
-                  onChange={handleChange}
-                  required={formData.entry_type === 'Material Receipt'}
-                  className="w-full px-3 py-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  <option value="">Select Destination Warehouse</option>
-                  {warehouses.map(wh => (
-                    <option key={wh.id} value={String(wh.id)}>
-                      {wh.warehouse_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+
 
             <Card className="border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20">
               <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">
@@ -786,21 +652,22 @@ export default function StockEntries() {
                 </h4>
               </div>
               <div className="p-3 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px]  text-neutral-400 ">Item Code *</label>
-                    <select
+                    <label className="text-[10px]  text-neutral-400 ">Item Code</label>
+
+                    <SearchableSelect
+
                       value={newItem.item_code}
-                      onChange={(e) => setNewItem({ ...newItem, item_code: e.target.value })}
-                      className="w-full px-3 py-1.5 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
-                    >
-                      <option value="">Select Item</option>
-                      {items.map(item => (
-                        <option key={item.item_code} value={item.item_code}>
-                          {item.name || item.item_name} ({item.item_code})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setNewItem({ ...newItem, item_code: val })}
+                      options={items.map(item => ({
+                        value: item.item_code,
+                        label: `${item.name || item.item_name} (${item.item_code})`
+                      }))}
+                      placeholder="Select Item"
+                      required
+                      containerClassName="bg-white dark:bg-neutral-800 text-xs border-neutral-200 dark:border-neutral-700"
+                    />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px]  text-neutral-400 ">Quantity *</label>
@@ -822,9 +689,6 @@ export default function StockEntries() {
                       className="w-full px-3 py-1.5 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <label className="text-[10px]  text-neutral-400 ">Batch No</label>
                     <input
@@ -853,6 +717,7 @@ export default function StockEntries() {
                     </Button>
                   </div>
                 </div>
+
 
                 {entryItems.length > 0 && (
                   <div className="mt-4 border border-neutral-200 dark:border-neutral-700 rounded-xs overflow-hidden bg-white dark:bg-neutral-800">
@@ -894,19 +759,7 @@ export default function StockEntries() {
               </div>
             </Card>
 
-            <div className="space-y-1.5">
-              <label className="text-[11px]  text-neutral-500  tracking-wider">
-                Remarks
-              </label>
-              <textarea
-                name="remarks"
-                value={formData.remarks}
-                onChange={handleChange}
-                rows={2}
-                placeholder="Additional notes..."
-                className="w-full px-3 py-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
-              />
-            </div>
+           
           </form>
         </Modal>
 
@@ -961,12 +814,10 @@ export default function StockEntries() {
                     className="bg-transparent text-xs border-0 text-neutral-700 dark:text-neutral-300 focus:outline-none cursor-pointer min-w-[100px]"
                   >
                     <option value="">All Types</option>
-                    <option value="Material Transfer">Material Transfer</option>
-                    <option value="Material Receipt">Material Receipt</option>
-                    <option value="Material Issue">Material Issue</option>
-                    <option value="Manufacturing Return">Manufacturing Return</option>
-                    <option value="Repack">Repack</option>
-                    <option value="Scrap Entry">Scrap Entry</option>
+                    <option value="Transfer">Transfer</option>
+                    <option value="Purchase">Purchase</option>
+                    <option value="Issue">Issue</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
 

@@ -215,7 +215,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Supplier & RFQ Selection */}
-          <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
+          <section className="bg-white rounded  border border-neutral-200 ">
             <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
               <User size={18} className="text-primary-600" />
               <h3 className="font-semibold text-neutral-800">Source Information</h3>
@@ -288,7 +288,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
 
         {/* Quotation Items */}
         {formData.items.length > 0 && (
-          <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
+          <section className="bg-white rounded  border border-neutral-200 ">
             <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
               <ShoppingBag size={18} className="text-primary-600" />
               <h3 className="font-semibold text-neutral-800">Quotation Items</h3>
@@ -365,7 +365,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
         )}
 
         {/* Notes Section */}
-        <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
+        <section className="bg-white rounded  border border-neutral-200 ">
           <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
             <FileText size={18} className="text-primary-600" />
             <h3 className="font-semibold text-neutral-800">Notes & Comments</h3>

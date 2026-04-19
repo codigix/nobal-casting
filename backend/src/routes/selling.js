@@ -31,6 +31,7 @@ router.delete('/sales-orders/truncate/all', SellingController.truncateSalesOrder
 router.put('/sales-orders/:id/confirm', SellingController.confirmSalesOrder)
 // Generic :id routes
 router.get('/sales-orders/:id', SellingController.getSalesOrderById)
+router.get('/sales-orders/:id/fulfillment-status', SellingController.getFulfillmentStatus)
 router.put('/sales-orders/:id', SellingController.updateSalesOrder)
 router.delete('/sales-orders/:id', SellingController.deleteSalesOrder)
 

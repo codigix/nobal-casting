@@ -18,7 +18,13 @@ class StockEntryModel {
           se.id as entry_id,
           se.entry_no,
           se.entry_date,
-          se.entry_type,
+          CASE 
+            WHEN se.entry_type = 'Material Transfer' THEN 'Transfer'
+            WHEN se.entry_type = 'Material Issue' THEN 'Issue'
+            WHEN se.entry_type IN ('Material Receipt', 'Purchase') THEN 'Purchase'
+            ELSE 'Other'
+          END as entry_type,
+          se.entry_type as original_entry_type,
           se.purpose,
           se.reference_doctype,
           se.reference_name,
@@ -93,6 +99,13 @@ class StockEntryModel {
       const [entryRows] = await db.query(
         `SELECT 
           se.*,
+          CASE 
+            WHEN se.entry_type = 'Material Transfer' THEN 'Transfer'
+            WHEN se.entry_type = 'Material Issue' THEN 'Issue'
+            WHEN se.entry_type IN ('Material Receipt', 'Purchase') THEN 'Purchase'
+            ELSE 'Other'
+          END as entry_type_display,
+          se.entry_type as original_entry_type,
           fw.warehouse_code as from_warehouse_code,
           fw.warehouse_name as from_warehouse_name,
           tw.warehouse_code as to_warehouse_code,
@@ -405,7 +418,8 @@ class StockEntryModel {
           'Material Transfer': 'Transfer',
           'Manufacturing Return': 'Manufacturing Return',
           'Repack': 'Repack',
-          'Scrap Entry': 'Scrap Entry'
+          'Scrap Entry': 'Scrap Entry',
+          'Purchase': 'Purchase Receipt'
         }
         const transactionType = transactionTypeMap[entry.entry_type] || entry.entry_type
 
@@ -456,7 +470,7 @@ class StockEntryModel {
           }
 
           // Handle Inward movement
-          if (['Material Receipt', 'Material Transfer', 'Manufacturing Return', 'Repack'].includes(entry.entry_type)) {
+          if (['Material Receipt', 'Material Transfer', 'Manufacturing Return', 'Repack', 'Purchase'].includes(entry.entry_type)) {
             const toWarehouseId = entry.to_warehouse_id
             if (!toWarehouseId) throw new Error(`Target warehouse is required for ${entry.entry_type}`)
             
@@ -496,7 +510,7 @@ class StockEntryModel {
             })
           }
 
-          const movement_type = entry.entry_type === 'Material Receipt' ? 'IN' : 
+          const movement_type = (entry.entry_type === 'Material Receipt' || entry.entry_type === 'Purchase') ? 'IN' : 
                                entry.entry_type === 'Material Issue' ? 'OUT' : 
                                entry.entry_type === 'Material Transfer' ? 'TRANSFER' : 
                                (entry.to_warehouse_id ? 'IN' : 'OUT')

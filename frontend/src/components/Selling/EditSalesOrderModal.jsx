@@ -285,7 +285,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                     name="status"
                     value={formData.status}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
+                    className="w-full p-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   >
                     <option value="draft">Draft</option>
                     <option value="confirmed">Confirmed</option>
@@ -443,7 +443,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                 value={formData.order_terms}
                 onChange={handleInputChange}
                 rows="4"
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
+                className="w-full p-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
               />
             </div>
           </div>

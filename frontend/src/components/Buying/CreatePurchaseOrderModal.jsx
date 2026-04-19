@@ -5,12 +5,14 @@ import Alert from '../Alert/Alert'
 import Badge from '../Badge/Badge'
 import Card from '../Card/Card'
 import Input from '../Input/Input'
+import SearchableSelect from '../SearchableSelect'
 import { Plus, Trash2, AlertCircle, CheckCircle, Package, Receipt, CreditCard, Calendar } from 'lucide-react'
-import { suppliersAPI, itemsAPI, taxTemplatesAPI, purchaseOrdersAPI } from '../../services/api'
+import { suppliersAPI, itemsAPI, taxTemplatesAPI, purchaseOrdersAPI, materialRequestsAPI } from '../../services/api'
 
 export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     supplier_id: '',
+    mr_id: '',
     order_date: '',
     expected_date: '',
     currency: 'INR',
@@ -19,6 +21,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
   })
 
   const [suppliers, setSuppliers] = useState([])
+  const [materialRequests, setMaterialRequests] = useState([])
   const [allItems, setAllItems] = useState([])
   const [taxTemplates, setTaxTemplates] = useState([])
   const [loading, setLoading] = useState(false)
@@ -37,15 +40,17 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
       setDataLoading(true)
       setError(null)
       
-      const [supRes, itemRes, taxRes] = await Promise.all([
+      const [supRes, itemRes, taxRes, mrRes] = await Promise.all([
         suppliersAPI.list(),
         itemsAPI.list(),
-        taxTemplatesAPI.list().catch(() => ({ data: { data: [] } }))
+        taxTemplatesAPI.list().catch(() => ({ data: { data: [] } })),
+        materialRequestsAPI.list().catch(() => ({ data: { data: [] } }))
       ])
 
       setSuppliers(supRes.data.data || [])
       setAllItems(itemRes.data.data || [])
       setTaxTemplates(taxRes.data.data || [])
+      setMaterialRequests(mrRes.data.data || [])
       
       const today = new Date().toISOString().split('T')[0]
       setFormData(prev => ({
@@ -61,8 +66,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
     }
   }
 
-  const handleSupplierChange = (e) => {
-    const supplierId = e.target.value
+  const handleSupplierChange = (supplierId) => {
     const supplier = suppliers.find(s => s.supplier_id === supplierId)
     setFormData(prev => ({
       ...prev,
@@ -70,6 +74,46 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
     }))
     setSupplierDetails(supplier)
     setError(null)
+  }
+
+  const handleMRChange = async (value) => {
+    // Value is passed directly from SearchableSelect
+    const mrId = value;
+    if (!mrId) {
+      setFormData(prev => ({ ...prev, mr_id: '', items: [{ item_code: '', qty: '', rate: '', schedule_date: '', uom: '' }] }))
+      return
+    }
+
+    try {
+      setLoading(true)
+      const res = await materialRequestsAPI.get(mrId)
+      const mr = res.data.data
+      
+      const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+        return new Date(dateStr).toISOString().split('T')[0];
+      }
+
+      const items = mr.items.map(item => ({
+        item_code: item.item_code,
+        qty: item.qty - (item.issued_qty || 0), // Remaining quantity
+        uom: item.uom,
+        rate: item.rate || 0,
+        schedule_date: formatDate(mr.required_by_date) || formData.expected_date
+      })).filter(item => item.qty > 0)
+
+      setFormData(prev => ({
+        ...prev,
+        mr_id: mrId,
+        items: items.length > 0 ? items : [{ item_code: '', qty: '', rate: '', schedule_date: '', uom: '' }],
+        expected_date: formatDate(mr.required_by_date) || prev.expected_date
+      }))
+    } catch (err) {
+      console.error('Failed to fetch Material Request details:', err)
+      setError('Failed to load Material Request details')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleInputChange = (e) => {
@@ -126,6 +170,37 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
     return q * r
   }
 
+  const getCleanMRName = (mr) => {
+    if (!mr.finished_goods_name) return 'Internal'
+    
+    // Normalize newlines
+    const normalized = mr.finished_goods_name.replace(/\\n/g, '\n')
+    
+    // If it specifically contains "Item: " followed by text
+    const itemMatch = normalized.match(/Item:\s*([^\n\r]+)/i)
+    if (itemMatch && itemMatch[1]) {
+      return itemMatch[1].trim()
+    }
+    
+    // Split into lines and clean up
+    const lines = normalized.split('\n').map(l => l.trim()).filter(l => l.length > 0)
+    
+    // Filter out metadata lines
+    const cleanLines = lines.filter(line => {
+      const l = line.toLowerCase()
+      return !l.startsWith('material request') && 
+             !l.startsWith('planned quantity') && 
+             !l.startsWith('includes raw') && 
+             !l.startsWith('bom:')
+    })
+    
+    if (cleanLines.length > 0) {
+      return cleanLines[0].replace(/^Item:\s*/i, '').trim()
+    }
+    
+    return lines[0]?.replace(/^Item:\s*/i, '').trim() || 'Internal'
+  }
+
   const calculateSubtotal = () => {
     return formData.items.reduce((total, item) => {
       return total + calculateLineAmount(item.qty, item.rate)
@@ -135,6 +210,24 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
   const getTotalQty = () => {
     return formData.items.reduce((total, item) => total + (parseFloat(item.qty) || 0), 0)
   }
+
+  const mrOptions = [
+    { value: '', label: 'Direct PO (No MR)' },
+    ...materialRequests.map(mr => ({
+      value: mr.mr_id,
+      label: `${mr.mr_id} - ${getCleanMRName(mr)} (${mr.status})`
+    }))
+  ]
+
+  const supplierOptions = suppliers.map(s => ({
+    value: s.supplier_id,
+    label: s.name
+  }))
+
+  const itemOptions = allItems.map(i => ({
+    value: i.item_code,
+    label: `${i.item_code} - ${i.name}`
+  }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -171,6 +264,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
       
       const submitData = {
         supplier_id: formData.supplier_id,
+        mr_id: formData.mr_id || null,
         order_date: formData.order_date,
         expected_date: formData.expected_date,
         currency: formData.currency,
@@ -194,6 +288,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
       const today = new Date().toISOString().split('T')[0]
       setFormData({
         supplier_id: '',
+        mr_id: '',
         order_date: today,
         expected_date: '',
         currency: 'INR',
@@ -224,18 +319,19 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
       isOpen={isOpen} 
       onClose={onClose} 
       title="Create New Purchase Order" 
-      size="3xl"
+      size="5xl"
       footer={
         <div className="flex justify-end gap-3 w-full">
-          <Button variant="outline" onClick={onClose} disabled={loading}>
+          <Button variant="outline" onClick={onClose} disabled={loading} className='p-2'>
             Cancel
           </Button>
           <Button 
             variant="primary" 
             onClick={handleSubmit} 
             loading={loading}
+            className='p-2'
           >
-            <CheckCircle size={16} className="mr-2" />
+            <CheckCircle size={15} className="mr-2" />
             Create Purchase Order
           </Button>
         </div>
@@ -245,36 +341,40 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
         {error && (
           <Alert variant="danger" className="mb-6">
             <div className="flex items-center gap-2">
-              <AlertCircle size={18} />
+              <AlertCircle size={15} />
               <span>{error}</span>
             </div>
           </Alert>
         )}
 
         {/* Basic Information Section */}
-        <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
+        <section className="bg-white rounded  border border-neutral-200 ">
           <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
-            <Receipt size={18} className="text-primary-600" />
-            <h3 className="font-semibold text-neutral-800">Basic Information</h3>
+            <Receipt size={15} className="text-primary-600" />
+            <h3 className=" text-neutral-800">Basic Information</h3>
           </div>
           
-          <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1.5">Material Request</label>
+              <SearchableSelect
+                options={mrOptions}
+                value={formData.mr_id}
+                onChange={handleMRChange}
+                placeholder="Select Material Request"
+                className="text-xs"
+              />
+            </div>
+
             <div>
               <label className="block text-xs font-medium text-neutral-700 mb-1.5">Supplier *</label>
-              <select
-                name="supplier_id"
+              <SearchableSelect
+                options={supplierOptions}
                 value={formData.supplier_id}
                 onChange={handleSupplierChange}
-                required
-                className="w-full h-10 px-3 rounded  border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm outline-none bg-white"
-              >
-                <option value="">Select Supplier</option>
-                {suppliers.map(supplier => (
-                  <option key={supplier.supplier_id} value={supplier.supplier_id}>
-                    {supplier.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="Select Supplier"
+                className="text-xs"
+              />
             </div>
 
             <Input
@@ -284,6 +384,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
               value={formData.order_date}
               onChange={handleInputChange}
               required
+              className="text-xs p-2"
             />
 
             <Input
@@ -293,6 +394,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
               value={formData.expected_date}
               onChange={handleInputChange}
               required
+              className="text-xs p-2"
             />
           </div>
 
@@ -311,46 +413,40 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
         </section>
 
         {/* Items Section */}
-        <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
+        <section className="bg-white rounded  border border-neutral-200 ">
           <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Package size={18} className="text-primary-600" />
-              <h3 className="font-semibold text-neutral-800">Purchase Order Items</h3>
+              <Package size={15} className="text-primary-600" />
+              <h3 className=" text-neutral-800">Purchase Order Items</h3>
             </div>
-            <Button variant="outline" size="sm" onClick={handleAddItem} className="h-8">
+            <Button variant="outline" size="xs" onClick={handleAddItem} className="p-2 text-xs rounded">
               <Plus size={14} className="mr-1" /> Add Item
             </Button>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="">
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-neutral-500  bg-neutral-50/50 border-b border-neutral-200">
                 <tr>
-                  <th className="p-2  font-semibold">Item Details</th>
-                  <th className="p-2  font-semibold w-24 text-right">Qty</th>
-                  <th className="p-2  font-semibold w-24">UOM</th>
-                  <th className="p-2  font-semibold w-32 text-right">Rate</th>
-                  <th className="p-2  font-semibold w-32 text-right">Amount</th>
-                  <th className="p-2  font-semibold w-16 text-center"></th>
+                  <th className="p-2  ">Item Details</th>
+                  <th className="p-2   w-24 text-right">Qty</th>
+                  <th className="p-2   w-24">UOM</th>
+                  <th className="p-2   w-32 text-right">Rate</th>
+                  <th className="p-2   w-32 text-right">Amount</th>
+                  <th className="p-2   w-16 text-center"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {formData.items.map((item, index) => (
                   <tr key={index} className="hover:bg-neutral-50/50 transition-colors">
                     <td className="p-2 ">
-                      <select
+                      <SearchableSelect
+                        options={itemOptions}
                         value={item.item_code}
-                        onChange={(e) => handleItemChange(index, 'item_code', e.target.value)}
-                        required
-                        className="w-full h-9 px-2 rounded-md border border-neutral-300 focus:ring-1 focus:ring-primary-500 outline-none text-sm bg-white"
-                      >
-                        <option value="">Select Item</option>
-                        {allItems.map(it => (
-                          <option key={it.item_code} value={it.item_code}>
-                            {it.item_code} - {it.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) => handleItemChange(index, 'item_code', value)}
+                        placeholder="Select Item"
+                        className="text-sm"
+                      />
                     </td>
                     <td className="p-2 ">
                       <input
@@ -361,7 +457,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
                         min="0"
                         step="0.01"
                         placeholder="0"
-                        className="w-full h-9 px-2 text-right rounded-md border border-neutral-300 focus:ring-1 focus:ring-primary-500 outline-none text-sm"
+                        className="w-full p-2 text-right rounded border border-neutral-300 focus:ring-1 focus:ring-primary-500 outline-none text-xs"
                       />
                     </td>
                     <td className="p-2 ">
@@ -369,7 +465,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
                         type="text"
                         value={item.uom}
                         readOnly
-                        className="w-full h-9 px-2 rounded-md border border-neutral-200 bg-neutral-50 text-neutral-500 text-sm outline-none"
+                        className="w-full p-2 rounded border border-neutral-200 bg-neutral-50 text-neutral-500 text-xs outline-none"
                       />
                     </td>
                     <td className="p-2 ">
@@ -381,7 +477,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
                         min="0"
                         step="0.01"
                         placeholder="0.00"
-                        className="w-full h-9 px-2 text-right rounded-md border border-neutral-300 focus:ring-1 focus:ring-primary-500 outline-none text-sm"
+                        className="w-full p-2 text-right rounded border border-neutral-300 focus:ring-1 focus:ring-primary-500 outline-none text-xs"
                       />
                     </td>
                     <td className="p-2  text-right font-medium text-neutral-900">
@@ -394,7 +490,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
                         disabled={formData.items.length === 1}
                         className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all disabled:opacity-30 disabled:hover:bg-transparent"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                       </button>
                     </td>
                   </tr>
@@ -403,17 +499,17 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
             </table>
           </div>
 
-          <div className="p-4 bg-neutral-50/50 border-t border-neutral-100 grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="p-2 bg-neutral-50/50 border-t border-neutral-100 grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="flex flex-col">
-              <span className="text-[10px]  tracking-wider  text-neutral-400 mb-1">Total Items</span>
+              <span className="text-xs    text-neutral-400 mb-1">Total Items</span>
               <span className="text-lg  text-neutral-800">{formData.items.length}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px]  tracking-wider  text-neutral-400 mb-1">Total Qty</span>
+              <span className="text-xs    text-neutral-400 mb-1">Total Qty</span>
               <span className="text-lg  text-neutral-800">{getTotalQty().toLocaleString('en-IN')}</span>
             </div>
             <div className="flex flex-col md:items-end">
-              <span className="text-[10px]  tracking-wider  text-neutral-400 mb-1">Item Subtotal</span>
+              <span className="text-xs    text-neutral-400 mb-1">Item Subtotal</span>
               <span className="text-lg  text-primary-600">
                 ₹{calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
@@ -421,21 +517,21 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
           </div>
         </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {/* Tax & Currency */}
-          <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
+          <section className="bg-white rounded  border border-neutral-200 ">
             <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
-              <CreditCard size={18} className="text-primary-600" />
-              <h3 className="font-semibold text-neutral-800">Tax & Currency</h3>
+              <CreditCard size={15} className="text-primary-600" />
+              <h3 className=" text-neutral-800">Tax & Currency</h3>
             </div>
-            <div className="p-4 space-y-4">
+            <div className="p-2 space-y-2">
               <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1.5">Currency</label>
+                <label className="block text-xs  text-neutral-700 mb-1.5">Currency</label>
                 <select
                   name="currency"
                   value={formData.currency}
                   onChange={handleInputChange}
-                  className="w-full h-10 px-3 rounded  border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
+                  className="w-full p-2 rounded  border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-xs bg-white"
                 >
                   <option value="INR">INR (Indian Rupee)</option>
                   <option value="USD">USD (US Dollar)</option>
@@ -449,7 +545,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
                   name="tax_template_id"
                   value={formData.tax_template_id}
                   onChange={handleInputChange}
-                  className="w-full h-10 px-3 rounded  border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
+                  className="w-full p-2 rounded  border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-xs bg-white"
                 >
                   <option value="">No Tax Template</option>
                   {taxTemplates.map(tax => (
@@ -463,26 +559,26 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
           </section>
 
           {/* Financial Summary */}
-          <section className="bg-primary-600 rounded  border border-primary-700 overflow-hidden text-white flex flex-col justify-center p-6  shadow-primary-200">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center border-b border-primary-500/50 pb-3">
+          <section className="bg-primary-600 rounded  border border-primary-700  text-white flex flex-col justify-center p-2  shadow-primary-200">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center border-b border-primary-500/50 ">
                 <span className="text-primary-100 text-sm">Subtotal</span>
-                <span className="text-xl font-semibold">
+                <span className="text-md ">
                   ₹{calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="flex justify-between items-center border-b border-primary-500/50 pb-3">
                 <span className="text-primary-100 text-sm">Tax Amount</span>
-                <span className="text-xl font-semibold">₹0.00</span>
+                <span className="text-md ">₹0.00</span>
               </div>
-              <div className="flex justify-between items-center pt-2">
-                <span className="text-primary-100 font-medium">Grand Total</span>
-                <span className="text-3xl ">
+              <div className="flex justify-between items-center ">
+                <span className="text-primary-100 text-sm">Grand Total</span>
+                <span className="text-xl ">
                   ₹{calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
-            <div className="mt-6 flex items-center gap-2 text-primary-100 text-xs bg-primary-700/50 p-2 rounded ">
+            <div className=" flex items-center gap-2 text-primary-100 text-xs bg-primary-700/50 p-2 rounded ">
               <Calendar size={14} />
               <span>Valid until {new Date(new Date().setDate(new Date().getDate() + 30)).toLocaleDateString()}</span>
             </div>

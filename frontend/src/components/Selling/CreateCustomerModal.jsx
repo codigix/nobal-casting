@@ -132,7 +132,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                 <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                   Customer ID (Generated)
                 </label>
-                <div className="px-4 py-2 bg-slate-50 border border-slate-200 rounded  text-sm font-mono text-blue-600">
+                <div className="p-2  bg-slate-50 border border-slate-200 rounded  text-sm font-mono text-blue-600">
                   {customerId || 'Awaiting name...'}
                 </div>
               </div>
@@ -146,7 +146,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                     name="customer_type"
                     value={formData.customer_type}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
+                    className="w-full p-2  border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   >
                     <option value="other">Standard</option>
                     <option value="tata">Corporate (TATA)</option>
@@ -161,7 +161,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                     name="status"
                     value={formData.status}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
+                    className="w-full p-2  border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -251,7 +251,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                   value={formData.address}
                   onChange={handleInputChange}
                   rows="3"
-                  className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
+                  className="w-full p-2  border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   placeholder="Official registered address..."
                 />
               </div>
@@ -264,7 +264,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                   value={formData.shipping_address}
                   onChange={handleInputChange}
                   rows="3"
-                  className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
+                  className="w-full p-2  border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   placeholder="Where goods should be delivered..."
                 />
               </div>

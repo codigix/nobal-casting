@@ -192,6 +192,11 @@ export const getWorkOrder = async (wo_id) => {
   return response.data
 }
 
+export const getWorkOrderDependencies = async (wo_id, type = 'child') => {
+  const response = await api.get(`/production/work-orders/${wo_id}/dependencies?type=${type}`)
+  return response.data
+}
+
 export const deleteWorkOrder = async (wo_id) => {
   const response = await api.delete(`/production/work-orders/${wo_id}`)
   return response.data
@@ -209,6 +214,16 @@ export const truncateBOMs = async () => {
 
 export const truncateJobCards = async () => {
   const response = await api.delete('/production/job-cards/truncate/all')
+  return response.data
+}
+
+export const bulkStartJobCards = async (wo_id) => {
+  const response = await api.post(`/production/job-cards/bulk-start/${wo_id}`)
+  return response.data
+}
+
+export const bulkStartPlanJobCards = async (plan_id) => {
+  const response = await api.post(`/production/plans/bulk-start/${plan_id}`)
   return response.data
 }
 
@@ -482,23 +497,25 @@ export const updateDowntime = async (id, data) => {
   return response.data
 }
 
-export const createOutwardChallan = async (data) => {
-  const response = await api.post('/production/outward-challans', data)
+export const getOutwardChallans = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/production/subcontract/outward-challans?${params}`)
   return response.data
 }
 
-export const getOutwardChallans = async (jobCardId) => {
-  const response = await api.get(`/production/outward-challans?job_card_id=${jobCardId}`)
+export const createOutwardChallan = async (data) => {
+  const response = await api.post('/production/subcontract/outward-challans', data)
   return response.data
 }
 
 export const createInwardChallan = async (data) => {
-  const response = await api.post('/production/inward-challans', data)
+  const response = await api.post('/production/subcontract/inward-challans', data)
   return response.data
 }
 
-export const getInwardChallans = async (jobCardId) => {
-  const response = await api.get(`/production/inward-challans?job_card_id=${jobCardId}`)
+export const getInwardChallans = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/production/subcontract/inward-challans?${params}`)
   return response.data
 }
 
@@ -510,6 +527,28 @@ export const dispatchToVendor = async (job_card_id, data = {}) => {
 
 export const receiveFromVendor = async (job_card_id, data) => {
   const response = await api.post(`/production/job-cards/${job_card_id}/receive`, data)
+  return response.data
+}
+
+export const getAllOutwardChallans = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/production/subcontract/outward-challans?${params}`)
+  return response.data
+}
+
+export const getAllInwardChallans = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/production/subcontract/inward-challans?${params}`)
+  return response.data
+}
+
+export const getChallanFilters = async () => {
+  const response = await api.get('/production/subcontract/challan-filters')
+  return response.data
+}
+
+export const getOutwardChallanItems = async (challan_id) => {
+  const response = await api.get(`/production/subcontract/outward-challans/${challan_id}/items`)
   return response.data
 }
 

@@ -231,7 +231,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-xs   tracking-wider transition-all rounded  ${
+              className={`flex items-center gap-2 p-2  text-xs   tracking-wider transition-all rounded  ${
                 activeTab === tab.id 
                 ? "bg-white text-blue-600   border border-slate-200" 
                 : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
@@ -301,7 +301,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                         name="uom"
                         value={formData.uom}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded  focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
+                        className="w-full p-2  bg-slate-50 border border-slate-200 rounded  focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
                       />
                     </div>
                   </div>
@@ -337,7 +337,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                         name="status"
                         value={formData.status}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2  bg-white border border-blue-200 rounded  text-sm font-semibold text-blue-800 outline-none   focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2   bg-white border border-blue-200 rounded  text-sm font-semibold text-blue-800 outline-none   focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="draft">🛠️ Draft / Development</option>
                         <option value="active">✅ Active / Production</option>
@@ -788,7 +788,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                       name="cost_rate_based_on"
                       value={formData.cost_rate_based_on}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2  bg-slate-50 border border-slate-200 rounded  text-sm  outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      className="w-full p-2   bg-slate-50 border border-slate-200 rounded  text-sm  outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     >
                       <option value="Valuation Rate">Valuation Rate (Stock Avg)</option>
                       <option value="Last Purchase Rate">Last Purchase Price</option>

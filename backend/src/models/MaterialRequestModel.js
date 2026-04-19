@@ -396,8 +396,8 @@ export class MaterialRequestModel {
         throw new Error('No valid items selected for processing')
       }
 
-      // Check stock for Issue/Transfer
-      const isStockTransaction = ['material_transfer', 'material_issue'].includes(request.purpose?.toLowerCase())
+      // Check stock for Issue/Transfer/Purchase (Direct stock release)
+      const isStockTransaction = ['material_transfer', 'material_issue', 'purchase'].includes(request.purpose?.toLowerCase())
       
       // Use provided source warehouse or fall back to existing one
       const finalSourceWarehouse = sourceWarehouse || request.source_warehouse
@@ -592,14 +592,12 @@ export class MaterialRequestModel {
 
       // Determine overall status
       let finalStatus = request.status
-      if (isStockTransaction) {
-        if (allCompleted) {
-          finalStatus = 'completed'
-        } else if (anyIssued) {
-          finalStatus = 'partial'
-        } else {
-          finalStatus = 'approved'
-        }
+      if (allCompleted) {
+        finalStatus = 'completed'
+      } else if (anyIssued) {
+        finalStatus = 'partial'
+      } else if (isStockTransaction) {
+        finalStatus = 'approved'
       } else {
         finalStatus = 'approved'
       }
@@ -765,9 +763,10 @@ export class MaterialRequestModel {
 
       // Update MR status and purpose
       // If it was a stock transaction, it's now a purchase transaction since we're creating a PO
+      // We keep it as "approved" so it can be used for material release after PO receipt
       await connection.query(
         'UPDATE material_request SET status = ?, purpose = "purchase", updated_at = NOW() WHERE mr_id = ?',
-        ['converted', mrId]
+        ['approved', mrId]
       )
 
       await connection.commit()
@@ -776,7 +775,7 @@ export class MaterialRequestModel {
       return {
         mr_id: mrId,
         po_no: po_no,
-        status: 'converted'
+        status: 'approved'
       }
     } catch (error) {
       await connection.rollback()
@@ -935,45 +934,6 @@ export class MaterialRequestModel {
       return rows.map(r => r.department)
     } catch (error) {
       throw new Error('Failed to fetch departments: ' + error.message)
-    }
-  }
-
-  static async createGRNFromRequest(db, mrId) {
-    const connection = await db.getConnection()
-    try {
-      await connection.beginTransaction()
-
-      const [mrRows] = await connection.query('SELECT * FROM material_request WHERE mr_id = ?', [mrId])
-      if (!mrRows.length) throw new Error('Material request not found')
-      const mr = mrRows[0]
-
-      const [itemRows] = await connection.query('SELECT * FROM material_request_item WHERE mr_id = ?', [mrId])
-
-      const grnNo = `GRN-${Date.now()}`
-
-      const [result] = await connection.query(
-        `INSERT INTO grn_requests (grn_no, po_no, supplier_id, supplier_name, receipt_date, status, total_items, material_request_id)
-         VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
-        [grnNo, '', '', mr.requested_by_name || 'Internal', new Date(), itemRows.length, mrId]
-      )
-
-      const grnRequestId = result.insertId
-
-      for (const item of itemRows) {
-        await connection.query(
-          `INSERT INTO grn_request_items (grn_request_id, item_code, item_name, po_qty, received_qty, batch_no, warehouse_name)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [grnRequestId, item.item_code, item.item_name, item.qty, 0, '', mr.source_warehouse || '']
-        )
-      }
-
-      await connection.commit()
-      return { grn_no: grnNo, id: grnRequestId }
-    } catch (error) {
-      await connection.rollback()
-      throw new Error('Failed to create GRN from request: ' + error.message)
-    } finally {
-      connection.release()
     }
   }
 

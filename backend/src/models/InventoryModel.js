@@ -33,14 +33,14 @@ class InventoryModel {
         )
 
         if (!stockCheck || stockCheck.length === 0) {
-          throw new Error(`Material ${item_code} not found in warehouse ${source_warehouse}`)
+          throw new Error(`Could not find any '${item_code}' in the ${source_warehouse} warehouse. Please check if the item exists and is in the correct warehouse.`);
         }
 
         const stock = stockCheck[0]
         if (stock.current_qty < required_qty) {
           throw new Error(
-            `Insufficient stock for ${item_code}. Available: ${stock.current_qty}, Required: ${required_qty}`
-          )
+            `Not enough '${item_code}' in stock. You need ${required_qty} units but only ${stock.current_qty} are available in the ${source_warehouse} warehouse.`
+          );
         }
 
         // Create allocation record
@@ -308,6 +308,22 @@ class InventoryModel {
           [finalToConsume, work_order_id, mat.item_code]
         )
 
+        // --- FLOW ENGINE: Update WIP Buffers ---
+        // Deduct from the specific handshake buffer for this component
+        await connection.query(
+          `UPDATE job_card_buffer 
+           SET available_qty = GREATEST(0, available_qty - ?),
+               consumed_qty = consumed_qty + ?
+           WHERE job_card_id = ? AND source_item_code = ?`,
+          [finalToConsume, job_card_id, mat.item_code]
+        );
+
+        // Update the convenience column in job_card (sum of remaining buffers)
+        await connection.query(
+          'UPDATE job_card SET input_buffer_qty = GREATEST(0, input_buffer_qty - ?) WHERE job_card_id = ?',
+          [finalToConsume, job_card_id]
+        );
+
         // Create consumption log for audit
         await connection.query(
           `INSERT INTO job_card_material_consumption 
@@ -334,9 +350,13 @@ class InventoryModel {
   // ============================================================================
   // STEP 3: FINALIZE MATERIAL DEDUCTION (When Work Order is Completed)
   // ============================================================================
-  async reconcileMaterials(work_order_id, finalized_by = 1) {
-    const connection = await this.db.getConnection()
-    await connection.beginTransaction()
+  async reconcileMaterials(work_order_id, finalized_by = 1, connection = null) {
+    let isInternalTransaction = false;
+    if (!connection) {
+      connection = await this.db.getConnection()
+      await connection.beginTransaction()
+      isInternalTransaction = true;
+    }
 
     try {
       // 1. Get all items for this work order
@@ -409,13 +429,19 @@ class InventoryModel {
         }
       }
 
-      await connection.commit()
+      if (isInternalTransaction) {
+        await connection.commit()
+      }
       return true
     } catch (error) {
-      await connection.rollback()
+      if (isInternalTransaction && connection) {
+        await connection.rollback()
+      }
       throw error
     } finally {
-      connection.release()
+      if (isInternalTransaction && connection) {
+        connection.release()
+      }
     }
   }
 
@@ -826,6 +852,21 @@ class InventoryModel {
           'UPDATE material_allocation SET consumed_qty = GREATEST(0, consumed_qty - ?) WHERE work_order_id = ? AND item_code = ?',
           [toReverse, work_order_id, mat.item_code]
         )
+
+        // --- FLOW ENGINE: Restore WIP Buffers ---
+        await connection.query(
+          `UPDATE job_card_buffer 
+           SET available_qty = available_qty + ?,
+               consumed_qty = GREATEST(0, consumed_qty - ?)
+           WHERE job_card_id = ? AND source_item_code = ?`,
+          [toReverse, toReverse, job_card_id, mat.item_code]
+        );
+
+        // Update convenience column
+        await connection.query(
+          'UPDATE job_card SET input_buffer_qty = input_buffer_qty + ? WHERE job_card_id = ?',
+          [toReverse, job_card_id]
+        );
       }
 
       await connection.commit()

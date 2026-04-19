@@ -244,7 +244,7 @@ export default function Warehouses() {
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs  rounded-xs transition-all   active:transform active:scale-95"
+            className="flex items-center gap-2 p-2  bg-amber-500 hover:bg-amber-600 text-white text-xs  rounded-xs transition-all   active:transform active:scale-95"
           >
             <Plus size={16} />
             Create Warehouse

@@ -5,7 +5,7 @@ import Button from '../../components/Button/Button'
 import Badge from '../../components/Badge/Badge'
 import Alert from '../../components/Alert/Alert'
 import api from '../../services/api'
-import CreateGRNModal from '../../components/Buying/CreateGRNModal'
+import ReceivePurchaseOrderModal from '../../components/Buying/ReceivePurchaseOrderModal'
 import CreatePurchaseInvoiceModal from '../../components/Buying/CreatePurchaseInvoiceModal'
 import { useToast } from '../../components/ToastContainer'
 import { 
@@ -23,7 +23,7 @@ export default function PurchaseOrderDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
-  const [showGRNModal, setShowGRNModal] = useState(false)
+  const [showReceiveModal, setShowReceiveModal] = useState(false)
   const [showInvoiceModal, setShowInvoiceModal] = useState(false)
 
   useEffect(() => {
@@ -142,6 +142,36 @@ export default function PurchaseOrderDetail() {
 
   if (!po) return null
 
+  const getCleanFGName = (name) => {
+    if (!name) return 'Internal'
+    
+    // Normalize newlines
+    const normalized = name.replace(/\\n/g, '\n')
+    
+    // Look for a line that starts with "Item:" (case-insensitive)
+    const lines = normalized.split('\n').map(l => l.trim()).filter(l => l.length > 0)
+    const itemLine = lines.find(line => line.toLowerCase().startsWith('item:'))
+    if (itemLine) {
+      return itemLine.replace(/^item:\s*/i, '').trim()
+    }
+    
+    // Filter out common metadata lines
+    const cleanLines = lines.filter(line => {
+      const l = line.toLowerCase()
+      return !l.includes('material request') && 
+             !l.includes('planned quantity') && 
+             !l.includes('includes raw') && 
+             !l.includes('bom:') &&
+             !l.includes('quantity:')
+    })
+    
+    if (cleanLines.length > 0) {
+      return cleanLines[0].replace(/^Item:\s*/i, '').trim()
+    }
+    
+    return lines[0]?.replace(/^Item:\s*/i, '').trim() || 'Internal'
+  }
+
   const subtotal = po.items?.reduce((sum, item) => sum + (Number(item.qty || 0) * Number(item.rate || 0)), 0) || 0
   const taxAmount = (subtotal * (po.tax_rate || 0)) / 100
   const total = subtotal + taxAmount
@@ -204,17 +234,12 @@ export default function PurchaseOrderDetail() {
               <Button 
                 variant="primary" 
                 size="sm"
-                disabled={po.grn_request_count > 0 || po.grn_count > 0}
-                className={`px-6 py-3 rounded shadow-indigo-600/20 flex items-center gap-2 transition-all border-none text-[10px] ${
-                  (po.grn_request_count > 0 || po.grn_count > 0)
-                    ? 'bg-neutral-200 text-neutral-500 cursor-not-allowed shadow-none'
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white hover:scale-[1.02] active:scale-[0.98]'
-                }`}
-                onClick={() => setShowGRNModal(true)}
-                title={po.grn_request_count > 0 || po.grn_count > 0 ? "GRN Request already created for this PO" : "Receive Material"}
+                className="px-6 py-3 rounded shadow-indigo-600/20 flex items-center gap-2 transition-all border-none text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white hover:scale-[1.02] active:scale-[0.98]"
+                onClick={() => setShowReceiveModal(true)}
+                title="Receive Material"
               >
                 <Package size={18} strokeWidth={3} />
-                {po.grn_request_count > 0 || po.grn_count > 0 ? 'GRN CREATED' : 'RECEIVE MATERIAL'}
+                RECEIVE MATERIAL
               </Button>
             )}
             {po.status === 'draft' && (
@@ -334,7 +359,7 @@ export default function PurchaseOrderDetail() {
             <div className="p-2 relative z-0">
               <p className="text-xs text-neutral-400 dark:text-neutral-500  mb-2">Finished Goods</p>
               <h3 className="text-[18px] text-indigo-600 dark:text-indigo-400   " title={po.finished_goods_name || 'No FG Linked'}>
-                {po.finished_goods_name || 'Internal'}
+                {getCleanFGName(po.finished_goods_name)}
               </h3>
               {/* <div className="mt-2 flex items-center gap-2 text-[10px] text-neutral-400 dark:text-neutral-500 bg-neutral-50 dark:bg-neutral-800/50 w-fit p-1 rounded border border-neutral-100 dark:border-neutral-800 ">
                 <Package size={12} />
@@ -611,11 +636,11 @@ export default function PurchaseOrderDetail() {
         </div>
       </div>
       
-      <CreateGRNModal
-        isOpen={showGRNModal}
-        onClose={() => setShowGRNModal(false)}
+      <ReceivePurchaseOrderModal
+        isOpen={showReceiveModal}
+        onClose={() => setShowReceiveModal(false)}
         onSuccess={fetchPO}
-        initialPoNo={po.po_no}
+        poNo={po.po_no}
         purchaseOrder={po}
       />
     </div>

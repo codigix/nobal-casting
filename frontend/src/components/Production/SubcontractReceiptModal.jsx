@@ -69,6 +69,9 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
       setLoading(true)
       
       // 1. Create Inward Challan Record
+      // In the updated backend, createInwardChallan automatically triggers handleSubcontractReceipt
+      // which handles stock movement from Subcontract WIP to Target/Scrap
+      // and automatic transfer to next operation via _syncJobCardQuantities
       await productionService.createInwardChallan({
         job_card_id: jobCard.job_card_id,
         outward_challan_id: jobCard.outward_challan_id,
@@ -78,13 +81,6 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
         quantity_accepted: formData.accepted_qty,
         quantity_rejected: formData.rejected_qty,
         notes: formData.notes
-      })
-
-      // 2. Perform Stock Receipt (movement from Subcontract WIP to Target/Scrap)
-      await productionService.receiveFromVendor(jobCard.job_card_id, {
-        received_qty: formData.received_qty,
-        accepted_qty: formData.accepted_qty,
-        rejected_qty: formData.rejected_qty
       })
 
       toast.addToast('Subcontract receipt recorded successfully', 'success')
@@ -103,14 +99,12 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
   const remaining = Math.max(0, parseFloat(jobCard?.sent_qty || 0) - currentReceived)
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded   w-full max-w-lg max-h-[30pc] overflow-auto flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
+        <div className="p-2 border-b border-gray-100 flex justify-between items-center bg-white">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded ">
-              <Package size={20} />
-            </div>
+           
             <div>
               <h2 className="text-lg  text-gray-900">Inward Challan</h2>
               <p className="text-xs text-gray-500">Receive from {jobCard?.vendor_name}</p>
@@ -120,20 +114,20 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded  transition-colors"
           >
-            <X size={20} />
+            <X size={15} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-5">
+          <div className="p-2 space-y-2">
             {/* Context Info */}
-            <div className="p-4 bg-slate-50 rounded  border border-slate-100 flex justify-between">
+            <div className="p-2 bg-slate-50 rounded  border border-slate-100 flex justify-between">
               <div>
-                <p className="text-[10px]   text-slate-400 mb-0.5">Dispatched</p>
+                <p className="text-xs   text-slate-400 mb-0.5">Dispatched</p>
                 <p className="text-sm  text-slate-700">{jobCard?.sent_qty} units</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px]   text-slate-400 mb-0.5">Pending Receipt</p>
+                <p className="text-xs   text-slate-400 mb-0.5">Pending Receipt</p>
                 <p className={`text-sm ${remaining <= 0 ? 'text-emerald-600 ' : 'text-indigo-600'}`}>
                   {remaining.toFixed(2)} units
                 </p>
@@ -141,21 +135,22 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
             </div>
 
             {/* Input Fields */}
-            <div className="space-y-4">
-              <div className="space-y-1.5">
+            <div className="space-y-2">
+              
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1.5">
                 <label className="text-xs  text-gray-700">Quantity Received</label>
                 <input
                   type="number"
                   step="0.01"
                   required
-                  className="w-full p-2.5 bg-white border border-gray-200 rounded  text-sm  focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                  className="w-full p-2 bg-white border border-gray-200 rounded  text-xs  focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                   value={formData.received_qty}
                   onChange={(e) => handleQtyChange('received_qty', e.target.value)}
                   max={remaining + 0.0001}
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs  text-emerald-700 flex items-center gap-1">
                     <ShieldCheck size={14} />
@@ -164,7 +159,7 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
                   <input
                     type="number"
                     step="0.01"
-                    className="w-full p-2.5 bg-emerald-50/50 border border-emerald-100 rounded  text-sm  text-emerald-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                    className="w-full p-2 bg-emerald-50/50 border border-emerald-100 rounded  text-xs  text-emerald-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                     value={formData.accepted_qty}
                     onChange={(e) => handleQtyChange('accepted_qty', e.target.value)}
                   />
@@ -177,7 +172,7 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
                   <input
                     type="number"
                     step="0.01"
-                    className="w-full p-2.5 bg-rose-50/50 border border-rose-100 rounded  text-sm  text-rose-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all"
+                    className="w-full p-2 bg-rose-50/50 border border-rose-100 rounded  text-xs  text-rose-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all"
                     value={formData.rejected_qty}
                     onChange={(e) => handleQtyChange('rejected_qty', e.target.value)}
                   />
@@ -185,7 +180,7 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
               </div>
 
               {formData.rejected_qty > 0 && (
-                <div className="p-3 bg-amber-50 rounded  border border-amber-100 flex items-start gap-2">
+                <div className="p-2 bg-amber-50 rounded  border border-amber-100 flex items-start gap-2">
                   <AlertTriangle size={16} className="text-amber-600 mt-0.5" />
                   <p className="text-[11px] text-amber-700 leading-relaxed">
                     Rejected quantities will be moved to the <strong>Scrap Warehouse</strong> and will not be available for the next operation.
@@ -202,13 +197,13 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
                 </div>
               )}
 
-              <div className="space-y-1.5">
+              <div className=" mt-2">
                 <label className="text-xs  text-gray-700 flex items-center gap-1">
                   <FileText size={14} className="text-gray-400" />
                   Receipt Notes
                 </label>
                 <textarea
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded  text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all resize-none h-20"
+                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded  text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all resize-none h-20"
                   placeholder="Notes about quality or delivery..."
                   value={formData.notes}
                   onChange={(e) => setFormData({...formData, notes: e.target.value})}
@@ -218,18 +213,18 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+          <div className="p-2 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm  text-gray-500 hover:text-gray-700 transition-colors"
+              className="p-2  text-xs  text-gray-500 hover:text-gray-700 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || remaining <= 0}
-              className="flex items-center gap-2 p-2  bg-emerald-600 text-white rounded  text-sm  hover:bg-emerald-700 transition-all  shadow-emerald-100 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+              className="flex items-center gap-2 p-2 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-all  shadow-emerald-100 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
             >
               {loading ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded  animate-spin" />

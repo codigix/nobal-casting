@@ -214,6 +214,14 @@
   border-bottom: none;
 }
 
+.data-table tr.group-header {
+  border-top: 2px solid #e2e8f0;
+}
+
+.data-table tr.group-header td {
+  padding-top: 12px;
+}
+
 .data-table td {
   
   color: var(--text-primary, #374151);

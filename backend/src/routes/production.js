@@ -59,6 +59,11 @@ export function createProductionRoutes(db) {
     authMiddleware,
     productionController.getWorkOrder.bind(productionController)
   )
+  router.get(
+    '/work-orders/:wo_id/dependencies',
+    authMiddleware,
+    productionController.getWorkOrderDependencies.bind(productionController)
+  )
   router.put(
     '/work-orders/:wo_id',
     authMiddleware,
@@ -195,6 +200,16 @@ router.delete(
     '/job-cards/:work_order_id/generate-all',
     productionController.generateJobCardsForWorkOrder.bind(productionController)
   )
+  router.post(
+    '/job-cards/bulk-start/:wo_id',
+    authMiddleware,
+    productionController.bulkStartJobCards.bind(productionController)
+  )
+  router.post(
+    '/plans/bulk-start/:plan_id',
+    authMiddleware,
+    productionController.bulkStartPlanJobCards.bind(productionController)
+  )
   router.put(
     '/job-cards/:job_card_id',
     authMiddleware,
@@ -212,6 +227,39 @@ router.delete(
   )
 
   // ============= SUBCONTRACTING =============
+  router.get(
+    '/subcontract/outward-challans',
+    authMiddleware,
+    productionController.getAllOutwardChallans.bind(productionController)
+  )
+  router.get(
+    '/subcontract/inward-challans',
+    authMiddleware,
+    productionController.getAllInwardChallans.bind(productionController)
+  )
+  router.get(
+    '/subcontract/challan-filters',
+    authMiddleware,
+    productionController.getChallanFilters.bind(productionController)
+  )
+  router.get(
+    '/subcontract/outward-challans/:challan_id/items',
+    authMiddleware,
+    productionController.getOutwardChallanItems.bind(productionController)
+  )
+
+  router.post(
+    '/subcontract/outward-challans',
+    authMiddleware,
+    productionController.createOutwardChallan.bind(productionController)
+  )
+
+  router.post(
+    '/subcontract/inward-challans',
+    authMiddleware,
+    productionController.createInwardChallan.bind(productionController)
+  )
+
   router.post(
     '/job-cards/:job_card_id/dispatch',
     authMiddleware,

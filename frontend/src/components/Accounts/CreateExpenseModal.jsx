@@ -133,7 +133,7 @@ export default function CreateExpenseModal({ isOpen, onClose, onSuccess }) {
               name="category"
               value={formData.category}
               onChange={handleInputChange}
-              className="w-full px-4 py-2  bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+              className="w-full p-2   bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
             >
               <option value="">Select Category</option>
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -149,7 +149,7 @@ export default function CreateExpenseModal({ isOpen, onClose, onSuccess }) {
               name="department"
               value={formData.department}
               onChange={handleInputChange}
-              className="w-full px-4 py-2  bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+              className="w-full p-2   bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
             >
               <option value="">Select Department</option>
               {departments.map(d => <option key={d} value={d}>{d}</option>)}
@@ -184,7 +184,7 @@ export default function CreateExpenseModal({ isOpen, onClose, onSuccess }) {
               name="expense_date"
               value={formData.expense_date}
               onChange={handleInputChange}
-              className="w-full px-4 py-2  bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+              className="w-full p-2   bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
             />
           </div>
 
@@ -197,7 +197,7 @@ export default function CreateExpenseModal({ isOpen, onClose, onSuccess }) {
               name="payment_method"
               value={formData.payment_method}
               onChange={handleInputChange}
-              className="w-full px-4 py-2  bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+              className="w-full p-2   bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
             >
               <option value="transfer">Bank Transfer</option>
               <option value="cash">Cash</option>
@@ -215,7 +215,7 @@ export default function CreateExpenseModal({ isOpen, onClose, onSuccess }) {
               name="expense_type"
               value={formData.expense_type}
               onChange={handleInputChange}
-              className="w-full px-4 py-2  bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+              className="w-full p-2   bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
             >
               <option value="operating">Operating Expense</option>
               <option value="non_operating">Non-Operating Expense</option>
@@ -235,7 +235,7 @@ export default function CreateExpenseModal({ isOpen, onClose, onSuccess }) {
             onChange={handleInputChange}
             placeholder="What was this expense for?"
             rows={3}
-            className="w-full px-4 py-2  bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all resize-none"
+            className="w-full p-2   bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all resize-none"
           />
         </div>
 

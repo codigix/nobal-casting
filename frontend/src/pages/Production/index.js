@@ -17,6 +17,7 @@ import WorkOrder from './WorkOrder'
 import WorkOrderForm from './WorkOrderForm'
 import Workstations from './Workstations'
 import WorkstationForm from './WorkstationForm'
+import SubcontractChallans from './SubcontractChallans'
 
 export {
   BOM,
@@ -37,7 +38,8 @@ export {
   WorkOrder,
   WorkOrderForm,
   Workstations,
-  WorkstationForm
+  WorkstationForm,
+  SubcontractChallans
 }
 
 export default {
@@ -59,5 +61,6 @@ export default {
   WorkOrder,
   WorkOrderForm,
   Workstations,
-  WorkstationForm
+  WorkstationForm,
+  SubcontractChallans
 }

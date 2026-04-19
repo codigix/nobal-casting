@@ -271,6 +271,7 @@ export default function ProjectAnalysis() {
                 ))}
               </div>
             </div>
+          
             <div className="flex items-center gap-2 text-slate-500  text-[10px]  ">
             <span className="bg-blue-50 text-blue-700 p-1 rounded border border-blue-100 flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded  bg-blue-600 animate-pulse" />

@@ -12,6 +12,7 @@ const TABS = [
   { id: 'issue', label: 'Material Issue', types: ['Issue', 'Consumption', 'Manufacturing Issue'] },
   { id: 'transfer', label: 'Material Transfer', types: ['Transfer'] },
   { id: 'purchase', label: 'Purchase', types: ['Purchase Receipt'] },
+  { id: 'dispatch', label: 'Dispatched Units', types: ['Dispatch', 'Subcontract Dispatch'] },
 ]
 
 export default function StockLedger() {
@@ -31,7 +32,7 @@ export default function StockLedger() {
   const [viewMode, setViewMode] = useState('table')
   const [showColumnMenu, setShowColumnMenu] = useState(false)
 
-  const [visibleColumns, setVisibleColumns] = useState(new Set(['item_details', 'warehouse_name', 'posting_date', 'transaction_type', 'qty_in', 'balance_qty', 'reference_name']))
+  const [visibleColumns, setVisibleColumns] = useState(new Set(['item_details', 'project', 'warehouse_name', 'posting_date', 'transaction_type', 'qty_in', 'balance_qty', 'reference_name']))
 
   useEffect(() => {
     fetchWarehouses()
@@ -143,6 +144,18 @@ export default function StockLedger() {
     link.click()
   }
 
+  const parseDispatchInfo = (remarks) => {
+    if (!remarks || !remarks.includes('|')) return null;
+    const parts = remarks.split('|').map(p => p.trim());
+    const info = {};
+    parts.forEach(part => {
+      if (part.startsWith('Project:')) info.projectName = part.replace('Project:', '').trim();
+      if (part.startsWith('Status:')) info.status = part.replace('Status:', '').trim();
+      if (part.startsWith('Plan Units:')) info.planUnits = part.replace('Plan Units:', '').trim();
+    });
+    return info;
+  };
+
   const columns = useMemo(() => [
     {
       key: 'item_details',
@@ -154,6 +167,14 @@ export default function StockLedger() {
         </div>
       )
     },
+    { 
+      key: 'project', 
+      label: 'Project',
+      render: (value, row) => {
+        const info = parseDispatchInfo(row.remarks);
+        return <span className="text-xs">{info?.projectName || '-'}</span>;
+      }
+    },
     { key: 'warehouse_name', label: 'Warehouse' },
     {
       key: 'posting_date',
@@ -163,17 +184,36 @@ export default function StockLedger() {
     {
       key: 'transaction_type',
       label: 'Type',
-      render: (value) => value ? <Badge variant="secondary" className="capitalize">{value}</Badge> : '-'
+      render: (value, row) => {
+        const info = parseDispatchInfo(row.remarks);
+        return (
+          <div className="flex flex-col">
+            <Badge variant="secondary" className="capitalize">{value}</Badge>
+            {info?.status && (
+              <span className={`text-[10px] mt-0.5 font-medium ${info.status === 'Fully Dispatch' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {info.status}
+              </span>
+            )}
+          </div>
+        );
+      }
     },
     {
       key: 'reference_name',
       label: 'Reference',
-      render: (value, row) => row.reference_name ? (
+      render: (value, row) => (
         <div className="flex flex-col">
-          <span className="text-xs font-medium">{row.reference_name}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium">{row.reference_name || '-'}</span>
+          </div>
           <span className="text-[10px] text-neutral-500">{row.reference_doctype}</span>
+          {parseDispatchInfo(row.remarks)?.planUnits && (
+            <span className="text-[10px] text-blue-600 font-medium mt-0.5">
+              Plan: {parseDispatchInfo(row.remarks).planUnits} units
+            </span>
+          )}
         </div>
-      ) : '-'
+      )
     },
     {
       key: 'qty_in',
@@ -270,7 +310,7 @@ export default function StockLedger() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
+              className={`p-2  text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'

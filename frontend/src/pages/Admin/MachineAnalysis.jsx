@@ -877,7 +877,7 @@ const MachineAnalysis = () => {
                         content={({ active, payload }) => {
                           if (active && payload && payload.length) {
                             return (
-                              <div className="bg-slate-900 text-white px-4 py-2.5 rounded shadow-2xl border border-white/10 backdrop-blur-md">
+                              <div className="bg-slate-900 text-white p-2 .5 rounded shadow-2xl border border-white/10 backdrop-blur-md">
                                 <p className="text-xs    mb-0.5">{payload[0].name}</p>
                                 <p className="text-lg ">{payload[0].value} <span className="text-xs  text-slate-400">Assets</span></p>
                               </div>
@@ -1272,7 +1272,7 @@ const MachineAnalysis = () => {
                       <td className="p-2 text-right">
                         <button 
                           onClick={() => { setSelectedMachine(m); setModalOpen(true); }}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-[#1e3a8a]/5 text-[#1e3a8a]  text-xs   rounded hover:bg-[#1e3a8a] hover:text-white transition-all "
+                          className="inline-flex items-center gap-2 p-2  bg-[#1e3a8a]/5 text-[#1e3a8a]  text-xs   rounded hover:bg-[#1e3a8a] hover:text-white transition-all "
                         >
                           <Eye size={14} strokeWidth={2.5} />
                           Explore

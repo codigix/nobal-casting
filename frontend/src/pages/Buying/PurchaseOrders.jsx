@@ -7,7 +7,7 @@ import Badge from '../../components/Badge/Badge'
 import DataTable from '../../components/Table/DataTable'
 import AdvancedFilters from '../../components/AdvancedFilters'
 import CreatePurchaseOrderModal from '../../components/Buying/CreatePurchaseOrderModal'
-import CreateGRNModal from '../../components/Buying/CreateGRNModal'
+import ReceivePurchaseOrderModal from '../../components/Buying/ReceivePurchaseOrderModal'
 import { useNavigate } from 'react-router-dom'
 import {
   FileText, Edit2, Send, Download, Eye, Package, AlertCircle, CheckCircle, XCircle,
@@ -58,7 +58,7 @@ export default function PurchaseOrders() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [showGRNModal, setShowGRNModal] = useState(false)
+  const [showReceiveModal, setShowReceiveModal] = useState(false)
   const [selectedPO, setSelectedPO] = useState(null)
   const [viewMode, setViewMode] = useState('list')
   const [activeFilter, setActiveFilter] = useState('')
@@ -165,7 +165,7 @@ export default function PurchaseOrders() {
 
   const handleReceiveMaterial = (po) => {
     setSelectedPO(po)
-    setShowGRNModal(true)
+    setShowReceiveModal(true)
   }
 
   const getStatusConfig = (status) => {
@@ -246,6 +246,36 @@ export default function PurchaseOrders() {
     return diffDays
   }
 
+  const getCleanFGName = (name) => {
+    if (!name) return 'Internal'
+    
+    // Normalize newlines
+    const normalized = name.replace(/\\n/g, '\n')
+    
+    // Look for a line that starts with "Item:" (case-insensitive)
+    const lines = normalized.split('\n').map(l => l.trim()).filter(l => l.length > 0)
+    const itemLine = lines.find(line => line.toLowerCase().startsWith('item:'))
+    if (itemLine) {
+      return itemLine.replace(/^item:\s*/i, '').trim()
+    }
+    
+    // Filter out common metadata lines
+    const cleanLines = lines.filter(line => {
+      const l = line.toLowerCase()
+      return !l.includes('material request') && 
+             !l.includes('planned quantity') && 
+             !l.includes('includes raw') && 
+             !l.includes('bom:') &&
+             !l.includes('quantity:')
+    })
+    
+    if (cleanLines.length > 0) {
+      return cleanLines[0].replace(/^Item:\s*/i, '').trim()
+    }
+    
+    return lines[0]?.replace(/^Item:\s*/i, '').trim() || 'Internal'
+  }
+
   const columns = [
     {
       key: 'po_details',
@@ -254,19 +284,13 @@ export default function PurchaseOrders() {
       render: (_, row) => (
         <div className="flex flex-col gap-1.5 py-1">
           <div className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 leading-tight">
-            {row.finished_goods_name ? (
-               <div className="flex flex-col">
-                  <span className="text-indigo-600 dark:text-indigo-400   ">
-                    {row.finished_goods_name}
-                  </span>
-               </div>
-            ) : (
-              <span className="text-neutral-400 dark:text-neutral-500 italic">No FG Linked</span>
-            )}
+            <span className="text-indigo-600 dark:text-indigo-400">
+              {getCleanFGName(row.finished_goods_name)}
+            </span>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-xs  text-indigo-600 dark:text-indigo-400  leading-none group-hover:scale-105 transition-transform origin-left ">
+            <span className="text-xs text-neutral-600 dark:text-neutral-400 leading-none group-hover:scale-105 transition-transform origin-left">
               {row.po_no}
             </span>
           </div>
@@ -594,7 +618,7 @@ export default function PurchaseOrders() {
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-4 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded ">
+              <div className="flex items-center gap-2 p-2  bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded ">
                 <Filter size={14} className="text-neutral-400" />
                 <span className="text-xs  text-neutral-500 dark:text-neutral-400  ">Status:</span>
                 <select
@@ -812,16 +836,16 @@ export default function PurchaseOrders() {
         onSuccess={fetchOrders}
       />
 
-      {showGRNModal && selectedPO && (
-        <CreateGRNModal
-          isOpen={showGRNModal}
+      {showReceiveModal && selectedPO && (
+        <ReceivePurchaseOrderModal
+          isOpen={showReceiveModal}
           onClose={() => {
-            setShowGRNModal(false)
+            setShowReceiveModal(false)
             setSelectedPO(null)
           }}
           purchaseOrder={selectedPO}
           onSuccess={() => {
-            setShowGRNModal(false)
+            setShowReceiveModal(false)
             setSelectedPO(null)
             fetchOrders()
           }}

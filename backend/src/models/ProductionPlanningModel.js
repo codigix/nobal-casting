@@ -20,9 +20,10 @@ export class ProductionPlanningModel {
     }
   }
 
-  async getPlanById(plan_id) {
+  async getPlanById(plan_id, connection = null) {
+    const db = connection || this.db;
     try {
-      const [plans] = await this.db.execute(
+      const [plans] = await db.query(
         `SELECT pp.*, i.name as bom_product_name, b.item_code as bom_item_code, sso.project_name, sso.delivery_date as expected_delivery_date 
          FROM production_plan pp
          LEFT JOIN bom b ON pp.bom_id = b.bom_id

@@ -14,7 +14,9 @@ export default function DataTable({
   pagination = true, // for backwards compatibility or toggle
   defaultHiddenColumns = [],
   externalVisibleColumns = null,
-  onVisibleColumnsChange = null
+  onVisibleColumnsChange = null,
+  getRowClassName = null,
+  groupBy = null
 }) {
   const actualRenderActions = renderActions || actions;
 
@@ -124,20 +126,24 @@ export default function DataTable({
                   </td>
                 </tr>
               ) : (
-                paginatedData.map((row, idx) => (
-                  <tr key={idx} className="data-row bg-white">
-                    {filteredColumns.map(col => (
-                      <td key={col.key} className={` p-2 ${col.key}-col ${col.key === 'status' || col.dropdown ? 'dropdown-col ' : ''}`}>
-                        {col.render ? col.render(row[col.key], row) : row[col.key]}
-                      </td>
-                    ))}
-                    {actualRenderActions && (
-                      <td className="actions-col bg-[#eff6ff] p-2">
-                        {actualRenderActions(row)}
-                      </td>
-                    )}
-                  </tr>
-                ))
+                paginatedData.map((row, idx) => {
+                  const isFirstOfGroup = groupBy ? (idx === 0 || row[groupBy] !== paginatedData[idx - 1][groupBy]) : false;
+                  
+                  return (
+                    <tr key={idx} className={`data-row ${getRowClassName ? getRowClassName(row, idx, isFirstOfGroup) : (isFirstOfGroup ? 'bg-gray-50/50' : 'bg-white')}`}>
+                      {filteredColumns.map(col => (
+                        <td key={col.key} className={` p-2 ${col.key}-col ${col.key === 'status' || col.dropdown ? 'dropdown-col ' : ''}`}>
+                          {col.render ? col.render(row[col.key], row, isFirstOfGroup) : row[col.key]}
+                        </td>
+                      ))}
+                      {actualRenderActions && (
+                        <td className="actions-col bg-[#eff6ff] p-2">
+                          {actualRenderActions(row)}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

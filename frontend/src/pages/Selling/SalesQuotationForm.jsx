@@ -484,7 +484,7 @@ export default function SalesQuotationForm() {
             <button
               type="button"
               onClick={() => navigate('/selling/quotations')}
-              className="px-4 py-2 text-[11px]  text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded   transition-all hover:bg-slate-50  "
+              className="p-2  text-[11px]  text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded   transition-all hover:bg-slate-50  "
             >
               Cancel
             </button>
@@ -675,7 +675,7 @@ export default function SalesQuotationForm() {
                   <button
                     type="button"
                     onClick={handleAddItem}
-                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded text-[10px]   tracking-[0.1em] hover:bg-amber-600 transition-all  shadow-amber-100 active:scale-95"
+                    className="flex items-center gap-2 p-2  bg-amber-500 text-white rounded text-[10px]   tracking-[0.1em] hover:bg-amber-600 transition-all  shadow-amber-100 active:scale-95"
                   >
                     <Plus size={14} strokeWidth={3} />
                     ADD ITEM
@@ -778,7 +778,7 @@ export default function SalesQuotationForm() {
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, taxes_charges: [...formData.taxes_charges, { type: 'Add', account_head: '', rate: 0, amount: 0, id: Date.now() }] })}
-                    className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded text-[10px]   tracking-[0.1em] hover:bg-rose-600 transition-all  shadow-rose-100 active:scale-95"
+                    className="flex items-center gap-2 p-2  bg-rose-500 text-white rounded text-[10px]   tracking-[0.1em] hover:bg-rose-600 transition-all  shadow-rose-100 active:scale-95"
                   >
                     <Plus size={14} strokeWidth={3} />
                     ADD TAX

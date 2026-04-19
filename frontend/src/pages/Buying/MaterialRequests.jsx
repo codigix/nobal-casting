@@ -29,6 +29,37 @@ export default function MaterialRequests() {
   const [selectedMrId, setSelectedMrId] = useState(null)
   const [stockData, setStockData] = useState({})
   const [refreshTime, setRefreshTime] = useState(new Date())
+  
+  const getCleanFGName = (name) => {
+    if (!name) return 'Internal'
+    
+    // Normalize newlines
+    const normalized = name.replace(/\\n/g, '\n')
+    
+    // Look for a line that starts with "Item:" (case-insensitive)
+    const lines = normalized.split('\n').map(l => l.trim()).filter(l => l.length > 0)
+    const itemLine = lines.find(line => line.toLowerCase().startsWith('item:'))
+    if (itemLine) {
+      return itemLine.replace(/^item:\s*/i, '').trim()
+    }
+    
+    // Filter out common metadata lines
+    const cleanLines = lines.filter(line => {
+      const l = line.toLowerCase()
+      return !l.includes('material request') && 
+             !l.includes('planned quantity') && 
+             !l.includes('includes raw') && 
+             !l.includes('bom:') &&
+             !l.includes('quantity:')
+    })
+    
+    if (cleanLines.length > 0) {
+      return cleanLines[0].replace(/^Item:\s*/i, '').trim()
+    }
+    
+    return lines[0]?.replace(/^Item:\s*/i, '').trim() || 'Internal'
+  }
+
   const [viewMode, setViewMode] = useState('table')
   const [showColumnMenu, setShowColumnMenu] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState(new Set([
@@ -357,7 +388,7 @@ export default function MaterialRequests() {
             
             <button 
               onClick={fetchRequests}
-              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs  border border-neutral-200 dark:border-neutral-800 transition-all active:scale-95  "
+              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 p-2  rounded-xs text-xs  border border-neutral-200 dark:border-neutral-800 transition-all active:scale-95  "
             >
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               Refresh
@@ -365,7 +396,7 @@ export default function MaterialRequests() {
 
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xs text-xs   shadow-indigo-200 dark:shadow-none transition-all active:scale-95"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white p-2  rounded-xs text-xs   shadow-indigo-200 dark:shadow-none transition-all active:scale-95"
             >
               <Plus size={16} />
               New Request

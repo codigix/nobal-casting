@@ -1,0 +1,1 @@
+const mysql = require('mysql2/promise'); async function run() { const conn = await mysql.createConnection({host:'localhost',user:'root',password:'root',database:'nobalcasting'}); const [rows] = await conn.query('SHOW TABLES'); console.log(JSON.stringify(rows)); await conn.end(); } run();  

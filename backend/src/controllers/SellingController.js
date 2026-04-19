@@ -597,7 +597,8 @@ export class SellingController {
                 COALESCE(c.name, sso.customer_name, '') as customer_full_name,
                 COALESCE(c.email, sso.customer_email, '') as customer_email_alt,
                 COALESCE(c.phone, sso.customer_phone, '') as customer_phone_alt,
-                (SELECT status FROM production_plan WHERE sales_order_id = sso.sales_order_id ORDER BY created_at DESC LIMIT 1) as production_plan_status
+                (SELECT status FROM production_plan WHERE sales_order_id = sso.sales_order_id ORDER BY created_at DESC LIMIT 1) as production_plan_status,
+                (SELECT plan_id FROM production_plan WHERE sales_order_id = sso.sales_order_id ORDER BY created_at DESC LIMIT 1) as production_plan_id
          FROM selling_sales_order sso
          LEFT JOIN selling_customer c ON sso.customer_id = c.customer_id
          WHERE sso.sales_order_id = ? AND sso.deleted_at IS NULL`,
@@ -624,6 +625,80 @@ export class SellingController {
     } catch (error) {
       console.error('Error fetching sales order:', error)
       res.status(500).json({ error: 'Failed to fetch sales order', details: error.message })
+    }
+  }
+
+  static async getFulfillmentStatus(req, res) {
+    const db = req.app.locals.db
+    const { id } = req.params
+
+    try {
+      // 1. Get Production Plan for this SO
+      const [plans] = await db.execute(
+        'SELECT plan_id FROM production_plan WHERE sales_order_id = ? ORDER BY created_at DESC LIMIT 1',
+        [id]
+      )
+
+      if (!plans.length) {
+        return res.json({ success: true, data: [], message: 'No production plan found for this sales order' })
+      }
+
+      const planId = plans[0].plan_id
+
+      // 2. Get all FG items from the production plan
+      const [fgItems] = await db.execute(
+        'SELECT item_code, item_name, planned_qty FROM production_plan_fg WHERE plan_id = ?',
+        [planId]
+      )
+
+      // 3. For each FG item, find its associated work order and check the last job card's accepted quantity
+      const fulfillmentData = []
+
+      for (const fg of fgItems) {
+        // Find Work Order for this item in this plan
+        const [workOrders] = await db.execute(
+          'SELECT wo_id, quantity as planned_qty FROM work_order WHERE production_plan_id = ? AND item_code = ?',
+          [planId, fg.item_code]
+        )
+
+        if (workOrders.length === 0) {
+          fulfillmentData.push({
+            ...fg,
+            produced_qty: 0,
+            accepted_qty: 0,
+            status: 'pending'
+          })
+          continue
+        }
+
+        const woId = workOrders[0].wo_id
+
+        // Find the last operation job card for this WO
+        const [jobCards] = await db.execute(
+          `SELECT 
+            SUM(produced_quantity) as total_produced,
+            SUM(accepted_quantity) as total_accepted
+           FROM job_card 
+           WHERE work_order_id = ? AND operation_sequence = (
+             SELECT MAX(operation_sequence) FROM job_card WHERE work_order_id = ?
+           )`,
+          [woId, woId]
+        )
+
+        const stats = jobCards[0]
+        fulfillmentData.push({
+          ...fg,
+          wo_id: woId,
+          produced_qty: parseFloat(stats.total_produced || 0),
+          accepted_qty: parseFloat(stats.total_accepted || 0),
+          status: parseFloat(stats.total_accepted || 0) >= parseFloat(fg.planned_qty) ? 'complete' : 'partial'
+        })
+      }
+
+      res.json({ success: true, data: fulfillmentData })
+    } catch (error) {
+      console.error('Error fetching fulfillment status:', error)
+      res.status(500).json({ success: false, error: error.message })
     }
   }
 

@@ -1,5 +1,7 @@
 export { default as ProjectAnalysis } from './ProjectAnalysis'
 export { default as ProjectDetails } from './ProjectDetails'
+export { default as Dispatched } from './Dispatched'
+export { default as ConsumeMaterial } from './ConsumeMaterial'
 export { default as MachineAnalysis } from './MachineAnalysis'
 export { default as CustomerStatistics } from './CustomerStatistics'
 export { default as OEE } from './OEE'

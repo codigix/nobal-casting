@@ -10,6 +10,21 @@ export const getSalesOrdersAsProjects = async () => {
   return response.data
 }
 
+export const getProjectDispatchReport = async () => {
+  const response = await api.get('/masters/project-dispatch-report')
+  return response.data
+}
+
+export const getIndividualDispatches = async () => {
+  const response = await api.get('/masters/individual-dispatches')
+  return response.data
+}
+
+export const getProjectMaterialReport = async () => {
+  const response = await api.get('/masters/project-material-report')
+  return response.data
+}
+
 export const getProjectStats = async () => {
   const response = await api.get('/masters/project-stats')
   return response.data

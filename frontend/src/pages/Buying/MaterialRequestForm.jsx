@@ -419,14 +419,14 @@ export default function MaterialRequestForm() {
             <button
               type="button"
               onClick={() => navigate('/buying/material-requests')}
-              className="px-4 py-2 text-[11px]  text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded   transition-all hover:bg-slate-50  "
+              className="p-2  text-[11px]  text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded   transition-all hover:bg-slate-50  "
             >
               Cancel
             </button>
             <button
               onClick={(e) => handleSubmit(e, 'draft')}
               disabled={loading || isFormDisabled}
-              className="px-4 py-2 text-[11px]  text-indigo-600 bg-indigo-50 border border-indigo-100 rounded   transition-all hover:bg-indigo-100   disabled:opacity-50"
+              className="p-2  text-[11px]  text-indigo-600 bg-indigo-50 border border-indigo-100 rounded   transition-all hover:bg-indigo-100   disabled:opacity-50"
             >
               {loading ? 'SAVING...' : 'SAVE DRAFT'}
             </button>

@@ -297,7 +297,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
                       setAcceptedQty(finalVal)
                       setRejectedQty(max - finalVal)
                     }}
-                    className="w-full px-4 py-2 bg-green-50 border border-green-200 rounded  text-green-900  focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+                    className="w-full p-2  bg-green-50 border border-green-200 rounded  text-green-900  focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
                 <div>
@@ -316,7 +316,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
                       setRejectedQty(finalVal)
                       setAcceptedQty(max - finalVal)
                     }}
-                    className="w-full px-4 py-2 bg-red-50 border border-red-200 rounded  text-red-900  focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                    className="w-full p-2  bg-red-50 border border-red-200 rounded  text-red-900  focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
                 

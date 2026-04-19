@@ -5,10 +5,17 @@ class QCModel {
 
   // ============= INSPECTIONS =============
 
-  async createInspection(data) {
+  async createInspection(data, connection = null) {
+    const isLocalTransaction = !connection;
+    const db = connection || await this.db.getConnection();
+    
     try {
+      if (isLocalTransaction) {
+        await db.beginTransaction();
+      }
+
       const inspection_id = `INS-${Date.now()}`
-      const [result] = await this.db.query(
+      const [result] = await db.query(
         `INSERT INTO inspection_result 
         (inspection_id, reference_type, reference_id, checklist_id, inspection_date, inspector_id, 
          quantity_inspected, quantity_passed, quantity_rejected, result, remarks)
@@ -21,33 +28,43 @@ class QCModel {
       if (data.reference_type === 'Job Card' && data.reference_id) {
         try {
           const ProductionModel = (await import('./ProductionModel.js')).default;
-          const prodModel = new ProductionModel(this.db);
+          const prodModel = new ProductionModel(db);
           // We need to infer the shift. Since shift isn't in inspection_result, 
           // we might need to query the job card or just pass a default.
           // However, _triggerOEERecalculation in ProductionModel is better.
           // But it needs shift. 
           // For now, let's try to find if there are any time logs for this date to get the shift.
-          const [timeLogs] = await this.db.query(
+          const [timeLogs] = await db.query(
             'SELECT DISTINCT shift FROM time_log WHERE job_card_id = ? AND log_date = ?',
             [data.reference_id, data.inspection_date]
           );
           
           for (const tl of timeLogs) {
-            await prodModel._triggerOEERecalculation(data.reference_id, data.inspection_date, tl.shift);
+            await prodModel._triggerOEERecalculation(data.reference_id, data.inspection_date, tl.shift, db);
           }
           
           if (timeLogs.length === 0) {
             // Default to Shift A if no logs found
-            await prodModel._triggerOEERecalculation(data.reference_id, data.inspection_date, 'A');
+            await prodModel._triggerOEERecalculation(data.reference_id, data.inspection_date, 'A', db);
           }
         } catch (oeeErr) {
           console.error('Error triggering OEE from Inspection:', oeeErr);
         }
       }
 
+      if (isLocalTransaction) {
+        await db.commit();
+      }
       return { inspection_id, ...data }
     } catch (error) {
+      if (isLocalTransaction) {
+        await db.rollback();
+      }
       throw error
+    } finally {
+      if (isLocalTransaction) {
+        db.release();
+      }
     }
   }
 

@@ -58,9 +58,9 @@ export const createStockEntry = async (req, res) => {
       }
     }
 
-    if (['Material Receipt'].includes(entry_type)) {
+    if (['Material Receipt', 'Purchase'].includes(entry_type)) {
       if (!to_warehouse_id) {
-        return res.status(400).json({ success: false, error: 'Destination warehouse required for Material Receipt' })
+        return res.status(400).json({ success: false, error: `Destination warehouse required for ${entry_type}` })
       }
     }
 

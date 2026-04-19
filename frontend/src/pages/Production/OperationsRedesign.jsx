@@ -178,6 +178,7 @@ export default function OperationsRedesign() {
               <option value="All">All Types</option>
               <option value="IN_HOUSE">In-House</option>
               <option value="OUTSOURCED">Outsourced</option>
+              <option value="DISPATCH">Dispatch</option>
             </select>
           </div>
         </div>
@@ -315,7 +316,11 @@ export default function OperationsRedesign() {
                         </span>
                       </td>
                       <td className="p-2 ">
-                        <span className={`px-2.5 py-1 rounded  text-xs   ${op.operation_type === 'OUTSOURCED' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                        <span className={`px-2.5 py-1 rounded  text-xs   ${
+                          op.operation_type === 'OUTSOURCED' ? 'bg-amber-50 text-amber-600' : 
+                          op.operation_type === 'DISPATCH' ? 'bg-blue-50 text-blue-600' :
+                          'bg-emerald-50 text-emerald-600'
+                        }`}>
                           {op.operation_type || 'IN_HOUSE'}
                         </span>
                       </td>

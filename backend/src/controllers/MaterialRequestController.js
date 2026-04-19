@@ -156,7 +156,8 @@ export class MaterialRequestController {
       let message = 'Material request approved successfully'
 
       if (purpose === 'purchase') {
-        message = 'Material request approved. You can now create an RFQ for this request.'
+        const warehouse = source_warehouse || result.source_warehouse || 'warehouse'
+        message = `Material request processed. Stock has been issued from ${warehouse}.`
       } else {
         const warehouse = source_warehouse || result.source_warehouse || 'warehouse'
         message = `Material request approved. Stock has been deducted from ${warehouse}.`

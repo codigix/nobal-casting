@@ -164,6 +164,20 @@ export async function updateReminderStatus(req, res) {
   }
 }
 
+export async function updateReceivedQty(req, res) {
+  try {
+    const db = req.app.locals.db
+    const model = new PurchaseOrderModel(db)
+    const { items } = req.body
+    const userId = req.user?.id || req.user?.user_id || 1
+
+    const result = await model.updateReceivedQty(req.params.po_no, items, userId)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message })
+  }
+}
+
 export async function createFromMaterialRequest(req, res) {
   try {
     const db = req.app.locals.db

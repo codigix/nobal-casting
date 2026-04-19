@@ -173,6 +173,7 @@ export class ProductionPlanningService {
 
   async processFinishedGoodsBOM(bomData, fgQuantity, plan) {
     const { lines = [], operations = [], raw_materials = [] } = bomData
+    const bomQuantity = parseFloat(bomData.quantity || 1)
 
     plan.finished_goods.push({
       item_code: bomData.item_code,
@@ -184,23 +185,23 @@ export class ProductionPlanningService {
     for (const line of lines) {
       const isSA = await this.isSubAssembly(line)
       if (isSA) {
-        await this.processSubAssembly(line, fgQuantity, plan, bomData.item_code)
+        await this.processSubAssembly(line, fgQuantity / bomQuantity, plan, bomData.item_code)
       } else {
-        this.addRawMaterialToPlan(line, fgQuantity, plan, bomData.item_code)
+        this.addRawMaterialToPlan(line, fgQuantity, plan, bomData.item_code, bomQuantity)
       }
     }
 
     for (const rawMaterial of raw_materials) {
       const isSA = await this.isSubAssembly(rawMaterial)
       if (isSA) {
-        await this.processSubAssembly(rawMaterial, fgQuantity, plan, bomData.item_code)
+        await this.processSubAssembly(rawMaterial, fgQuantity / bomQuantity, plan, bomData.item_code)
       } else {
-        this.addRawMaterialToPlan(rawMaterial, fgQuantity, plan, bomData.item_code)
+        this.addRawMaterialToPlan(rawMaterial, fgQuantity, plan, bomData.item_code, bomQuantity)
       }
     }
 
     for (const operation of operations) {
-      const operationTimePerUnit = parseFloat(operation.operation_time || 0)
+      const operationTimePerUnit = parseFloat(operation.operation_time || 0) / bomQuantity
       const totalTime = operationTimePerUnit * fgQuantity
       const totalHours = totalTime / 60
 
@@ -221,12 +222,13 @@ export class ProductionPlanningService {
     }
   }
 
-  addRawMaterialToPlan(item, plannedQty, plan, sourceBomCode) {
+  addRawMaterialToPlan(item, plannedQty, plan, sourceBomCode, bomQuantity = 1) {
     const itemCode = item.item_code || item.component_code
     const itemName = item.item_name || item.component_description || item.description || itemCode
     const itemGroup = item.item_group || ''
     const itemType = item.item_type || 'Raw Material'
-    const qtyPerUnit = parseFloat(item.qty || item.quantity || 0)
+    const qtyInBom = parseFloat(item.qty || item.quantity || 0)
+    const qtyPerUnit = qtyInBom / bomQuantity
     const totalRmQty = qtyPerUnit * plannedQty
     const rate = parseFloat(item.rate || 0)
     const uom = item.uom
@@ -269,15 +271,15 @@ export class ProductionPlanningService {
     plan.sub_assemblies.push(item)
   }
 
-  async processSubAssembly(bomLine, fgQuantity, plan, parentCode = null, level = 1) {
+  async processSubAssembly(bomLine, parentPlannedQty, plan, parentCode = null, level = 1) {
     const subAsmCode = bomLine.component_code || bomLine.item_code
     const subAsmName = bomLine.component_description || bomLine.item_name
-    const bomQtyPerFg = parseFloat(bomLine.quantity || bomLine.qty || 1)
+    const bomQtyPerParent = parseFloat(bomLine.quantity || bomLine.qty || 1)
     
     const item = await this.getItemDetails(subAsmCode)
     const scrapPercentage = item ? parseFloat(item.loss_percentage || 0) : 0
 
-    const plannedQtyBeforeScrap = fgQuantity * bomQtyPerFg
+    const plannedQtyBeforeScrap = parentPlannedQty * bomQtyPerParent
     const plannedQty = this.calculateQtyWithScrap(plannedQtyBeforeScrap, scrapPercentage)
 
     const subBomData = await this.getSubAssemblyBOM(subAsmCode, bomLine.bom_no)
@@ -286,8 +288,8 @@ export class ProductionPlanningService {
       item_code: subAsmCode,
       item_name: subAsmName,
       parent_item_code: parentCode,
-      bom_qty_per_fg: bomQtyPerFg,
-      fg_quantity: fgQuantity,
+      bom_qty_per_parent: bomQtyPerParent,
+      parent_planned_qty: parentPlannedQty,
       scrap_percentage: scrapPercentage,
       planned_qty_before_scrap: plannedQtyBeforeScrap,
       planned_qty: plannedQty,
@@ -348,6 +350,7 @@ export class ProductionPlanningService {
 
   async processSubAssemblyBOM(bomData, plannedQty, plan, level = 1) {
     const { lines = [], operations = [], raw_materials = [] } = bomData
+    const bomQuantity = parseFloat(bomData.quantity || 1)
 
     for (const line of lines) {
       const isSA = await this.isSubAssembly(line)
@@ -357,9 +360,9 @@ export class ProductionPlanningService {
         const scrapPercentage = item ? parseFloat(item.loss_percentage || 0) : 0
 
         const bomQtyPerParent = parseFloat(line.quantity || line.qty || 1)
-        const plannedQtyBeforeScrap = plannedQty * bomQtyPerParent
+        const nestedPlannedQtyBeforeScrap = (plannedQty / bomQuantity) * bomQtyPerParent
 
-        const nestedPlannedQty = this.calculateQtyWithScrap(plannedQtyBeforeScrap, scrapPercentage)
+        const nestedPlannedQty = this.calculateQtyWithScrap(nestedPlannedQtyBeforeScrap, scrapPercentage)
 
         const nestedBomData = await this.getSubAssemblyBOM(nestedSubAsmCode, line.bom_no)
 
@@ -368,9 +371,9 @@ export class ProductionPlanningService {
           item_name: line.component_description || line.item_name,
           parent_item_code: bomData.item_code,
           bom_qty_per_parent: bomQtyPerParent,
-          parent_planned_qty: plannedQty,
+          parent_planned_qty: plannedQty / bomQuantity,
           scrap_percentage: scrapPercentage,
-          planned_qty_before_scrap: plannedQtyBeforeScrap,
+          planned_qty_before_scrap: nestedPlannedQtyBeforeScrap,
           planned_qty: nestedPlannedQty,
           status: 'pending',
           bom_no: nestedBomData ? nestedBomData.bom_id : null,
@@ -381,7 +384,7 @@ export class ProductionPlanningService {
           await this.processSubAssemblyBOM(nestedBomData, nestedPlannedQty, plan, level + 1)
         }
       } else {
-        this.addRawMaterialToPlan(line, plannedQty, plan, bomData.item_code)
+        this.addRawMaterialToPlan(line, plannedQty, plan, bomData.item_code, bomQuantity)
       }
     }
 
@@ -393,9 +396,9 @@ export class ProductionPlanningService {
         const scrapPercentage = item ? parseFloat(item.loss_percentage || 0) : 0
 
         const bomQtyPerParent = parseFloat(rawMaterial.quantity || rawMaterial.qty || 1)
-        const plannedQtyBeforeScrap = plannedQty * bomQtyPerParent
+        const nestedPlannedQtyBeforeScrap = (plannedQty / bomQuantity) * bomQtyPerParent
 
-        const nestedPlannedQty = this.calculateQtyWithScrap(plannedQtyBeforeScrap, scrapPercentage)
+        const nestedPlannedQty = this.calculateQtyWithScrap(nestedPlannedQtyBeforeScrap, scrapPercentage)
 
         const nestedBomData = await this.getSubAssemblyBOM(nestedSubAsmCode, rawMaterial.bom_no)
 
@@ -404,9 +407,9 @@ export class ProductionPlanningService {
           item_name: rawMaterial.component_description || rawMaterial.item_name || rawMaterial.description,
           parent_item_code: bomData.item_code,
           bom_qty_per_parent: bomQtyPerParent,
-          parent_planned_qty: plannedQty,
+          parent_planned_qty: plannedQty / bomQuantity,
           scrap_percentage: scrapPercentage,
-          planned_qty_before_scrap: plannedQtyBeforeScrap,
+          planned_qty_before_scrap: nestedPlannedQtyBeforeScrap,
           planned_qty: nestedPlannedQty,
           status: 'pending',
           bom_no: nestedBomData ? nestedBomData.bom_id : null,
@@ -417,12 +420,13 @@ export class ProductionPlanningService {
           await this.processSubAssemblyBOM(nestedBomData, nestedPlannedQty, plan, level + 1)
         }
       } else {
-        this.addRawMaterialToPlan(rawMaterial, plannedQty, plan, bomData.item_code)
+        this.addRawMaterialToPlan(rawMaterial, plannedQty, plan, bomData.item_code, bomQuantity)
       }
     }
 
     for (const operation of operations) {
-      const operationTimePerUnit = parseFloat(operation.operation_time || 0)
+      const operationTimePerBom = parseFloat(operation.operation_time || 0)
+      const operationTimePerUnit = operationTimePerBom / bomQuantity
       const totalTime = operationTimePerUnit * plannedQty
       const totalHours = totalTime / 60
 
@@ -489,7 +493,7 @@ export class ProductionPlanningService {
 
         await this.db.execute(
           'INSERT INTO production_plan_sub_assembly (plan_id, item_code, item_name, parent_item_code, required_qty, planned_qty, planned_qty_before_scrap, scrap_percentage, bom_no, schedule_date, explosion_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          [planId, sa.item_code, sa.item_name, sa.parent_item_code || sa.parent_assembly_code || null, sa.planned_qty, sa.planned_qty, sa.planned_qty_before_scrap, sa.scrap_percentage, saBomNo, sa.schedule_date || null, sa.explosion_level || 0]
+          [planId, sa.item_code, sa.item_name, sa.parent_item_code || sa.parent_assembly_code || sa.parent_code || null, sa.planned_qty, sa.planned_qty, sa.planned_qty_before_scrap, sa.scrap_percentage, saBomNo, sa.schedule_date || null, sa.explosion_level || 0]
         )
       }
 
@@ -552,6 +556,7 @@ export class ProductionPlanningService {
       // This ensures nested sub-assemblies correctly find their parents
       const itemCodeToWoIdMap = {}
       let woCounter = 0
+      let globalOpCounter = 0
       const batchTimestamp = Date.now()
 
       const processBatch = async (batch, isFG = false) => {
@@ -635,23 +640,23 @@ export class ProductionPlanningService {
               parent_wo_id: parentWoId,
               target_warehouse: item.target_warehouse || item.fg_warehouse || null,
               notes: `Auto-generated from Production Plan ${planId}${isFG ? ' (Finished Good)' : ' (Sub-Assembly)'}`,
-              operations: operationsToUse
+              operations: operationsToUse,
+              starting_plan_sequence: globalOpCounter, // NEW: Track global sequence
+              skipJobCardGeneration: true // Pass 1: Skip Job Card generation
             }
 
-            console.log(`[ProductionPlanningService] Creating Work Order: ${woId} for Item: ${item.item_code} (Parent: ${parentWoId || 'None'})`)
+            console.log(`[ProductionPlanningService] Creating Work Order Header: ${woId} for Item: ${item.item_code} (Parent: ${parentWoId || 'None'})`)
 
             const createdIds = await productionModel.createWorkOrderRecursive(woData, userId || 1, false, true)
             
+            // Increment global sequence by the number of operations in this WO
+            globalOpCounter += operationsToUse.length;
+
             if (createdIds && createdIds.length > 0) {
               const actualWoId = createdIds[0]
               itemCodeToWoIdMap[item.item_code] = actualWoId
               item.generated_wo_id = actualWoId
               console.log(`[ProductionPlanningService] Successfully created WO ${actualWoId} for ${item.item_code}`)
-              
-              if (parentWoId) {
-                console.log(`[ProductionPlanningService] Linking dependency: ${parentWoId} -> ${actualWoId}`)
-                await productionModel.addWorkOrderDependency(parentWoId, actualWoId, item.item_code, plannedQty)
-              }
             }
 
             // Add a small delay to ensure unique timestamps and sequential creation
@@ -667,7 +672,7 @@ export class ProductionPlanningService {
       // 1. Process Sub-Assemblies FIRST in order of explosion level (Dependencies)
       // Note: We use dbSubAsms but we need to ensure they match allSubAsms used in previous logic
       const sortedSubAsmList = [...(dbSubAsms || allSubAsms)].sort((a, b) => 
-        (parseInt(a.explosion_level || 0)) - (parseInt(b.explosion_level || 0))
+        (parseInt(b.explosion_level || 0)) - (parseInt(a.explosion_level || 0))
       )
       
       console.log(`[ProductionPlanningService] Starting Sub-Assembly batch... Count: ${sortedSubAsmList.length}`)
@@ -682,7 +687,55 @@ export class ProductionPlanningService {
         .map(item => item.generated_wo_id)
         .filter(id => !!id)
 
-      // 3. Update Plan Status
+      // --- PASS 2: Link Dependencies ---
+      console.log(`[ProductionPlanningService] PASS 2: Linking Work Order Dependencies...`)
+      for (const item of [...sortedSubAsmList, ...allFGItems]) {
+        const actualWoId = item.generated_wo_id
+        const parentItemCode = item.parent_item_code || item.parent_assembly_code || item.parent_code
+        
+        if (actualWoId && parentItemCode) {
+          const parentWoId = itemCodeToWoIdMap[parentItemCode]
+          if (parentWoId) {
+            console.log(`[ProductionPlanningService] Linking dependency and updating parent: ${parentWoId} -> ${actualWoId}`)
+            const plannedQty = parseFloat(item.planned_qty) || parseFloat(item.qty) || parseFloat(item.quantity) || 0
+            
+            // 1. Add to work_order_dependency table (Primary dependency tracking)
+            await productionModel.addWorkOrderDependency(parentWoId, actualWoId, item.item_code, plannedQty)
+            
+            // 2. Update parent_wo_id column in work_order table (Legacy/Reference support)
+            await this.db.execute(
+              'UPDATE work_order SET parent_wo_id = ? WHERE wo_id = ?',
+              [parentWoId, actualWoId]
+            )
+          } else {
+            console.warn(`[ProductionPlanningService] Could not find parent WO for ${item.item_code} (Parent code: ${parentItemCode})`)
+          }
+        }
+      }
+
+      // --- PASS 3: Generate Job Cards BOTTOM-UP (Deepest Level First) ---
+      // This ensures child job cards exist when parent buffers are linked.
+      console.log(`[ProductionPlanningService] PASS 3: Generating Job Cards Bottom-Up...`)
+      
+      const bottomUpList = [...(dbSubAsms || allSubAsms)].sort((a, b) => 
+        (parseInt(b.explosion_level || 0)) - (parseInt(a.explosion_level || 0))
+      )
+
+      for (const item of bottomUpList) {
+        if (item.generated_wo_id) {
+          console.log(`[ProductionPlanningService] Pass 3: Generating Job Cards for Child WO ${item.generated_wo_id} (${item.item_code})`)
+          await productionModel.generateJobCardsForWorkOrder(item.generated_wo_id, userId || 1)
+        }
+      }
+
+      for (const item of allFGItems) {
+        if (item.generated_wo_id) {
+          console.log(`[ProductionPlanningService] Pass 3: Generating Job Cards for Root FG WO ${item.generated_wo_id} (${item.item_code})`)
+          await productionModel.generateJobCardsForWorkOrder(item.generated_wo_id, userId || 1)
+        }
+      }
+
+      // 4. Update Plan Status
       console.log(`[ProductionPlanningService] Updating plan status for ${planId} to 'in_progress'`)
       await productionPlanningModel.updatePlanStatus(planId, 'in_progress')
 
@@ -939,7 +992,7 @@ export class ProductionPlanningService {
   async syncJobCardsForWorkOrder(woId) {
     try {
       const [jobCards] = await this.db.execute(
-        'SELECT job_card_id, status FROM job_card WHERE work_order_id = ? AND status IN ("draft", "ready", "open", "pending")',
+        'SELECT job_card_id, status, produced_quantity FROM job_card WHERE work_order_id = ? AND status IN ("draft", "ready", "open", "pending", "in-progress")',
         [woId]
       )
 
@@ -959,10 +1012,14 @@ export class ProductionPlanningService {
           const [wo] = await this.db.execute('SELECT quantity FROM work_order WHERE wo_id = ?', [woId])
           const woQty = parseFloat(wo[0]?.quantity || 1)
           const perUnitTime = (parseFloat(op.time_in_minutes) || 0) / woQty
+          
+          // Safety Check: For In-Progress cards, don't set target less than what's already produced
+          const producedQty = parseFloat(jc.produced_quantity || 0)
+          const targetQty = jc.status === 'in-progress' ? Math.max(woQty, producedQty) : woQty
 
           await this.db.execute(
             'UPDATE job_card SET planned_quantity = ?, operation_time = ?, operating_cost = ?, updated_at = NOW() WHERE job_card_id = ?',
-            [woQty, perUnitTime, op.operating_cost, jc.job_card_id]
+            [targetQty, perUnitTime, op.operating_cost, jc.job_card_id]
           )
         }
       }

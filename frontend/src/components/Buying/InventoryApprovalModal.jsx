@@ -196,7 +196,7 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
         </div>
 
         {/* Unified Items Table */}
-        <section className="bg-white rounded  border border-neutral-200 overflow-hidden  ">
+        <section className="bg-white rounded  border border-neutral-200   ">
           <div className="p-2  bg-neutral-50 border-b border-neutral-200 flex justify-between items-center">
             <h4 className=" text-neutral-800 flex items-center gap-2 text-sm">
               <ClipboardCheck size={16} className="text-primary-600" /> 

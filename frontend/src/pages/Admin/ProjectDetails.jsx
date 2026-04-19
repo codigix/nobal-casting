@@ -328,6 +328,7 @@ export default function ProjectDetails() {
             { id: 'overview', label: 'Overview', icon: LayoutGrid },
             { id: 'stages', label: 'Production Flow', icon: TrendingUp },
             { id: 'workorders', label: 'Work Orders', icon: ClipboardCheck },
+            { id: 'logistics', label: 'Logistics', icon: Truck },
             { id: 'supplychain', label: 'Supply Chain', icon: ShoppingCart },
             { id: 'history', label: 'Production History', icon: Clock },
             { id: 'materials', label: 'Inventory Matrix', icon: Layers }
@@ -960,6 +961,108 @@ export default function ProjectDetails() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'logistics' && (
+          <div className="space-y-6">
+            <div className="bg-indigo-600  rounded  p-2 text-white  flex items-center justify-between overflow-hidden relative">
+              <div className="absolute -right-10 -bottom-10 opacity-10 rotate-12"><Truck size={90} /></div>
+              <div className="relative z-0">
+                <p className="text-xs  text-indigo-200 mb-1">Logistics & Delivery</p>
+                <h3 className="text-sm text-white  m-0">Shipment Status for Project {project.id}</h3>
+              </div>
+              <div className="text-right relative z-0">
+                <p className="text-xs text-indigo-200 mb-1">Total Dispatched</p>
+                <p className="text-lg text-white m-0">
+                  {project.job_card_shipments?.reduce((sum, s) => sum + parseFloat(s.accepted_quantity || 0), 0).toLocaleString() || 0} Units
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white rounded border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-100">
+                  <h4 className="text-sm  text-slate-900 m-0 font-semibold flex items-center gap-2">
+                    <Truck size={16} className="text-indigo-600" /> Dispatch Events (Production)
+                  </h4>
+                </div>
+                <div className="p-0">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="bg-slate-50 text-[10px] text-slate-400">
+                        <th className="p-3">Job Card</th>
+                        <th className="p-3">Operation</th>
+                        <th className="p-3">Carrier / Tracking</th>
+                        <th className="p-3">Qty</th>
+                        <th className="p-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {project.job_card_shipments?.length > 0 ? project.job_card_shipments.map((s, i) => (
+                        <tr key={i} className="text-xs hover:bg-slate-50">
+                          <td className="p-3 font-medium text-slate-700">{s.job_card_id}</td>
+                          <td className="p-3 text-slate-600">{s.operation}</td>
+                          <td className="p-3 text-slate-600">
+                            <div className="font-medium">{s.carrier_name || 'N/A'}</div>
+                            {s.tracking_number && <div className="text-[10px] text-slate-400">Track: {s.tracking_number}</div>}
+                          </td>
+                          <td className="p-3 font-semibold text-indigo-600">{parseFloat(s.accepted_quantity).toLocaleString()}</td>
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] ${s.is_partial ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                              {s.is_partial ? 'Partial' : 'Full'}
+                            </span>
+                          </td>
+                        </tr>
+                      )) : (
+                        <tr><td colSpan="5" className="p-8 text-center text-slate-400 italic">No production dispatch logs found</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="bg-white rounded border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-100">
+                  <h4 className="text-sm  text-slate-900 m-0 font-semibold flex items-center gap-2">
+                    <Package size={16} className="text-blue-600" /> Delivery Challans / Official Orders
+                  </h4>
+                </div>
+                <div className="p-0">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="bg-slate-50 text-[10px] text-slate-400">
+                        <th className="p-3">Dispatch ID</th>
+                        <th className="p-3">Date</th>
+                        <th className="p-3">Carrier / Tracking</th>
+                        <th className="p-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {project.dispatches?.length > 0 ? project.dispatches.map((d, i) => (
+                        <tr key={i} className="text-xs hover:bg-slate-50">
+                          <td className="p-3 font-medium text-blue-600">{d.dispatch_id}</td>
+                          <td className="p-3 text-slate-600">{new Date(d.dispatch_date).toLocaleDateString()}</td>
+                          <td className="p-3 text-slate-600">
+                            <div className="font-medium">{d.carrier || 'N/A'}</div>
+                            {d.tracking_number && <div className="text-[10px] text-slate-400">Track: {d.tracking_number}</div>}
+                          </td>
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] ${
+                              d.status === 'shipped' ? 'bg-blue-50 text-blue-600' : 
+                              d.status === 'delivered' ? 'bg-emerald-50 text-emerald-600' : 
+                              'bg-slate-50 text-slate-500'
+                            }`}>{d.status}</span>
+                          </td>
+                        </tr>
+                      )) : (
+                        <tr><td colSpan="4" className="p-8 text-center text-slate-400 italic">No formal dispatch orders found</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>

@@ -57,7 +57,7 @@ export default function DepartmentLayout({ children }) {
     const deptMenus = {
       'inventory': 'inventory',
       'manufacturing': 'manufacturing',
-      'admin': 'analytics',
+      'admin': 'project_tracking',
       'accounts': 'accounts'
     }
     return deptMenus[userDept] || null
@@ -118,10 +118,6 @@ export default function DepartmentLayout({ children }) {
           section: 'APPS',
           submenu: [
             { label: 'Material Requests', path: '/inventory/material-requests', icon: FileText },
-                        { label: 'Purchase Orders', path: '/buying/purchase-orders', icon: Package },
-
-             { label: 'Purchase Receipt', path: '/inventory/purchase-receipts', icon: Receipt },
-            { label: 'GRN Management', path: '/inventory/grn-management', icon: Package },
           
             { label: 'Stock Entries', path: '/inventory/stock-entries', icon: FileText },
             { label: 'Stock Balance', path: '/inventory/stock-balance', icon: Package },
@@ -152,41 +148,12 @@ export default function DepartmentLayout({ children }) {
             { label: 'Production Planning', path: '/manufacturing/production-planning', icon: Calendar },
             { label: 'Work Orders', path: '/manufacturing/work-orders', icon: Clipboard },
             { label: 'Job Cards', path: '/manufacturing/job-cards', icon: FileText },
+            { label: 'Challans', path: '/manufacturing/subcontract-challans', icon: Truck },
             { label: 'Workstations', path: '/manufacturing/workstations', icon: Grid3x3 },
             { label: 'Operations', path: '/manufacturing/operations', icon: Zap }
           ]
         },
-        {
-          id: 'buying',
-          label: 'Buying',
-          icon: ShoppingCart,
-          section: 'APPS',
-          submenu: [
-            { label: 'Material Requests', path: '/inventory/material-requests', icon: FileText },
-            { label: 'Purchase Orders', path: '/buying/purchase-orders', icon: Package },
-            { label: 'Purchase Receipt', path: '/inventory/purchase-receipts', icon: Receipt },
-            { label: 'Purchase Invoices', path: '/buying/purchase-invoices', icon: Receipt }
-          ]
-        },
-        {
-          id: 'selling',
-          label: 'Selling',
-          icon: Send,
-          section: 'APPS',
-          submenu: [
-            { label: 'Sales Orders', path: '/manufacturing/sales-orders', icon: ShoppingCart },
-            { label: 'Sales Invoices', path: '/selling/sales-invoices', icon: FileText }
-          ]
-        },
-        {
-          id: 'analytics',
-          label: 'Analytics',
-          icon: BarChart3,
-          section: 'APPS',
-          submenu: [
-            { label: 'Production Analytics', path: '/manufacturing/analytics', icon: TrendingUp }
-          ]
-        }
+       
       ]
     }
 
@@ -194,21 +161,23 @@ export default function DepartmentLayout({ children }) {
     if (userDept === 'admin') {
       return [
         dashboardItem,
-      
         {
-          id: 'analytics',
-          label: 'Analytics',
-          icon: BarChart3,
+          id: 'project_tracking',
+          label: 'Project Tracking',
+          icon: Clipboard,
           section: 'APPS',
           submenu: [
             { label: 'Project Analysis', path: '/admin/project-analysis', icon: TrendingUp, state: { filterSegment: 'all' } },
-                        { label: 'Customer Statistics', path: '/admin/customer-statistics', icon: Award },
-
+            { label: 'Project Dispatch', path: '/admin/dispatched', icon: Truck },
+            { label: 'Material Consumption', path: '/admin/consume-material', icon: Package },
+         { label: 'Customer Statistics', path: '/admin/customer-statistics', icon: Award },
             { label: 'Machine Analysis', path: '/admin/machine-analysis', icon: TrendingUp },
             { label: 'OEE Analysis', path: '/admin/oee', icon: TrendingUp },
             { label: 'Employees & Designations', path: '/admin/employees-designations', icon: Users }
+          
           ]
-        }
+        },
+       
       ]
     }
 
@@ -223,7 +192,6 @@ export default function DepartmentLayout({ children }) {
           section: 'APPS',
           submenu: [
             { label: 'Sales Invoices', path: '/selling/sales-invoices', icon: FileText },
-            { label: 'Purchase Invoices', path: '/buying/purchase-invoices', icon: Receipt },
             { label: 'Payments', path: '/accounts/payments', icon: CreditCard },
             { label: 'Expenses', path: '/accounts/expenses', icon: TrendingDown },
             { label: 'Ledger', path: '/accounts/ledger', icon: Clipboard },

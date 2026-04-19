@@ -1685,7 +1685,7 @@ export default function WorkOrderForm() {
                         <div className="p-4 flex justify-center border-t border-slate-100">
                           <button
                             onClick={createJobCardsFromOperations}
-                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs  shadow-indigo-100"
+                            className="flex items-center gap-2 p-2  bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs  shadow-indigo-100"
                           >
                             <Zap size={14} />
                             Generate Job Cards

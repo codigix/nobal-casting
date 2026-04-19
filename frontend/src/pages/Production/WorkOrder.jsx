@@ -1172,7 +1172,7 @@ export default function WorkOrder() {
                               )}
 
                               {/* Group Footer */}
-                              <div className="bg-gray-50/30 px-4 py-2 border-t border-gray-100 flex justify-between items-center text-[10px] text-gray-400">
+                              <div className="bg-gray-50/30 p-2  border-t border-gray-100 flex justify-between items-center text-[10px] text-gray-400">
                                 <span className="italic">Aggregated production lifecycle for {group.id}</span>
                                 <div className="flex gap-6">
                                   <div className="flex items-center gap-2">

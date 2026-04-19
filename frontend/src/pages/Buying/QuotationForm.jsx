@@ -176,7 +176,7 @@ export default function QuotationForm() {
             <Button 
               onClick={() => navigate('/buying/quotations')}
               variant="secondary"
-              className="px-4 py-2 h-10 border-neutral-200  text-[10px]   rounded "
+              className="p-2  h-10 border-neutral-200  text-[10px]   rounded "
             >
               Cancel
             </Button>

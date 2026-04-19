@@ -684,7 +684,7 @@ export default function CreateJobCardModal({
                       return updated
                     })
                   }}
-                  className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs"
+                  className="w-full p-2  border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs"
                   disabled={!formData.work_order_id}
                 >
                   <option value="">Select Operation</option>
@@ -723,7 +723,7 @@ export default function CreateJobCardModal({
                         name="produced_quantity"
                         value={formData.produced_quantity}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-emerald-100 rounded focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-xs"
+                        className="w-full p-2  border border-emerald-100 rounded focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-xs"
                       />
                     </div>
                     <div>
@@ -735,7 +735,7 @@ export default function CreateJobCardModal({
                         name="accepted_quantity"
                         value={formData.accepted_quantity}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-blue-100 rounded focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
+                        className="w-full p-2  border border-blue-100 rounded focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                       />
                     </div>
                   </>
@@ -749,7 +749,7 @@ export default function CreateJobCardModal({
                     name="status"
                     value={formData.status}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs"
+                    className="w-full p-2  border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs"
                   >
                     <option value="draft">Draft</option>
                     <option value="pending">Pending</option>
@@ -772,7 +772,7 @@ export default function CreateJobCardModal({
                       value={formData.scheduled_start_date}
                       onChange={handleInputChange}
                       required
-                      className={`w-full px-4 py-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs ${
+                      className={`w-full p-2  border rounded focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs ${
                         getSequencingError() ? 'border-rose-300 bg-rose-50' : 'border-slate-200'
                       }`}
                     />
@@ -798,7 +798,7 @@ export default function CreateJobCardModal({
                       name="scheduled_end_date"
                       value={formData.scheduled_end_date}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs ${
+                      className={`w-full p-2  border rounded focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs ${
                         getMachineConflict() ? 'border-amber-300 bg-amber-50' : 'border-slate-200'
                       }`}
                     />

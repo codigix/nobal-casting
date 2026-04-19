@@ -13,6 +13,7 @@ router.delete('/:po_no', controller.deletePurchaseOrder)
 
 // Actions
 router.post('/:po_no/submit', controller.submitPurchaseOrder)
+router.put('/:po_no/receive', controller.updateReceivedQty)
 
 // Payment Reminders
 router.get('/reminders/list', controller.getPaymentReminders)

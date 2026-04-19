@@ -18,7 +18,7 @@ const StatCard = ({ label, value, icon: Icon, color, onClick, isActive }) => {
   return (
     <div
       onClick={onClick}
-      className={`bg-white p-3 rounded border transition-all duration-200 cursor-pointer relative group ${
+      className={`bg-white p-2 rounded border transition-all duration-200 cursor-pointer relative group ${
         isActive 
           ? 'border-indigo-600 ring-1 ring-indigo-600' 
           : 'border-neutral-200 hover:border-neutral-300'
@@ -436,7 +436,7 @@ export default function SupplierQuotations() {
             <Button 
               onClick={() => setIsModalOpen(true)}
               variant="primary"
-              className="bg-neutral-900 hover:bg-neutral-800 text-white flex items-center gap-2 px-4 py-2 rounded h-10 border-0"
+              className="bg-neutral-900 hover:bg-neutral-800 text-white flex items-center gap-2 p-2  rounded h-10 border-0"
             >
               <Plus size={16} strokeWidth={3} /> 
               <span className="text-xs   ">New Quotation</span>
@@ -523,7 +523,7 @@ export default function SupplierQuotations() {
             <div className="relative">
               <button
                 onClick={() => setShowColumnMenu(!showColumnMenu)}
-                className="flex items-center gap-2 text-[10px]  text-neutral-600 hover:border-indigo-600 hover:text-indigo-600 transition-all px-4 py-2  border border-neutral-200 rounded bg-white  "
+                className="flex items-center gap-2 text-[10px]  text-neutral-600 hover:border-indigo-600 hover:text-indigo-600 transition-all p-2   border border-neutral-200 rounded bg-white  "
               >
                 <Eye size={14} />
                 <span>Columns</span>
@@ -532,7 +532,7 @@ export default function SupplierQuotations() {
 
               {showColumnMenu && (
                 <div className="absolute right-0 mt-2 w-56 bg-white border border-neutral-200 rounded shadow  z-50 py-3 overflow-hidden">
-                  <div className="px-4 py-2 border-b border-neutral-100 flex justify-between bg-neutral-50 mb-2">
+                  <div className="p-2  border-b border-neutral-100 flex justify-between bg-neutral-50 mb-2">
                     <button 
                       onClick={() => setVisibleColumns(new Set(columns.map(c => c.key)))}
                       className="text-[9px]  text-indigo-600 hover:underline  "
@@ -548,7 +548,7 @@ export default function SupplierQuotations() {
                   </div>
                   <div className="max-h-64 overflow-y-auto px-1">
                     {columns.map(col => (
-                      <label key={col.key} className="flex items-center gap-3 px-4 py-2 hover:bg-neutral-50 cursor-pointer transition-colors group">
+                      <label key={col.key} className="flex items-center gap-3 p-2  hover:bg-neutral-50 cursor-pointer transition-colors group">
                         <input
                           type="checkbox"
                           className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-600 w-3.5 h-3.5"

@@ -395,11 +395,12 @@ class OEEModel {
   /**
    * Calculate and save OEE for a Job Card on a specific date and shift
    */
-  async calculateAndSaveJobCardOEE(jobCardId, logDate, shift) {
+  async calculateAndSaveJobCardOEE(jobCardId, logDate, shift, connection = null) {
+    const db = connection || this.db;
     try {
       // 1. Get Job Card and BOM Ideal Cycle Time
       // We look for operation_time in bom_operation or job_card itself
-      const [jcRows] = await this.db.query(`
+      const [jcRows] = await db.query(`
         SELECT jc.*, bo.operation_time as bom_ideal_cycle_time
         FROM job_card jc
         LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
@@ -425,7 +426,7 @@ class OEEModel {
       }
 
       // 2. Get Production and Time Logs for this shift
-      const [timeLogs] = await this.db.query(`
+      const [timeLogs] = await db.query(`
         SELECT SUM(time_in_minutes) as actual_time, 
                SUM(completed_qty) as total_produced,
                SUM(accepted_qty) as total_accepted
@@ -438,7 +439,7 @@ class OEEModel {
       let totalAccepted = parseFloat(stats.total_accepted || 0);
 
       // 2a. Incorporate Quality Inspection Entries for higher accuracy
-      const [inspectionLogs] = await this.db.query(`
+      const [inspectionLogs] = await db.query(`
         SELECT SUM(quantity_inspected) as total_inspected,
                SUM(quantity_passed) as total_passed
         FROM inspection_result
@@ -452,7 +453,7 @@ class OEEModel {
       }
 
       // 3. Get Downtime for this shift
-      const [downtimes] = await this.db.query(`
+      const [downtimes] = await db.query(`
         SELECT downtime_type, downtime_reason, SUM(duration_minutes) as duration
         FROM downtime_entry
         WHERE job_card_id = ? AND (DATE(log_date) = ? OR log_date = ?) AND shift = ?
@@ -461,17 +462,17 @@ class OEEModel {
 
       // NEW: Check if there's ANY data at all for this shift. If not, delete the OEE analysis entry and return.
       if (totalProduced === 0 && totalAccepted === 0 && (downtimes.length === 0 || downtimes.every(d => parseFloat(d.duration) === 0))) {
-        await this.db.query(`
+        await db.query(`
           DELETE FROM oee_analysis 
           WHERE level = 'job_card' AND reference_id = ? AND log_date = ? AND shift = ?
         `, [jobCardId, logDate, shift]);
         
         // Still need to trigger parent aggregations because this might have been the last record
         if (jobCard.work_order_id) {
-          await this.calculateAndSaveWorkOrderOEE(jobCard.work_order_id, logDate);
+          await this.calculateAndSaveWorkOrderOEE(jobCard.work_order_id, logDate, connection);
         }
         if (jobCard.machine_id) {
-          await this.calculateAndSaveWorkstationOEE(jobCard.machine_id, logDate);
+          await this.calculateAndSaveWorkstationOEE(jobCard.machine_id, logDate, connection);
         }
         return null;
       }
@@ -591,9 +592,10 @@ class OEEModel {
   /**
    * Calculate aggregated OEE for a Work Order (weighted average)
    */
-  async calculateAndSaveWorkOrderOEE(workOrderId, logDate) {
+  async calculateAndSaveWorkOrderOEE(workOrderId, logDate, connection = null) {
+    const db = connection || this.db;
     try {
-      const [rows] = await this.db.query(`
+      const [rows] = await db.query(`
         SELECT 
           SUM(availability * actual_run_time) / NULLIF(SUM(actual_run_time), 0) as weighted_availability,
           SUM(performance * actual_run_time) / NULLIF(SUM(actual_run_time), 0) as weighted_performance,
@@ -614,7 +616,7 @@ class OEEModel {
 
       if (rows.length === 0 || rows[0].total_run_time === null) {
         // No data, delete work order OEE record
-        await this.db.query(`
+        await db.query(`
           DELETE FROM oee_analysis 
           WHERE level = 'work_order' AND reference_id = ? AND log_date = ?
         `, [workOrderId, logDate]);
@@ -646,7 +648,7 @@ class OEEModel {
         quality_loss_qty: summary.total_qual_loss || 0
       };
 
-      await this.db.query(`
+      await db.query(`
         INSERT INTO oee_analysis (
           level, reference_id, log_date, shift, availability, performance, quality, oee,
           planned_production_time, downtime, actual_run_time, 
@@ -677,11 +679,12 @@ class OEEModel {
   /**
    * Calculate consolidated OEE for a Workstation
    */
-  async calculateAndSaveWorkstationOEE(machineId, logDate) {
+  async calculateAndSaveWorkstationOEE(machineId, logDate, connection = null) {
+    const db = connection || this.db;
     try {
       // 1. Get components consolidated by shift to avoid overcounting planned time
       // We assume each unique shift on a machine has a fixed planned time (e.g. 480 mins)
-      const [shiftComponents] = await this.db.query(`
+      const [shiftComponents] = await db.query(`
         SELECT 
           shift,
           MAX(planned_production_time) as shift_planned_time,
@@ -702,7 +705,7 @@ class OEEModel {
 
       if (shiftComponents.length === 0) {
         // No data, delete workstation OEE record
-        await this.db.query(`
+        await db.query(`
           DELETE FROM oee_analysis 
           WHERE level = 'workstation' AND reference_id = ? AND log_date = ?
         `, [machineId, logDate]);
@@ -756,7 +759,7 @@ class OEEModel {
         quality_loss_qty: totalQualLoss
       };
 
-      await this.db.query(`
+      await db.query(`
         INSERT INTO oee_analysis (
           level, reference_id, log_date, shift, availability, performance, quality, oee,
           planned_production_time, downtime, actual_run_time, 

@@ -462,7 +462,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
                 onChange={handleInputChange}
                 rows="3"
                 placeholder="Additional terms, conditions or notes..."
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+                className="w-full p-2  bg-slate-50 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
               ></textarea>
             </div>
           </div>

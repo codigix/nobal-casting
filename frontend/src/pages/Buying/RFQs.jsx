@@ -279,7 +279,7 @@ export default function RFQs() {
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
       {/* Modern Header Section */}
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-40">
+      <header className="bg-white border-b border-neutral-200 sticky top-0">
         <div className=" mx-auto p-2">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-1">
@@ -422,7 +422,7 @@ export default function RFQs() {
             <div className="relative">
               <button
                 onClick={() => setShowColumnMenu(!showColumnMenu)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-[10px]  text-neutral-600 hover:border-indigo-500 hover:text-indigo-600 transition-all  "
+                className="flex items-center gap-2 p-2  bg-white border border-neutral-200 text-[10px]  text-neutral-600 hover:border-indigo-500 hover:text-indigo-600 transition-all  "
               >
                 <Eye size={12} strokeWidth={3} />
                 <span>Columns</span>

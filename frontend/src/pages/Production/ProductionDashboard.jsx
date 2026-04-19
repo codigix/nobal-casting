@@ -870,13 +870,11 @@ const ChartContainer = ({ children, title, subtitle }) => (
   return (
   <div className="min-h-screen bg-[#f8fafc] p-4 pb-12">
     {/* Sticky Top Header */}
-    <div className="sticky top-0  bg-white/80 backdrop-blur-md border-b border-slate-200">
-      <div className=" p-6 ">
+    <div className="sticky top-0 backdrop-blur-md ">
+      <div className="">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
-            <div className="bg-indigo-600 p-2 rounded ">
-              <BarChart3 className="w-5 h-5 text-white" />
-            </div>
+            
             <div>
               <h1 className="text-lg  text-slate-900">Production Dashboard</h1>
               <div className="flex items-center gap-2 text-xs  text-slate-500 font-medium text-xs ">

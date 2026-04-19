@@ -127,7 +127,9 @@
   }
 
 
-
+.data-table th{
+  padding: 5px !important;
+}
   .form-group label {
     @apply block font-medium;
   }

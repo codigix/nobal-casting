@@ -226,7 +226,7 @@ export default function Payments() {
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-40">
+      <header className="bg-white border-b border-neutral-200 sticky top-0">
         <div className=" mx-auto p-2">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-1">

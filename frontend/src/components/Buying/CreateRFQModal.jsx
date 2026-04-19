@@ -266,7 +266,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Basic Info & Source */}
           <div className="space-y-2">
-            <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
+            <section className="bg-white rounded  border border-neutral-200 ">
               <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
                 <FileText size={18} className="text-primary-600" />
                 <h3 className="font-semibold text-neutral-800">Basic Information</h3>
@@ -289,7 +289,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
               </div>
             </section>
 
-            <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
+            <section className="bg-white rounded  border border-neutral-200 ">
               <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
                 <Building2 size={18} className="text-primary-600" />
                 <h3 className="font-semibold text-neutral-800">Source MR</h3>
@@ -312,7 +312,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           {/* Suppliers Selection */}
-          <section className="bg-white rounded  border border-neutral-200 overflow-hidden flex flex-col">
+          <section className="bg-white rounded  border border-neutral-200  flex flex-col">
             <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Users size={18} className="text-primary-600" />
@@ -370,7 +370,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
         </div>
 
         {/* Items Section */}
-        <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
+        <section className="bg-white rounded  border border-neutral-200 ">
           <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Package size={18} className="text-primary-600" />

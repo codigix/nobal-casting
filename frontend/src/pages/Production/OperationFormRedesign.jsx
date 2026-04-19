@@ -272,6 +272,7 @@ export default function OperationFormRedesign() {
                     >
                       <option value="IN_HOUSE">In-House</option>
                       <option value="OUTSOURCED">Outsourced</option>
+                      <option value="DISPATCH">Dispatch</option>
                     </select>
                   </div>
                   <div className="space-y-2">

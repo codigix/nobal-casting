@@ -174,7 +174,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
         if (onUpdate) onUpdate()
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to start operation')
+      setError(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to start operation')
     } finally {
       setLoading(false)
     }
@@ -235,7 +235,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
         }
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to end operation')
+      setError(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to end operation')
     } finally {
       setLoading(false)
     }
@@ -273,7 +273,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
         setTimeout(() => setSuccess(null), 3000)
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create outward challan')
+      setError(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to create outward challan')
     } finally {
       setLoading(false)
     }
@@ -288,8 +288,9 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
           <h3 className=" text-gray-900 mb-4">Operation Execution</h3>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xs text-red-700 text-xs">
-              {error}
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-sm text-red-700 text-sm font-medium flex items-start gap-3">
+              <AlertCircle className="shrink-0 mt-0.5" size={18} />
+              <span>{error}</span>
             </div>
           )}
 
@@ -375,17 +376,17 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
         )}
 
         {inwardChallans.length > 0 && (
-          <div className="bg-white rounded-xs border border-gray-20 0p-2">
+          <div className="bg-white rounded-xs border border-gray-20 p-2">
             <h3 className=" text-gray-900 mb-3">Inward Challans</h3>
-            <div className="space-y-2">
+            <div className="space-y-1">
               {inwardChallans.map(challan => (
-                <div key={challan.id} className="p-3 border border-gray-200 rounded-xs bg-gray-50">
+                <div key={challan.id} className="p-2 border border-gray-200 rounded-xs bg-gray-50">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className=" text-gray-900">{challan.challan_number}</div>
                       <div className="text-xs text-gray-600">Vendor: {challan.vendor_name}</div>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded ${
+                    <span className={`text-xs p-1 rounded ${
                       challan.status === 'received' ? 'bg-green-100 text-green-800' :
                       challan.status === 'verified' ? 'bg-blue-100 text-blue-800' :
                       'bg-gray-100 text-gray-800'

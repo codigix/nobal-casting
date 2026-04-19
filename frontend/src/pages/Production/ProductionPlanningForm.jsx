@@ -83,9 +83,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
       onClick={onToggle}
     >
       <div className="flex items-center gap-2">
-        <div className={`p-2 rounded   transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
-          <Icon size={18} strokeWidth={2.5} />
-        </div>
+        
         <div>
           <h2 className="text-xs  flex items-center gap-3">
             <span className={`${theme.text} `}>{title.split(' ')[0]}</span>
@@ -141,7 +139,7 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
 }
 
 const FieldWrapper = ({ label, children, error, required }) => (
-  <div className=".5">
+  <div className="space-y-1">
     <div className="flex items-center justify-between">
       <label className="text-xs   text-slate-400  text-xs  flex items-center gap-1">
         {label}
@@ -975,6 +973,8 @@ export default function ProductionPlanningForm() {
               fg_sub_assembly: 'Sub-Assembly',
               component_type: subAsmItem.component_type || 'Sub-Assembly',
               item_group: subAsmItem.item_group,
+              explosion_level: 1,
+              parent_code: bomData?.item_code || itemCode,
               planned_start_date: new Date().toISOString().split('T')[0],
               planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
             }
@@ -1978,7 +1978,7 @@ export default function ProductionPlanningForm() {
               {isReadOnly ? (
                 <button
                   onClick={() => setIsReadOnly(false)}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs font-medium"
+                  className="flex items-center gap-2 p-2  bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs font-medium"
                 >
                   <FileText size={16} />
                   <span>Edit Plan</span>
@@ -2099,7 +2099,7 @@ export default function ProductionPlanningForm() {
           {/* Main Content Area */}
           <div className="space-y-2 min-w-0">
             {/* Strategic Parameters Section */}
-            <div id="parameters" className="block bg-white">
+            <div id="parameters" className="relative z-[20] block bg-white">
               <Card>
                 <SectionHeader
                   title="01 STRATEGIC PARAMETERS"
@@ -2224,7 +2224,7 @@ export default function ProductionPlanningForm() {
                 )}
               </Card>
             </div>
-<div id="subassembly" className="block bg-white">
+<div id="subassembly" className="relative z-[15] block bg-white">
             {subAssemblyItems.length > 0 && (
               <Card>
                 <SectionHeader
@@ -2414,7 +2414,7 @@ export default function ProductionPlanningForm() {
             )}
           </div>
             {/* Production Scope Section */}
-            <div id="scope" className="block bg-white">
+            <div id="scope" className="relative z-[10] block bg-white">
               <Card>
                 <SectionHeader
                   title="03 FINISHED GOODS"
@@ -2556,7 +2556,7 @@ export default function ProductionPlanningForm() {
                         </table>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-slate-100 rounded  bg-slate-50/50">
+                      <div className="flex flex-col items-center justify-center z-0 py-16 px-4 border-2 border-dashed border-slate-100 rounded">
                         <div className=" p-2 bg-white    rounded  text-slate-300 mb-4 animate-bounce">
                           <Package size={40} />
                         </div>
@@ -2571,7 +2571,7 @@ export default function ProductionPlanningForm() {
 
           </div>
           
-          <div id="requirements" className="block bg-white">
+          <div id="requirements" className="relative z-[5] block bg-white">
             {(rawMaterialItems.length > 0 || subAssemblyBomMaterials.length > 0) && (
               <Card>
                 <SectionHeader
@@ -2999,7 +2999,7 @@ export default function ProductionPlanningForm() {
       )}
 
       {/* Floating Action Bar */}
-      <div className=" z-40 bg-white/90 backdrop-blur-md border-t border-slate-200 p-4  shadow-slate-200/50">
+      <div className=" bg-white border-t border-slate-200 p-4  shadow-slate-200/50">
         <div className=" flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex flex-col">

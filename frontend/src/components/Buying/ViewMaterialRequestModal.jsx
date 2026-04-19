@@ -9,7 +9,7 @@ import {
   Printer, CheckCircle, XCircle, Trash2, FileText, 
   ShoppingCart, ArrowRightLeft, Calendar, User, 
   Warehouse, Package, ClipboardList, Info, AlertTriangle,
-  RefreshCw, CheckCheck, Activity, Building2, ArrowRight
+  RefreshCw, CheckCheck, Activity, Building2, ArrowRight, Truck
 } from 'lucide-react'
 
 export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStatusChange }) {
@@ -239,7 +239,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
     try {
       setLoading(true)
       setError(null)
-      const isTransferOrIssue = ['material_transfer', 'material_issue'].includes(request?.purpose?.toLowerCase())
+      const isTransferOrIssue = ['material_transfer', 'material_issue', 'purchase'].includes(request?.purpose?.toLowerCase())
       
       // Identify available items to process if it's a stock transaction
       let itemsToProcess = []
@@ -391,43 +391,6 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
     }
   }
 
-  const handleCreatePO = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // send only total required items to purchase from vendor buy items for whole production
-      const itemsToOrder = request?.items?.map(item => ({
-        item_code: item.item_code,
-        item_name: item.item_name,
-        qty: Number(item.qty), // Total required for whole production
-        uom: item.uom || 'Kg',
-        rate: parseFloat(item.rate || 0)
-      })).filter(i => i.qty > 0) || []
-
-      if (itemsToOrder.length === 0) {
-        setError('No items found in this material request to purchase')
-        setLoading(false)
-        return
-      }
-
-      const poData = {
-        mr_id: mrId,
-        items: itemsToOrder,
-        department: request?.department,
-        purpose: request?.purpose
-      }
-
-      const response = await api.post('/purchase-orders/from-material-request', poData)
-      setSuccess(`Purchase Order ${response.data.data.po_no} created successfully. Redirecting...`)
-      setTimeout(() => window.location.href = '/buying/purchase-orders', 2000)
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create purchase order')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const getStatusBadge = (status) => {
     const colors = {
       draft: 'warning',
@@ -441,7 +404,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
     return <Badge color={colors[status] || 'secondary'} className=" text-xs p-1">{status}</Badge>
   }
 
-  const isTransferOrIssue = ['material_issue', 'material_transfer'].includes(request?.purpose?.toLowerCase())
+  const isTransferOrIssue = ['material_issue', 'material_transfer', 'purchase'].includes(request?.purpose?.toLowerCase())
   const anyAvailable = request?.items?.some(item => {
     const stock = stockData[item.item_code]
     const requestedQtyLimit = Number(item.requested_qty || item.qty || 0)
@@ -452,6 +415,42 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
     const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
     return pendingQty > 0
   })
+
+  // Helper to extract a clean finished goods name from potentially long descriptive strings
+  const getCleanFGName = () => {
+    if (!request?.finished_goods_name) return 'Internal'
+    
+    // Normalize newlines (handle literal \n strings if they exist)
+    const normalized = request.finished_goods_name.replace(/\\n/g, '\n')
+    
+    // Split into lines by actual newlines OR literal \n characters
+    const lines = normalized.split(/\n|\\n/).map(l => l.trim()).filter(l => l.length > 0)
+    
+    // 1. Look for a line that contains "Item:" (case-insensitive)
+    const itemLine = lines.find(line => line.toLowerCase().includes('item:'))
+    if (itemLine) {
+      // Extract only what follows "Item:" on that line
+      return itemLine.replace(/.*item:\s*/i, '').trim()
+    }
+    
+    // 2. Filter out common metadata lines if we haven't found an Item: line
+    const cleanLines = lines.filter(line => {
+      const l = line.toLowerCase()
+      return !l.includes('material request') && 
+             !l.includes('planned quantity') && 
+             !l.includes('includes raw') && 
+             !l.includes('bom:') &&
+             !l.includes('quantity:')
+    })
+    
+    if (cleanLines.length > 0) {
+      return cleanLines[0].replace(/^Item:\s*/i, '').trim()
+    }
+    
+    return lines[0]?.replace(/^Item:\s*/i, '').trim() || 'Internal'
+  }
+
+  const cleanFGName = getCleanFGName()
 
   if (!request && loading) {
     return (
@@ -465,7 +464,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Material Request: ${request?.finished_goods_name || request?.series_no || 'Details'}`} size="7xl">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Material Request: ${cleanFGName}`} size="7xl">
       <div className="flex flex-col h-[78vh] bg-slate-50/50">
         <div className="flex-1 overflow-y-auto space-y-3">
           {error && <Alert type="danger" className="  border-2 mb-4">{error}</Alert>}
@@ -483,10 +482,10 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
               <div className="w-6 h-6 rounded  bg-indigo-50 flex items-center justify-center text-indigo-600">
                 <ClipboardList size={15} />
               </div>
-              <div>
-                <p className="text-[10px]  text-slate-400 ">Finished Goods</p>
-                <p className="text-xs  text-indigo-600" title={request?.finished_goods_name || request?.project_name || 'Internal'}>
-                  {request?.finished_goods_name || request?.project_name || 'Internal'}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs  text-slate-400 ">Finished Goods</p>
+                <p className="text-xs font-medium text-indigo-600 truncate" title={request?.finished_goods_name || request?.project_name || 'Internal'}>
+                  {cleanFGName}
                 </p>
               </div>
             </div>
@@ -496,7 +495,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                 <Activity size={15} />
               </div>
               <div>
-                <p className="text-[10px]  text-slate-400 ">Status</p>
+                <p className="text-xs  text-slate-400 ">Status</p>
                 <div className="mt-0.5">{getStatusBadge(request?.status)}</div>
               </div>
             </div>
@@ -506,94 +505,56 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                 <ArrowRightLeft size={15} />
               </div>
               <div>
-                <p className="text-[10px]  text-slate-400 ">Purpose</p>
+                <p className="text-xs  text-slate-400 ">Purpose</p>
                 <p className="text-xs  text-slate-700 capitalize">{request?.purpose?.replace('_', ' ')}</p>
               </div>
             </div>
 
             {isTransferOrIssue && (
-              <>
-                <div className="bg-white p-2 rounded border border-slate-200 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-indigo-50 flex items-center justify-center text-indigo-600">
-                    <Warehouse size={15} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] text-slate-400">Source Store</p>
-                    <select 
-                      value={selectedSourceWarehouse || ''} 
-                      onChange={(e) => {
-                        setSelectedSourceWarehouse(e.target.value)
-                        setTimeout(() => checkStockAvailability(request), 0)
-                      }}
-                      className="text-xs text-slate-700 bg-transparent border-none outline-none w-full p-0 h-4"
-                    >
-                      <option value="">{request?.source_warehouse_name || 'Select Store...'}</option>
-                      {warehouses.map(w => (
-                        <option key={w.id} value={w.id}>{w.warehouse_name}</option>
-                      ))}
-                    </select>
-                  </div>
+              <div className="bg-white p-2 rounded border border-slate-200 flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-indigo-50 flex items-center justify-center text-indigo-600">
+                  <Warehouse size={15} />
                 </div>
-
-                {request?.purpose?.toLowerCase() === 'material_transfer' && (
-                  <div className="bg-white p-2 rounded border border-slate-200 flex items-center gap-2">
-                    <div className="w-6 h-6 rounded bg-emerald-50 flex items-center justify-center text-emerald-600">
-                      <Truck size={15} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[10px] text-slate-400">Target Store</p>
-                      <select 
-                        value={selectedTargetWarehouse || ''} 
-                        onChange={(e) => setSelectedTargetWarehouse(e.target.value)}
-                        className="text-xs text-slate-700 bg-transparent border-none outline-none w-full p-0 h-4"
-                      >
-                        <option value="">{request?.target_warehouse_name || 'Select Store...'}</option>
-                        {warehouses.map(w => (
-                          <option key={w.id} value={w.id}>{w.warehouse_name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-              </>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-400">Source Store</p>
+                  <select 
+                    value={selectedSourceWarehouse || ''} 
+                    onChange={(e) => {
+                      setSelectedSourceWarehouse(e.target.value)
+                      setTimeout(() => checkStockAvailability(request), 0)
+                    }}
+                    className="text-xs font-medium text-slate-700 bg-transparent border-none outline-none w-full p-0 h-4 cursor-pointer"
+                  >
+                    <option value="">{request?.source_warehouse_name || 'Select Store...'}</option>
+                    {warehouses.map(w => (
+                      <option key={w.id} value={w.id}>{w.warehouse_name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             )}
 
-            {/* <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-2">
-              <div className="w-6 h-6 rounded  bg-purple-50 flex items-center justify-center text-purple-600">
-                <Building2 size={15} />
+            {isTransferOrIssue && request?.purpose?.toLowerCase() === 'material_transfer' && (
+              <div className="bg-white p-2 rounded border border-slate-200 flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-emerald-50 flex items-center justify-center text-emerald-600">
+                  <Truck size={15} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-400">Target Store</p>
+                  <select 
+                    value={selectedTargetWarehouse || ''} 
+                    onChange={(e) => setSelectedTargetWarehouse(e.target.value)}
+                    className="text-xs font-medium text-slate-700 bg-transparent border-none outline-none w-full p-0 h-4 cursor-pointer"
+                  >
+                    <option value="">{request?.target_warehouse_name || 'Select Store...'}</option>
+                    {warehouses.map(w => (
+                      <option key={w.id} value={w.id}>{w.warehouse_name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px]  text-slate-400 ">Department</p>
-                <p className="text-xs  text-slate-700">{request?.department}</p>
-              </div>
-            </div> */}
+            )}
 
-            {/* <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-2">
-              <div className="w-6 h-6 rounded  bg-emerald-50 flex items-center justify-center text-emerald-600">
-                <User size={15} />
-              </div>
-              <div>
-                <p className="text-[10px]  text-slate-400 ">Requested By</p>
-                <p className="text-xs  text-slate-700">{request?.requested_by_name || 'System'}</p>
-              </div>
-            </div> */}
-
-            <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-2">
-              <div className="w-6 h-6 rounded  bg-indigo-50 flex items-center justify-center text-indigo-600">
-                <ShoppingCart size={15} />
-              </div>
-              <div>
-                <p className="text-[10px]  text-slate-400 ">Linked PO</p>
-                {request?.linked_po_no ? (
-                  <div className="flex flex-col">
-                    <p className="text-xs  text-indigo-700">#{request.linked_po_no}</p>
-                    <p className="text-xs text-indigo-500  ">{request.po_status || 'CREATED'}</p>
-                  </div>
-                ) : (
-                  <p className="text-xs  text-slate-400 italic">None</p>
-                )}
-              </div>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-2">
@@ -607,7 +568,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                     </div>
                     <div>
                       <h3 className="text-xs  text-slate-800">Requested Items</h3>
-                      <p className="text-[10px] text-slate-400 ">Verify stock availability per store</p>
+                      <p className="text-xs text-slate-400 ">Verify stock availability per store</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -626,12 +587,11 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   <table className="w-full text-xs text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50/80 border-b border-slate-100">
-                        <th className="p-2 text-[10px]   text-slate-500 ">Item Details</th>
-                        <th className="p-2 text-[10px]   text-slate-500  text-center">Total Required</th>
-                        <th className="p-2 text-[10px]   text-slate-500  text-center bg-indigo-50/50">To Request</th>
-                        <th className="p-2 text-[10px]   text-slate-500  text-center">Fulfillment Store</th>
-                        <th className="p-2 text-[10px]   text-slate-500  text-center">Available Stock</th>
-                        <th className="p-2 text-[10px]   text-slate-500  text-right">Fulfillment Status</th>
+                        <th className="p-2 text-xs   text-slate-500 ">Item Details</th>
+                        <th className="p-2 text-xs   text-slate-500  text-center bg-indigo-50/50">To Release</th>
+                        <th className="p-2 text-xs   text-slate-500  text-center">Fulfillment Store</th>
+                        <th className="p-2 text-xs   text-slate-500  text-center">Available Stock</th>
+                        <th className="p-2 text-xs   text-slate-500  text-right">Fulfillment Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -650,23 +610,17 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                               <div className="flex flex-col gap-1">
                                 <span className=" text-slate-800 leading-tight text-xs group-hover:text-indigo-600 transition-colors">{item.item_name}</span>
                                 <div className="flex flex-col">
-                                  <span className="text-[10px] w-fit bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono ">{item.item_code}</span>
+                                  <span className="text-xs w-fit bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono ">{item.item_code}</span>
                                   {item.item_group && (
-                                    <span className="text-[10px] text-slate-400 "> {item.item_group}</span>
+                                    <span className="text-xs text-slate-400 "> {item.item_group}</span>
                                   )}
                                 </div>
                                 {issuedQty > 0 && (
                                   <div className="flex items-center gap-1.5 mt-1">
                                     <div className="w-1 h-1 rounded bg-emerald-500 animate-pulse"></div>
-                                    <p className="text-[10px]  text-emerald-600">Issued: {issuedQty} {item.uom}</p>
+                                    <p className="text-xs  text-emerald-600">Issued: {issuedQty} {item.uom}</p>
                                   </div>
                                 )}
-                              </div>
-                            </td>
-                            <td className="p-2 align-top text-center">
-                              <div className="flex flex-col items-center gap-1">
-                                <span className="text-xs font-medium text-slate-600">{totalQty}</span>
-                                <span className="text-[9px] text-slate-400">{item.uom}</span>
                               </div>
                             </td>
                             <td className="p-2 align-top text-center bg-indigo-50/20">
@@ -680,27 +634,27 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                         const val = parseFloat(e.target.value) || 0
                                         setCustomQuantities(prev => ({ ...prev, [item.item_code]: val }))
                                       }}
-                                      className="w-16 p-1 text-xs font-bold text-center border-2 border-indigo-200 rounded text-indigo-700 bg-white outline-none focus:border-indigo-500 transition-all"
+                                      className=" p-1 text-xs  text-center border border-indigo-200 rounded text-indigo-700 bg-white outline-none focus:border-indigo-500 transition-all"
                                       min="0"
                                       max={pendingQty}
                                     />
-                                    <span className="text-[9px] text-indigo-400">{item.uom}</span>
+                                    <span className="text-xs text-indigo-400">{item.uom}</span>
                                   </div>
                                 ) : (
                                   <>
-                                    <span className="text-xs font-bold text-indigo-700">{pendingQty}</span>
-                                    <span className="text-[9px] text-indigo-400">{item.uom}</span>
+                                    <span className="text-xs  text-indigo-700">{pendingQty}</span>
+                                    <span className="text-xs text-indigo-400">{item.uom}</span>
                                   </>
                                 )}
                                 {issuedQty > 0 && (
                                   <div className="mt-1 flex flex-col items-center border-t border-indigo-100 pt-1">
-                                    <p className="text-[8px] text-indigo-400 uppercase tracking-tighter">Remaining</p>
-                                    <p className="text-[10px] font-bold text-indigo-600">{Math.max(0, pendingQty)} {item.uom}</p>
+                                    <p className="text-xs text-indigo-400  ">Remaining</p>
+                                    <p className="text-xs  text-indigo-600">{Math.max(0, pendingQty)} {item.uom}</p>
                                   </div>
                                 )}
                               </div>
                             </td>
-                            <td className="p-2 align-top text-center min-w-[200px]">
+                            <td className="p-2 align-top text-center">
                               {isTransferOrIssue && item.status !== 'completed' ? (
                                 stock?.hasStockAnywhere ? (
                                   <div className="space-y-1.5 relative group/select">
@@ -711,7 +665,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                         setItemWarehouses(prev => ({ ...prev, [item.item_code]: newWhId }))
                                         setTimeout(() => checkStockAvailability(request), 0)
                                       }}
-                                      className={`w-full text-[11px]  border-2 rounded bg-white outline-none transition-all appearance-none cursor-pointer ${
+                                      className={`w-full text-xs p-1 border-2 rounded bg-white outline-none transition-all appearance-none cursor-pointer ${
                                         !itemWarehouse
                                           ? 'border-amber-200 bg-amber-50/30 text-amber-700' 
                                           : 'border-slate-100 text-slate-700 hover:border-indigo-200 focus:border-indigo-500'
@@ -724,13 +678,13 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                         </option>
                                       ))}
                                     </select>
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-focus-within/select:text-indigo-500 transition-colors">
+                                    <div className="absolute right-3 top-2 -translate-y-1/2 pointer-events-none text-slate-400 group-focus-within/select:text-indigo-500 transition-colors">
                                       <ArrowRight size={12} />
                                     </div>
                                     {stock?.breakdown?.length > 1 && !itemWarehouses[item.item_code] && (
                                       <div className="flex items-center justify-center gap-1.5 py-1 px-2 bg-indigo-50/50 rounded-lg">
                                         <Info size={10} className="text-indigo-500" />
-                                        <p className="text-[9px]  text-indigo-600  tracking-tighter">Optimization Possible</p>
+                                        <p className="text-xs  text-indigo-600  ">Optimization Possible</p>
                                       </div>
                                     )}
                                   </div>
@@ -738,9 +692,9 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                   <div className="flex flex-col items-center gap-1 py-2 px-3 bg-rose-50 border border-rose-100 rounded-xl">
                                     <div className="flex items-center gap-1.5 text-rose-600">
                                       <XCircle size={12} />
-                                      <span className="text-[10px]   ">Out of Stock</span>
+                                      <span className="text-xs   ">Out of Stock</span>
                                     </div>
-                                    <p className="text-[9px]  text-rose-400 text-center leading-tight">Procurement required for fulfillment</p>
+                                    <p className="text-xs  text-rose-400 text-center leading-tight">Procurement required for fulfillment</p>
                                   </div>
                                 )
                               ) : (
@@ -755,7 +709,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                             <td className="p-2 align-top text-center font-mono">
                               {stock ? (
                                 <div className="flex flex-col items-center gap-2">
-                                  <div className={`text-xs  px-2 py-0.5 rounded-lg ${stock.available > 0 ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 bg-slate-50'}`}>
+                                  <div className={`text-xs  p-1 rounded ${stock.available > 0 ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 bg-slate-50'}`}>
                                     {stock.available} {item.uom}
                                   </div>
                                   {!itemWarehouses[item.item_code] && stock.breakdown?.length > 0 ? (
@@ -767,20 +721,20 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                             setItemWarehouses(prev => ({ ...prev, [item.item_code]: b.id }))
                                             setTimeout(() => checkStockAvailability(request), 0)
                                           }}
-                                          className="flex items-center justify-between gap-2 px-2 py-1 bg-white border border-slate-100 hover:border-indigo-300 hover: rounded-lg transition-all text-[9px]  text-slate-500 group/btn"
+                                          className="flex items-center justify-between gap-2 p-1 bg-white border border-slate-100 hover:border-indigo-300 hover: rounded transition-all text-xs  text-slate-500 group/btn"
                                         >
                                           <span className="truncate group-hover/btn:text-indigo-600 transition-colors">{b.warehouse}</span>
-                                          <span className="text-indigo-500 bg-indigo-50 px-1 rounded">{b.qty}</span>
+                                          <span className="text-indigo-500 bg-indigo-50 p-1 rounded">{b.qty}</span>
                                         </button>
                                       ))}
                                       {stock.breakdown.length > 3 && (
-                                        <p className="text-[8px]  text-slate-400  tracking-tighter">+{stock.breakdown.length - 3} more stores</p>
+                                        <p className="text-xs  text-slate-400  ">+{stock.breakdown.length - 3} more stores</p>
                                       )}
                                     </div>
                                   ) : (
                                     <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-50 border border-slate-100 rounded-lg">
                                       <Activity size={10} className="text-slate-400" />
-                                      <span className="text-[9px]  text-slate-500  tracking-tighter">{stock.warehouse}</span>
+                                      <span className="text-xs  text-slate-500  ">{stock.warehouse}</span>
                                     </div>
                                   )}
                                 </div>
@@ -797,7 +751,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                       : (stock.hasStock ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-rose-50 border-rose-100 text-rose-700')
                                   }`}>
                                     <div className={`w-1.5 h-1.5 rounded ${stock.isAvailable ? 'bg-emerald-500' : (stock.hasStock ? 'bg-amber-500' : 'bg-rose-500')}`}></div>
-                                    <span className="text-[10px]    leading-none">
+                                    <span className="text-xs    leading-none">
                                       {stock.isAvailable ? 'Optimal' : (stock.hasStock ? 'Partial' : 'Critically Low')}
                                     </span>
                                   </div>
@@ -806,7 +760,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                 )}
                                 
                                 {item.status && (
-                                  <div className={`text-[9px]    px-2 py-0.5 rounded-md border ${
+                                  <div className={`text-xs    p-1 rounded border ${
                                     item.status === 'completed' 
                                       ? 'bg-indigo-50 border-indigo-100 text-indigo-600' 
                                       : 'bg-slate-50 border-slate-200 text-slate-500'
@@ -823,7 +777,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                   <button
                                     onClick={() => handleReleaseSingleItem(item.item_code)}
                                     disabled={loading}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px]    transition-all shadow-lg shadow-emerald-600/20 active:scale-95 disabled:opacity-50"
+                                    className="flex items-center gap-2 p-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs    transition-all shadow-lg shadow-emerald-600/20 active:scale-95 disabled:opacity-50"
                                   >
                                     <CheckCircle size={12} strokeWidth={3} /> Dispatch
                                   </button>
@@ -856,8 +810,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                     <h4 className="text-xs ">Approved Requisition</h4>
                   </div>
                   <p className="text-xs text-emerald-700 leading-relaxed pl-11">
-                    This requisition has been reviewed and authorized. 
-                    {!isTransferOrIssue ? ' It is now ready for procurement processing.' : ' Materials are being issued/transferred.'}
+                    This requisition has been reviewed and authorized. Materials are being issued/transferred.
                   </p>
                 </div>
               )}
@@ -914,7 +867,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   disabled={loading || (isTransferOrIssue && !anyAvailable)}
                   className="p-2   shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
                 >
-                  {isTransferOrIssue ? 'Release Material' : 'Authorize Request'} <CheckCircle size={16} />
+                  Release Material <CheckCircle size={16} />
                 </Button>
               </div>
             )}
@@ -936,26 +889,12 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   disabled={loading || (isTransferOrIssue && (!anyAvailable || request?.items?.every(item => Number(item.issued_qty) >= Number(item.qty))))}
                   className="p-2   shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
                 >
-                  {isTransferOrIssue ? 'Release Material' : 'Authorize Request'} <CheckCircle size={16} />
+                  Release Material <CheckCircle size={16} />
                 </Button>
               </div>
             )}
 
-            {((request?.status === 'approved' && request?.purpose?.toLowerCase() === 'purchase') || 
-              (['draft', 'pending', 'approved', 'partial'].includes(request?.status) && anyUnavailable)) && (
-              <Button
-                onClick={handleCreatePO}
-                variant="primary"
-                disabled={loading || !!request?.linked_po_no || checkingStock}
-                className="p-2   shadow-blue-600/20  text-xs rounded  flex items-center gap-2"
-              >
-                {checkingStock ? (
-                  <>Verifying Stock... <RefreshCw size={16} className="animate-spin" /></>
-                ) : (
-                  <>{request?.linked_po_no ? 'PO Already Created' : 'Create Purchase Order'} <ShoppingCart size={16} /></>
-                )}
-              </Button>
-            )}
+            {/* Action buttons removed */}
           </div>
         </div>
       </div>

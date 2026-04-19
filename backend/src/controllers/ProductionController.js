@@ -548,6 +548,24 @@ class ProductionController {
     }
   }
 
+  async getWorkOrderDependencies(req, res) {
+    try {
+      const { wo_id } = req.params
+      const { type = 'child' } = req.query
+      const dependencies = await this.productionModel.getWorkOrderDependencies(wo_id, type)
+      res.status(200).json({
+        success: true,
+        data: dependencies
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching work order dependencies',
+        error: error.message
+      })
+    }
+  }
+
   async truncateWorkOrders(req, res) {
     try {
       await this.productionModel.truncateWorkOrders()
@@ -699,7 +717,23 @@ class ProductionController {
   // Create production entry (daily production)
   async createProductionEntry(req, res) {
     try {
-      const { work_order_id, machine_id, operator_id, entry_date, shift_no, quantity_produced, quantity_rejected, hours_worked, remarks } = req.body
+      const { 
+        work_order_id, 
+        job_card_id,
+        machine_id, 
+        operator_id, 
+        entry_date, 
+        shift_no, 
+        quantity_produced, 
+        quantity_rejected, 
+        hours_worked, 
+        remarks,
+        auto_transfer,
+        transfer_quantity,
+        next_job_card_id,
+        next_operator_id,
+        next_machine_id
+      } = req.body
 
       if (!work_order_id || !entry_date || !quantity_produced) {
         return res.status(400).json({
@@ -710,6 +744,7 @@ class ProductionController {
 
       const entry = await this.productionModel.createProductionEntry({
         work_order_id,
+        job_card_id,
         machine_id,
         operator_id,
         entry_date,
@@ -717,7 +752,13 @@ class ProductionController {
         quantity_produced: parseFloat(quantity_produced) || 0,
         quantity_rejected: parseFloat(quantity_rejected) || 0,
         hours_worked: parseFloat(hours_worked) || 0,
-        remarks
+        remarks,
+        auto_transfer,
+        transfer_quantity,
+        next_job_card_id,
+        next_operator_id,
+        next_machine_id,
+        created_by: req.user?.user_id || 1
       })
 
       res.status(201).json({
@@ -1160,9 +1201,19 @@ class ProductionController {
   async getJobCards(req, res) {
     try {
       const jobCards = await this.productionModel.getJobCards(req.query)
+      
+      // Calculate max allowed quantity for each job card in the list for dispatch/start validations
+      const enrichedJobCards = await Promise.all((jobCards || []).map(async (jc) => {
+        const maxAllowed = await this.productionModel._getMaxAllowedQuantity(jc.job_card_id);
+        return {
+          ...jc,
+          max_allowed_quantity: maxAllowed
+        };
+      }));
+
       res.status(200).json({
         success: true,
-        data: jobCards
+        data: enrichedJobCards
       })
     } catch (error) {
       res.status(500).json({
@@ -1286,7 +1337,9 @@ class ProductionController {
         status, notes,
         execution_mode, vendor_id, subcontract_status, sent_qty, received_qty, 
         accepted_qty, rejected_qty, scrap_quantity, accepted_quantity, rejected_quantity: rejQty,
-        transfer_to_next_op, next_job_card_id, next_operator_id, next_machine_id, next_warehouse_id
+        transfer_to_next_op, transfer_quantity, next_job_card_id, next_operator_id, next_machine_id, next_warehouse_id,
+        carrier_name, tracking_number, dispatch_date, shipping_notes, is_partial,
+        is_shipment, source_warehouse_id, target_warehouse_id, dispatch_qty
       } = req.body
 
       if (status) {
@@ -1319,9 +1372,20 @@ class ProductionController {
         scrap_quantity,
         accepted_quantity,
         transfer_to_next_op: transfer_to_next_op === true || transfer_to_next_op === 'true',
+        transfer_quantity: transfer_quantity !== undefined ? parseFloat(transfer_quantity) : undefined,
         next_job_card_id,
         next_operator_id,
-        next_machine_id: next_machine_id || next_warehouse_id // Handle both naming conventions
+        next_machine_id: next_machine_id || next_warehouse_id, // Handle both naming conventions
+        carrier_name,
+        tracking_number,
+        dispatch_date,
+        shipping_notes,
+        is_partial: is_partial === true || is_partial === 'true',
+        is_shipment: is_shipment === true || is_shipment === 'true',
+        source_warehouse_id,
+        target_warehouse_id,
+        dispatch_qty: dispatch_qty !== undefined ? parseFloat(dispatch_qty) : undefined,
+        userId: req.user?.user_id || 1
       })
 
       if (success) {
@@ -1668,7 +1732,12 @@ class ProductionController {
         scrap_qty, 
         time_in_minutes,
         inhouse,
-        outsource
+        outsource,
+        auto_transfer,
+        transfer_quantity,
+        next_job_card_id,
+        next_operator_id,
+        next_machine_id
       } = req.body
 
       if (!job_card_id) {
@@ -1696,7 +1765,12 @@ class ProductionController {
         scrap_qty,
         time_in_minutes,
         inhouse,
-        outsource
+        outsource,
+        auto_transfer,
+        transfer_quantity,
+        next_job_card_id,
+        next_operator_id,
+        next_machine_id
       })
 
       res.status(201).json({
@@ -1774,7 +1848,22 @@ class ProductionController {
 
   async createRejection(req, res) {
     try {
-      const { job_card_id, day_number, log_date, shift, accepted_qty, rejection_reason, rejected_qty, scrap_qty, notes } = req.body
+      const { 
+        job_card_id, 
+        day_number, 
+        log_date, 
+        shift, 
+        accepted_qty, 
+        rejection_reason, 
+        rejected_qty, 
+        scrap_qty, 
+        notes,
+        auto_transfer,
+        transfer_quantity,
+        next_job_card_id,
+        next_operator_id,
+        next_machine_id
+      } = req.body
 
       if (!job_card_id) {
         return res.status(400).json({
@@ -1792,7 +1881,12 @@ class ProductionController {
         rejection_reason,
         rejected_qty,
         scrap_qty,
-        notes
+        notes,
+        auto_transfer,
+        transfer_quantity,
+        next_job_card_id,
+        next_operator_id,
+        next_machine_id
       })
 
       res.status(201).json({
@@ -2090,7 +2184,11 @@ class ProductionController {
 
   async createOutwardChallan(req, res) {
     try {
-      const { job_card_id, vendor_id, vendor_name, expected_return_date, notes, dispatch_quantity, items } = req.body
+      const { 
+        job_card_id, vendor_id, vendor_name, expected_return_date, notes, 
+        dispatch_quantity, items, transporter_name, vehicle_number, 
+        eway_bill_no, dispatch_date 
+      } = req.body
 
       if (!job_card_id) {
         return res.status(400).json({
@@ -2107,6 +2205,10 @@ class ProductionController {
         notes,
         dispatch_quantity,
         items,
+        transporter_name,
+        vehicle_number,
+        eway_bill_no,
+        dispatch_date,
         created_by: req.user?.user_id || 'system'
       })
 
@@ -2211,6 +2313,88 @@ class ProductionController {
     }
   }
 
+  async getAllOutwardChallans(req, res) {
+    try {
+      const filters = {
+        project_name: req.query.project_name,
+        operation: req.query.operation,
+        vendor_id: req.query.vendor_id
+      }
+      const challans = await this.productionModel.getAllOutwardChallans(filters)
+      res.status(200).json({
+        success: true,
+        data: challans
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching all outward challans',
+        error: error.message
+      })
+    }
+  }
+
+  async getAllInwardChallans(req, res) {
+    try {
+      const filters = {
+        project_name: req.query.project_name,
+        operation: req.query.operation,
+        vendor_id: req.query.vendor_id
+      }
+      const challans = await this.productionModel.getAllInwardChallans(filters)
+      res.status(200).json({
+        success: true,
+        data: challans
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching all inward challans',
+        error: error.message
+      })
+    }
+  }
+
+  async getChallanFilters(req, res) {
+    try {
+      const projectNames = await this.productionModel.getChallanProjectNames()
+      const operations = await this.productionModel.getChallanOperations()
+      res.status(200).json({
+        success: true,
+        data: {
+          project_names: projectNames,
+          operations: operations
+        }
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching challan filters',
+        error: error.message
+      })
+    }
+  }
+
+  async getOutwardChallanItems(req, res) {
+    try {
+      const { challan_id } = req.params
+      const [items] = await this.productionModel.db.query(
+        'SELECT * FROM outward_challan_item WHERE challan_id = ?',
+        [challan_id]
+      )
+      res.status(200).json({
+        success: true,
+        data: items
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching outward challan items',
+        error: error.message
+      })
+    }
+  }
+
   async updateInwardChallan(req, res) {
     try {
       const { id } = req.params
@@ -2309,8 +2493,8 @@ class ProductionController {
   async handleSubcontractDispatch(req, res) {
     try {
       const { job_card_id } = req.params;
-      const { items, outward_challan_id } = req.body;
-      const result = await this.productionModel.handleSubcontractDispatch(job_card_id, req.user?.user_id || 1, items, outward_challan_id);
+      const { items, outward_challan_id, dispatch_quantity } = req.body;
+      const result = await this.productionModel.handleSubcontractDispatch(job_card_id, req.user?.user_id || 1, items, outward_challan_id, dispatch_quantity);
       res.status(200).json({
         success: true,
         message: 'Job card dispatched to vendor successfully',
@@ -2642,6 +2826,26 @@ class ProductionController {
         message: 'Error requesting resource notification',
         error: error.message
       });
+    }
+  }
+
+  async bulkStartJobCards(req, res) {
+    try {
+      const { wo_id } = req.params;
+      const result = await this.productionModel.bulkStartJobCards(wo_id);
+      res.status(200).json(result);
+    } catch (error) {
+      this.handleError(res, error, 'Error bulk starting job cards');
+    }
+  }
+
+  async bulkStartPlanJobCards(req, res) {
+    try {
+      const { plan_id } = req.params;
+      const result = await this.productionModel.bulkStartPlanJobCards(plan_id);
+      res.status(200).json(result);
+    } catch (error) {
+      this.handleError(res, error, 'Error bulk starting plan job cards');
     }
   }
 }

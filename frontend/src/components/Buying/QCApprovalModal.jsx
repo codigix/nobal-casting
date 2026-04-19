@@ -110,7 +110,7 @@ export default function QCApprovalModal({ grn, onClose, onSuccess }) {
       title=""
       size="2xl"
       footer={
-        <div className="flex gap-3 justify-end w-full px-4 py-2 bg-white border-t border-gray-100">
+        <div className="flex gap-3 justify-end w-full p-2  bg-white border-t border-gray-100">
           <Button variant="outline" onClick={onClose} className=" px-6">
             Cancel
           </Button>

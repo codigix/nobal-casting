@@ -142,6 +142,36 @@ export default function MaterialRequestsRedesign() {
   const [viewMode, setViewMode] = useState('grid')
   const [refreshTime, setRefreshTime] = useState(new Date())
 
+  const getCleanFGName = (name) => {
+    if (!name) return ''
+    
+    // Normalize newlines (handle literal \n strings if they exist)
+    const normalized = name.replace(/\\n/g, '\n')
+    
+    // Split into lines by actual newlines OR literal \n characters
+    const lines = normalized.split(/\n|\\n/).map(l => l.trim()).filter(l => l.length > 0)
+    
+    // 1. Look for a line that contains "Item:" (case-insensitive)
+    const itemLine = lines.find(line => line.toLowerCase().includes('item:'))
+    if (itemLine) {
+      // Extract only what follows "Item:" on that line
+      return itemLine.replace(/.*item:\s*/i, '').trim()
+    }
+    
+    // 2. Filter out common metadata lines if we haven't found an Item: line
+    const metadataKeywords = ['material request', 'planned quantity', 'includes raw', 'bom:', 'quantity:']
+    const cleanLines = lines.filter(line => {
+      const l = line.toLowerCase()
+      return !metadataKeywords.some(kw => l.includes(kw))
+    })
+    
+    if (cleanLines.length > 0) {
+      return cleanLines[0].replace(/^Item:\s*/i, '').trim()
+    }
+    
+    return lines[0]?.replace(/^Item:\s*/i, '').trim() || ''
+  }
+
   const fetchRequests = useCallback(async () => {
     try {
       setLoading(true)
@@ -452,7 +482,7 @@ export default function MaterialRequestsRedesign() {
                               <div>
                                 <p className="text-[8px]  text-slate-400 uppercase tracking-tighter">Finished Goods</p>
                                 <p className="text-[11px] font-bold text-blue-700 truncate max-w-[140px]" title={row.finished_goods_name || 'Manual Requisition'}>
-                                  {row.finished_goods_name || 'MANUAL REQ'}
+                                  {getCleanFGName(row.finished_goods_name) || 'MANUAL REQ'}
                                 </p>
                               </div>
                             </div>
@@ -546,7 +576,7 @@ export default function MaterialRequestsRedesign() {
                           </td>
                           <td className="p-2">
                             <div className="flex flex-col">
-                              <span className="text-xs font-bold text-blue-700">{row.finished_goods_name || 'MANUAL REQUISITION'}</span>
+                              <span className="text-xs font-bold text-blue-700">{getCleanFGName(row.finished_goods_name) || 'MANUAL REQUISITION'}</span>
                               <span className="text-[10px] text-slate-400 uppercase tracking-tight">Parent Product</span>
                             </div>
                           </td>

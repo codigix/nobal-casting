@@ -1122,7 +1122,7 @@ export default function OEE() {
               {['Daily', 'Yesterday', 'Weekly', 'Monthly', 'Yearly'].map(opt => <option key={opt} className="text-slate-900">{opt}</option>)}
             </select>
           </div>
-          <button onClick={() => fetchData(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs  rounded hover:bg-slate-50 transition-all ">
+          <button onClick={() => fetchData(true)} className="flex items-center gap-2 p-2  bg-white border border-slate-200 text-slate-700 text-xs  rounded hover:bg-slate-50 transition-all ">
             <RefreshCcw size={15} className={syncLoading ? 'animate-spin' : ''} />
             Sync Dashboard
           </button>
@@ -1169,7 +1169,7 @@ export default function OEE() {
                   <Filter size={16} />
                   <span className="text-[10px]   tracking-wider">Filters</span>
                 </div>
-                <select value={filters.line} onChange={(e) => setFilters({ ...filters, line: e.target.value })} className="bg-slate-50 border-none text-xs  text-slate-700 rounded px-4 py-2 focus:ring-0 outline-none cursor-pointer">
+                <select value={filters.line} onChange={(e) => setFilters({ ...filters, line: e.target.value })} className="bg-slate-50 border-none text-xs  text-slate-700 rounded p-2  focus:ring-0 outline-none cursor-pointer">
                   <option>All Lines</option>
                   {[...new Set((realData.machineOEE || []).map(m => m.line_id || 'Unassigned'))].filter(Boolean).map(l => <option key={l} value={l}>{l}</option>)}
                 </select>

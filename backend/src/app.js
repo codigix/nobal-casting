@@ -4,10 +4,10 @@ import dotenv from 'dotenv'
 import { createPool } from 'mysql2/promise'
 import authRoutes from './routes/auth.js'
 import itemRoutes from './routes/items.js'
-import purchaseReceiptRoutes from './routes/purchaseReceipts.js'
-import purchaseOrderRoutes from './routes/purchaseOrders.js'
-import purchaseInvoiceRoutes from './routes/purchaseInvoices.js'
-import grnRequestRoutes from './routes/grnRequests.js'
+// import purchaseReceiptRoutes from './routes/purchaseReceipts.js'
+// import purchaseOrderRoutes from './routes/purchaseOrders.js'
+// import purchaseInvoiceRoutes from './routes/purchaseInvoices.js'
+// import grnRequestRoutes from './routes/grnRequests.js'
 import analyticsRoutes from './routes/analyticsRoutes.js'
 import stockWarehouseRoutes from './routes/stockWarehouses.js'
 import stockBalanceRoutes from './routes/stockBalance.js'
@@ -121,6 +121,7 @@ async function initializeDatabase() {
     await createOperationExecutionLogTable()
     await createBomMaterialRequestLinkTable()
     await createOutwardChallanTable()
+    await createOutwardChallanItemTable()
     await createInwardChallanTable()
     await createDocumentSequencesTable()
 
@@ -499,7 +500,18 @@ async function enhanceJobCardTable() {
       { name: 'received_qty', sql: 'received_qty DECIMAL(18,6) DEFAULT 0' },
       { name: 'accepted_qty', sql: 'accepted_qty DECIMAL(18,6) DEFAULT 0' },
       { name: 'rejected_qty', sql: 'rejected_qty DECIMAL(18,6) DEFAULT 0' },
-      { name: 'transferred_quantity', sql: 'transferred_quantity DECIMAL(18,6) DEFAULT 0' }
+      { name: 'transferred_quantity', sql: 'transferred_quantity DECIMAL(18,6) DEFAULT 0' },
+      { name: 'next_job_card_id', sql: 'next_job_card_id VARCHAR(50) DEFAULT NULL' },
+      { name: 'outward_challan_id', sql: 'outward_challan_id INT DEFAULT NULL' },
+      { name: 'carrier_name', sql: 'carrier_name VARCHAR(255) DEFAULT NULL' },
+      { name: 'tracking_number', sql: 'tracking_number VARCHAR(100) DEFAULT NULL' },
+      { name: 'dispatch_date', sql: 'dispatch_date DATE DEFAULT NULL' },
+      { name: 'shipping_notes', sql: 'shipping_notes TEXT DEFAULT NULL' },
+      { name: 'is_partial', sql: 'is_partial TINYINT(1) DEFAULT 0' },
+      { name: 'is_shipment', sql: 'is_shipment TINYINT(1) DEFAULT 0' },
+      { name: 'source_warehouse_id', sql: 'source_warehouse_id VARCHAR(100) DEFAULT NULL' },
+      { name: 'target_warehouse_id', sql: 'target_warehouse_id VARCHAR(100) DEFAULT NULL' },
+      { name: 'dispatch_qty', sql: 'dispatch_qty DECIMAL(18, 4) DEFAULT 0' }
     ]
 
     for (const column of columnsToAdd) {
@@ -893,6 +905,7 @@ async function createOutwardChallanTable() {
         notes TEXT,
         status VARCHAR(50) DEFAULT 'issued',
         created_by VARCHAR(50),
+        dispatch_quantity DECIMAL(18,6) DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_job_card_id (job_card_id),
@@ -903,6 +916,29 @@ async function createOutwardChallanTable() {
       )
     `)
     console.log('✓ Outward challan table ready')
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function createOutwardChallanItemTable() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS outward_challan_item (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        challan_id INT NOT NULL,
+        item_code VARCHAR(100) NOT NULL,
+        required_qty DECIMAL(18,6) DEFAULT 0,
+        release_qty DECIMAL(18,6) DEFAULT 0,
+        uom VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (challan_id) REFERENCES outward_challan(id) ON DELETE CASCADE,
+        INDEX idx_challan_id (challan_id),
+        INDEX idx_item_code (item_code)
+      )
+    `)
+    console.log('✓ Outward challan item table ready')
   } catch (error) {
     console.log('Note:', error.message)
   }
@@ -973,11 +1009,11 @@ function setupRoutes() {
   app.use('/api/items', itemRoutes)
   app.use('/api/item-groups', itemGroupRoutes)
   app.use('/api/uom', uomRoutes)
-  app.use('/api/purchase-orders', purchaseOrderRoutes)
-  app.use('/api/purchase-invoices', purchaseInvoiceRoutes)
-  app.use('/api/purchase-receipts', purchaseReceiptRoutes)
-  app.use('/api/grn-requests', grnRequestRoutes)
-  app.use('/api/stock/grns', grnRequestRoutes)
+  // app.use('/api/purchase-orders', purchaseOrderRoutes)
+  // app.use('/api/purchase-invoices', purchaseInvoiceRoutes)
+  // app.use('/api/purchase-receipts', purchaseReceiptRoutes)
+  // app.use('/api/grn-requests', grnRequestRoutes)
+  // app.use('/api/stock/grns', grnRequestRoutes)
   app.use('/api/warehouses', stockWarehouseRoutes)
   app.use('/api/stock/warehouses', stockWarehouseRoutes)
   app.use('/api/stock/stock-balance', stockBalanceRoutes)

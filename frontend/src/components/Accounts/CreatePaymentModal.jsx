@@ -282,7 +282,7 @@ export default function CreatePaymentModal({ isOpen, onClose, onSuccess, initial
               name="payment_date"
               value={formData.payment_date}
               onChange={handleInputChange}
-              className="w-full px-4 py-2  bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+              className="w-full p-2   bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
             />
           </div>
 
@@ -295,7 +295,7 @@ export default function CreatePaymentModal({ isOpen, onClose, onSuccess, initial
               name="payment_method"
               value={formData.payment_method}
               onChange={handleInputChange}
-              className="w-full px-4 py-2  bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+              className="w-full p-2   bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
             >
               <option value="transfer">Bank Transfer</option>
               <option value="cash">Cash</option>
@@ -315,7 +315,7 @@ export default function CreatePaymentModal({ isOpen, onClose, onSuccess, initial
               value={formData.payment_reference}
               onChange={handleInputChange}
               placeholder="Transaction ID, Cheque No, etc."
-              className="w-full px-4 py-2  bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+              className="w-full p-2   bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
             />
           </div>
         </div>
@@ -331,7 +331,7 @@ export default function CreatePaymentModal({ isOpen, onClose, onSuccess, initial
             onChange={handleInputChange}
             placeholder="Add any additional details..."
             rows={3}
-            className="w-full px-4 py-2  bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all resize-none"
+            className="w-full p-2   bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all resize-none"
           />
         </div>
 

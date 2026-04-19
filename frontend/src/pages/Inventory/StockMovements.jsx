@@ -315,7 +315,7 @@ export default function StockMovements() {
           <div className="flex items-center gap-2">
             <button 
               onClick={fetchMovements}
-              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs  border border-neutral-200 dark:border-neutral-800 transition-all  "
+              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 p-2  rounded-xs text-xs  border border-neutral-200 dark:border-neutral-800 transition-all  "
             >
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               Refresh
@@ -323,7 +323,7 @@ export default function StockMovements() {
 
             <button
               onClick={() => { setSelectedMovement(null); setShowModal(true) }}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xs text-xs   shadow-blue-200 dark:shadow-none transition-all"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white p-2  rounded-xs text-xs   shadow-blue-200 dark:shadow-none transition-all"
             >
               <Plus size={16} />
               New Movement
@@ -475,7 +475,7 @@ export default function StockMovements() {
         <div className="mb-4 flex gap-2">
           <button
             onClick={() => setViewMode('grouped')}
-            className={`px-4 py-2 rounded-xs text-xs font-medium transition-all ${
+            className={`p-2  rounded-xs text-xs font-medium transition-all ${
               viewMode === 'grouped'
                 ? 'bg-blue-600 text-white'
                 : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50'
@@ -485,7 +485,7 @@ export default function StockMovements() {
           </button>
           <button
             onClick={() => setViewMode('flat')}
-            className={`px-4 py-2 rounded-xs text-xs font-medium transition-all ${
+            className={`p-2  rounded-xs text-xs font-medium transition-all ${
               viewMode === 'flat'
                 ? 'bg-blue-600 text-white'
                 : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50'

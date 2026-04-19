@@ -146,6 +146,47 @@ class ProductionAnalyticsController {
       
       const overallProgress = totalPlanned > 0 ? Math.round((totalProduced / totalPlanned) * 100) : 0
 
+      // 8. Fetch Job Card Dispatches (Production Shipments)
+      const [jobCardShipments] = await db.execute(
+        `SELECT jc.job_card_id, jc.operation, jc.carrier_name, jc.tracking_number, 
+                jc.dispatch_qty as accepted_quantity, jc.dispatch_date, jc.shipping_notes
+         FROM job_card jc
+         WHERE jc.work_order_id IN (SELECT wo_id FROM work_order WHERE sales_order_id = ?)
+         AND jc.is_shipment = 1 AND jc.dispatch_qty > 0`,
+        [soId]
+      )
+
+      // 9. Fetch Official Delivery Challans (Selling Module)
+      const [dispatches] = await db.execute(
+        `SELECT dn.delivery_note_id as dispatch_id, dn.delivery_date as dispatch_date, 
+                dn.driver_name as carrier, dn.status, dn.quantity
+         FROM selling_delivery_note dn
+         WHERE dn.sales_order_id = ? AND dn.deleted_at IS NULL`,
+        [soId]
+      )
+
+      // 10. Fetch Daily Production Entries (History)
+      const [entries] = await db.execute(
+        `SELECT pe.entry_date as date, pe.quantity_produced, pe.quantity_rejected, pe.hours_worked, 
+                wo.item_code, i.name as item_name
+         FROM production_entry pe
+         JOIN work_order wo ON pe.work_order_id = wo.wo_id
+         LEFT JOIN item i ON wo.item_code = i.item_code
+         WHERE wo.sales_order_id = ?
+         ORDER BY pe.entry_date DESC`,
+        [soId]
+      )
+
+      // 11. Calculate Chart Data (Daily Trend)
+      const dailyTrend = entries.reduce((acc, entry) => {
+        const dateStr = new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+        if (!acc[dateStr]) acc[dateStr] = { date: dateStr, actual: 0 }
+        acc[dateStr].actual += parseFloat(entry.quantity_produced || 0)
+        return acc
+      }, {})
+
+      const chartData = Object.values(dailyTrend).sort((a, b) => new Date(a.date) - new Date(b.date))
+
       res.status(200).json({
         success: true,
         data: {
@@ -156,10 +197,16 @@ class ProductionAnalyticsController {
             status: salesOrder.status,
             delivery_date: salesOrder.delivery_date,
             grand_total: salesOrder.grand_total,
-            overall_progress: overallProgress
+            overall_progress: overallProgress,
+            job_card_shipments: jobCardShipments,
+            dispatches: dispatches
           },
           stages: Object.values(stagesMap).sort((a, b) => a.sequence - b.sequence),
           materials: materialReadiness,
+          entries: entries,
+          chartData: [
+            { id: 'Total Production', data: chartData }
+          ],
           work_orders_count: workOrders.length,
           job_cards_count: jobCards.length,
           plan_id: plan ? plan.plan_id : null

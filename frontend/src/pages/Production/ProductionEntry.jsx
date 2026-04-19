@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Plus, Trash2, Clock, AlertCircle, ArrowLeft, CheckCircle,
   Activity, CheckCircle2, Calendar, Layout, ChevronRight, Settings, Info, FileText,
   Package, Boxes, ArrowRight, Save, ShieldCheck, AlertTriangle, XCircle,
-  Edit2, X, Eye
+  Edit2, X, Eye, ArrowRightLeft, Truck
 } from 'lucide-react'
 import SearchableSelect from '../../components/SearchableSelect'
 import DataTable from '../../components/Table/DataTable'
@@ -269,6 +269,123 @@ const SectionTitle = ({ title, icon: Icon, badge, subtitle }) => (
   </div>
 )
 
+const calculateMaxQty = (jcData, prevOpData, childDeps, buffers = []) => {
+  if (jcData?.max_allowed_quantity !== undefined && jcData?.max_allowed_quantity !== null) {
+    // If backend provided a pre-calculated max, use it
+    return parseFloat(jcData.max_allowed_quantity);
+  }
+
+  const currentSequence = parseInt(jcData?.operation_sequence || 0);
+  const isFirstOp = currentSequence <= 1;
+  const parentTotalQty = parseFloat(jcData?.planned_quantity) || 1;
+
+  // 1. Handshake-based Bottleneck Enforcement (WIP Buffers)
+  if (buffers && buffers.length > 0) {
+    let minConstraint = Infinity;
+    
+    buffers.forEach(buffer => {
+      const available = parseFloat(buffer.available_qty || 0);
+      const qtyPerUnit = parseFloat(buffer.qty_per_unit || 1.0);
+      
+      if (qtyPerUnit > 0) {
+        const constraint = available / qtyPerUnit;
+        if (constraint < minConstraint) minConstraint = constraint;
+      }
+    });
+
+    if (minConstraint !== Infinity) {
+      return Math.min(parentTotalQty, minConstraint);
+    }
+  }
+
+  // 2. Legacy/Fallback: Child Dependencies (Cross-WO)
+  if (isFirstOp && childDeps && childDeps.length > 0) {
+    let minConstraint = Infinity;
+
+    childDeps.forEach(dep => {
+      const qtyPerParent = parseFloat(dep.required_qty) / parentTotalQty;
+      const acceptedChildQty = parseFloat(dep.child_accepted_qty) || 0;
+      const constraint = acceptedChildQty / qtyPerParent;
+      if (constraint < minConstraint) minConstraint = constraint;
+    });
+
+    if (minConstraint !== Infinity) {
+      return Math.min(parentTotalQty, minConstraint);
+    }
+  }
+
+  // 3. Intra-WO Flow: Previous Operation Handover
+  if (prevOpData) {
+    return parseFloat(prevOpData.transferred_quantity || 0);
+  }
+
+  return parseFloat(jcData?.planned_quantity || 0);
+};
+
+const calculateReadyToAssemble = (jcData, childDeps, buffers = [], returnDetails = false) => {
+  const parentTotalQty = parseFloat(jcData?.planned_quantity) || 0;
+  let bottleneck = null;
+  let minConstraint = Infinity;
+  let constraints = [];
+
+  // 1. Use WIP Buffers if available (more accurate as it tracks physical transfers)
+  if (buffers && buffers.length > 0) {
+    buffers.forEach(buffer => {
+      const available = parseFloat(buffer.available_qty || 0);
+      const qtyPerUnit = parseFloat(buffer.qty_per_unit || 1.0);
+      
+      if (qtyPerUnit > 0) {
+        const constraint = available / qtyPerUnit;
+        const detail = {
+          name: buffer.item_name || buffer.source_item_code,
+          available: available,
+          required_per_unit: qtyPerUnit,
+          potential: constraint
+        };
+        constraints.push(detail);
+
+        if (constraint < minConstraint) {
+          minConstraint = constraint;
+          bottleneck = detail;
+        }
+      }
+    });
+
+    const finalQty = minConstraint === Infinity ? parentTotalQty : Math.min(parentTotalQty, minConstraint);
+    if (returnDetails) return { readyQty: finalQty, bottleneck, constraints };
+    return finalQty;
+  }
+
+  // 2. Fallback to general child dependencies
+  if (!childDeps || childDeps.length === 0) {
+    if (returnDetails) return { readyQty: parentTotalQty, bottleneck: null, constraints: [] };
+    return parentTotalQty;
+  }
+
+  childDeps.forEach(dep => {
+    const qtyPerParent = parseFloat(dep.required_qty) / (parentTotalQty || 1);
+    const acceptedChildQty = parseFloat(dep.child_accepted_qty) || 0;
+    const constraint = acceptedChildQty / (qtyPerParent || 1);
+    
+    const detail = {
+      name: dep.child_item_name || dep.child_item_code,
+      available: acceptedChildQty,
+      required_per_unit: qtyPerParent,
+      potential: constraint
+    };
+    constraints.push(detail);
+
+    if (constraint < minConstraint) {
+      minConstraint = constraint;
+      bottleneck = detail;
+    }
+  });
+
+  const finalQty = minConstraint === Infinity ? parentTotalQty : Math.min(parentTotalQty, minConstraint);
+  if (returnDetails) return { readyQty: finalQty, bottleneck, constraints };
+  return finalQty;
+};
+
 const ProductionRibbon = ({
   jobCardData,
   itemName,
@@ -279,10 +396,77 @@ const ProductionRibbon = ({
   totalActualMinutes,
   totalOperationCost,
   transferableQty,
-  previousOperationData
+  previousOperationData,
+  handleUpdateProduction,
+  handleTransferUnits,
+  handleSubcontractDispatch,
+  isSubmitting,
+  hasPendingApproval,
+  nextOperationForm,
+  isOperationFinished,
+  childDependencies,
+  buffers
 }) => {
+  const inputAvailable = (parseFloat(jobCardData?.input_qty || 0) + parseFloat(jobCardData?.input_buffer_qty || 0));
+  const prevAcceptedQty = parseFloat(previousOperationData?.accepted_quantity || 0);
+  const { readyQty: readyToAssemble, bottleneck, constraints } = calculateReadyToAssemble(jobCardData, childDependencies, buffers, true);
+  const totalPlanned = parseFloat(jobCardData?.planned_quantity || 0);
+  
+  const currentSequence = parseInt(jobCardData?.operation_sequence || 0);
+  const isFirstOp = currentSequence === 1 || currentSequence === 0;
+  const isShipmentOp = useMemo(() => {
+    if (!jobCardData?.operation) return false;
+    const op = jobCardData.operation.toLowerCase();
+    return op.includes('shipment') || op.includes('dispatch') || op.includes('delivery');
+  }, [jobCardData?.operation]);
+                      
+  const hasSubAssemblies = (isFirstOp || isShipmentOp) && childDependencies && childDependencies.length > 0;
+  const hasPreviousOp = !isFirstOp && previousOperationData;
+
+  const rawReadyQty = hasSubAssemblies ? readyToAssemble : (hasPreviousOp ? inputAvailable : totalPlanned);
+  const readyQty = Math.min(totalPlanned, rawReadyQty);
+  const readyLabel = isShipmentOp ? 'Ready for Dispatch' : (hasSubAssemblies ? 'Ready to Assemble' : (hasPreviousOp ? 'Ready from Previous Stage' : 'Planned'));
+
   return (
     <>
+      {/* Dependency Warning */}
+      {hasPreviousOp && inputAvailable < totalPlanned && (
+        <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded flex items-center gap-3 text-amber-800  animate-pulse">
+          <div className="p-2 bg-amber-100 rounded-full text-amber-600">
+            <ArrowRightLeft size={16} />
+          </div>
+          <div className="text-sm flex-1">
+            <p className=" mb-0.5">Operation Dependency Active</p>
+            <p className="opacity-90">
+              Only <span className="">{inputAvailable.toLocaleString()} units</span> have been transferred from <span className="italic font-medium">{previousOperationData.operation_name}</span>. 
+              Production is capped at this amount until more units are transferred.
+            </p>
+          </div>
+          <div className="text-xs  px-2 py-1 bg-amber-200/50 rounded  ">
+            Constrained
+          </div>
+        </div>
+      )}
+
+      {hasSubAssemblies && readyToAssemble < totalPlanned && (
+        <div className="mb-3 p-3 bg-indigo-50 border border-indigo-200 rounded flex flex-col gap-3 text-indigo-800 ">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 rounded-full text-indigo-600">
+              <Boxes size={16} />
+            </div>
+            <div className="text-sm flex-1">
+              <p className=" mb-0.5">Production Constraints Active</p>
+              <p className="opacity-90">
+                You can only produce <span className=" text-indigo-700">{readyToAssemble.toLocaleString()} units</span> because of component shortages. See the sub-assembly section below for details.
+              </p>
+            </div>
+            <div className="text-xs  px-2 py-1 bg-indigo-200/50 rounded  ">
+              Limited by {bottleneck?.name || 'Components'}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded  border border-slate-100 p-2 mb-2 flex flex-wrap items-center gap-y-2">
         {/* Target Item Info */}
         <div className="flex items-center gap-5 p-2 border-r border-slate-100 flex-1 ">
@@ -297,7 +481,7 @@ const ProductionRibbon = ({
                 {jobCardData?.item_code || '---'}
               </span>
               {jobCardData?.execution_mode && (
-                <span className={`p-1 text-xs  rounded border   ${jobCardData.execution_mode === 'INHOUSE'
+                <span className={`p-1 text-xs  rounded border   ${String(jobCardData.execution_mode).toUpperCase().includes('INHOUSE') || String(jobCardData.execution_mode).toUpperCase().includes('IN_HOUSE')
                   ? 'bg-blue-50 text-blue-600 border-blue-100'
                   : 'bg-amber-50 text-amber-600 border-amber-100'
                   }`}>
@@ -321,118 +505,141 @@ const ProductionRibbon = ({
             </div>
           </div>
         </div>
+
+        {/* Action Center - Integrated into Ribbon */}
+        <div className="flex items-center gap-3 px-4">
+          <button
+            onClick={handleUpdateProduction}
+            disabled={isSubmitting}
+            className="flex items-center gap-2 p-2  bg-slate-800 text-white rounded hover:bg-slate-700 disabled:opacity-50 transition-all text-xs   "
+            title="Save production logs and quality data"
+          >
+            {isSubmitting ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded animate-spin" /> : <Activity size={14} />}
+            Update Progress
+          </button>
+
+          {transferableQty > 0 && (
+            <button
+              onClick={handleTransferUnits}
+              disabled={isSubmitting}
+              className="flex items-center gap-2 p-2  bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 shadow-md shadow-emerald-100 transition-all text-xs   "
+              title={`Transfer ${transferableQty} accepted units to next operation`}
+            >
+              {isSubmitting ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded animate-spin" /> : <ArrowRightLeft size={14} />}
+              Transfer {transferableQty.toFixed(0)} Units
+            </button>
+          )}
+
+
+
+          {isOperationFinished && normalizeStatus(jobCardData?.status) !== 'completed' && transferableQty <= 0 && (
+            <button
+              onClick={handleUpdateProduction}
+              disabled={isSubmitting}
+              className="flex items-center gap-2 p-2  bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 shadow-md shadow-blue-100 transition-all text-xs   "
+            >
+              {isSubmitting ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded animate-spin" /> : <CheckCircle size={14} />}
+              Complete Stage
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Metrics Group 2: Actuals */}
       <div className='grid grid-cols-3 justify-between'>
         <div className="flex items-center col-span-2 justify-between gap-2 p-2 border-r border-slate-100">
           <div className="">
-            <p className="text-xs   text-slate-400  mb-2">Planned</p>
+            <p className="text-xs   text-slate-400  mb-2">{readyLabel}</p>
             <div className="flex items-baseline  gap-1.5">
-              <span className="text-md  text-slate-900 ">
-                {parseFloat(maxAllowedQty || 0).toLocaleString()}
+              <span className={`text-md ${readyQty >= totalPlanned ? 'text-emerald-600' : (readyQty > 0 ? 'text-amber-600' : 'text-rose-600')} `}>
+                {parseFloat(readyQty || 0).toLocaleString()}
               </span>
+              {(hasSubAssemblies || hasPreviousOp) && (
+                <span className="text-xs text-slate-400">/ {totalPlanned.toLocaleString()}</span>
+              )}
               <span className="text-xs  text-slate-400 ">Units</span>
-            </div>
-          </div>
-          <div className="">
-            <p className="text-xs   text-slate-400  mb-2">Total Exp. Time</p>
-            <div className="flex items-baseline justify-left gap-1.5">
-              <span className="text-md  text-violet-600 ">
-                {formatDuration((operationCycleTime || 0) * (parseFloat(maxAllowedQty || 0)))}
-              </span>
-            </div>
-          </div>
-          <div className="">
-            <p className="text-xs   text-indigo-400  mb-2">Total Actual Time</p>
-            <div className="flex items-baseline justify-left gap-1.5">
-              <span className="text-md  text-indigo-600 ">
-                {formatDuration(totalActualMinutes)}
-              </span>
-            </div>
-          </div>
-          <div className="">
-            <p className="text-xs   text-amber-500  mb-2">Total Cost</p>
-            <div className="flex items-baseline justify-left gap-1.5">
-              <span className="text-md  text-amber-600 ">
-                ₹{totalOperationCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
             </div>
           </div>
           <div className="">
             <p className="text-xs   text-rose-500  mb-2">Remaining</p>
             <div className="flex items-baseline justify-left gap-1.5">
               <span className="text-md  text-rose-600 ">
-                {Math.max(0, maxAllowedQty - totalAcceptedQty).toLocaleString()}
+                {Math.max(0, totalPlanned - totalAcceptedQty).toLocaleString()}
               </span>
               <span className="text-xs  text-rose-400 ">Units</span>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2 p-2 border-r border-slate-100">
+          {!isShipmentOp && (
+            <>
+              <div className="">
+                <p className="text-xs   text-slate-400  mb-2">Produced</p>
+                <div className="flex items-baseline justify-left gap-1.5">
+                  <span className="text-md  text-slate-600 ">
+                    {totalProducedQty.toLocaleString()}
+                  </span>
+                  <span className="text-xs  text-slate-400 ">Units</span>
+                </div>
+              </div>
+              <div className="">
+                <p className="text-xs   text-emerald-500  mb-2">Accepted</p>
+                <div className="flex items-baseline justify-left gap-1.5">
+                  <span className="text-md  text-emerald-600 ">
+                    {totalAcceptedQty.toLocaleString()}
+                  </span>
+                  <span className="text-xs  text-emerald-400 ">Units</span>
+                </div>
+              </div>
+            </>
+          )}
           <div className="">
-            <p className="text-xs   text-slate-400  mb-2">Produced</p>
+            <p className={`text-xs mb-2 ${isShipmentOp ? 'text-blue-500' : 'text-amber-500'}`}>{isShipmentOp ? 'Ready for Dispatch' : 'Ready for Transfer'}</p>
             <div className="flex items-baseline justify-left gap-1.5">
-              <span className="text-md  text-slate-600 ">
-                {totalProducedQty.toLocaleString()}
+              <span className={`text-md ${isShipmentOp ? 'text-blue-600 font-bold' : 'text-amber-600'} `}>
+                {transferableQty.toLocaleString()}
               </span>
-              <span className="text-xs  text-slate-400 ">Units</span>
+              <span className={`text-xs ${isShipmentOp ? 'text-blue-400' : 'text-amber-400'} `}>Units</span>
             </div>
           </div>
           <div className="">
-            <p className="text-xs   text-emerald-500  mb-2">Accepted</p>
+            <p className={`text-xs mb-2 ${isShipmentOp ? 'text-indigo-500' : 'text-indigo-500'}`}> {isShipmentOp ? 'Dispatched' : 'Transferred'} </p>
             <div className="flex items-baseline justify-left gap-1.5">
-              <span className="text-md  text-emerald-600 ">
-                {totalAcceptedQty.toLocaleString()}
-              </span>
-              <span className="text-xs  text-emerald-400 ">Units</span>
-            </div>
-          </div>
-          <div className="">
-            <p className="text-xs   text-indigo-500  mb-2">Transferred</p>
-            <div className="flex items-baseline justify-left gap-1.5">
-              <span className="text-md  text-indigo-600 ">
+              <span className={`text-md ${isShipmentOp ? 'text-indigo-600 font-bold' : 'text-indigo-600'} `}>
                 {parseFloat(jobCardData?.transferred_quantity || 0).toLocaleString()}
               </span>
               <span className="text-xs  text-indigo-400 ">Units</span>
             </div>
           </div>
-           <div className="">
-            <p className="text-xs   text-amber-500  mb-2">Balance WIP</p>
-            <div className="flex items-baseline justify-left gap-1.5">
-              <span className="text-md text-amber-600 ">
-                {transferableQty.toLocaleString()}
-              </span>
-              <span className="text-xs  text-amber-400 ">Units</span>
-            </div>
-          </div>
         </div>
         {/* Metrics Group 3: WIP */}
-       
-        {/* Current Operation & Assignee */}
-        <div className="flex items-center gap-6 px-4">
-          <div>
-            <p className="text-xs   text-slate-400  mb-2">Current Op</p>
-            <div className="flex items-center gap-3">
-              <div className="w-2.5 h-2.5 rounded  bg-violet-500 animate-pulse shrink-0 ring-4 ring-violet-50" />
-              <span className="text-xs  text-violet-600 truncate font-medium">
-                {jobCardData?.operation || 'N/A'}
-              </span>
-            </div>
-          </div>
 
-          <div className="border-l border-slate-100 pl-6">
-            <p className="text-xs   text-slate-400  mb-2">Assignee</p>
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 bg-indigo-50 rounded  flex items-center justify-left text-xs text-indigo-600  border border-indigo-100">
-                {(jobCardData?.assignee_name || jobCardData?.operator_name || 'U').charAt(0)}
+        {/* Current Operation & Assignee */}
+        {!isShipmentOp && (
+          <div className="flex items-center gap-6 px-4">
+            <div>
+              <p className="text-xs   text-slate-400  mb-2">Current Op</p>
+              <div className="flex items-center gap-3">
+                <div className="w-2.5 h-2.5 rounded  bg-violet-500 animate-pulse shrink-0 ring-4 ring-violet-50" />
+                <span className="text-xs  text-violet-600 truncate font-medium">
+                  {jobCardData?.operation || 'N/A'}
+                </span>
               </div>
-              <span className="text-xs  text-slate-700 font-medium">
-                {jobCardData?.assignee_name || jobCardData?.operator_name || 'Unassigned'}
-              </span>
+            </div>
+
+            <div className="border-l border-slate-100 pl-6">
+              <p className="text-xs   text-slate-400  mb-2">Assignee</p>
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-indigo-50 rounded  flex items-center justify-left text-xs text-indigo-600  border border-indigo-100">
+                  {(jobCardData?.assignee_name || jobCardData?.operator_name || 'U').charAt(0)}
+                </div>
+                <span className="text-xs  text-slate-700 font-medium">
+                  {jobCardData?.assignee_name || jobCardData?.operator_name || 'Unassigned'}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
       </div>
     </>
@@ -491,6 +698,225 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle }) => {
     </Card>
   )
 }
+
+const HandoverStatusSection = ({ previousOperationData, totalPlanned, inputAvailable }) => {
+  if (!previousOperationData) return null;
+
+  const handoverPercent = totalPlanned > 0 ? (inputAvailable / totalPlanned) * 100 : 0;
+  
+  return (
+    <div className="bg-white rounded border border-slate-100 p-2 mb-4 ">
+      <SectionTitle 
+        title="Preceding Operation Handover" 
+        icon={ArrowRightLeft} 
+        subtitle="Progress of material transfer from previous stage" 
+      />
+      <div className="bg-slate-50/50 p-2 rounded border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex-1 w-full">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-slate-400   ">Source Stage</p>
+              <h4 className="text-sm  text-slate-800">
+                Sequence {previousOperationData.operation_sequence}: {previousOperationData.operation_name}
+              </h4>
+            </div>
+            <div className="text-right">
+              <span className={`text-xs  p-1 rounded   ${handoverPercent >= 100 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+                {handoverPercent >= 100 ? 'Fully Transferred' : 'Partial Handover'}
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 mb-1">
+            <div className="flex-1 h-1 bg-slate-200 rounded overflow-hidden">
+              <div 
+                className={`h-full transition-all duration-1000 ${handoverPercent >= 100 ? 'bg-emerald-500' : 'bg-amber-500'}`} 
+                style={{ width: `${Math.min(100, handoverPercent)}%` }}
+              />
+            </div>
+            <span className="text-xs  text-slate-600 w-10 text-right">{handoverPercent.toFixed(1)}%</span>
+          </div>
+          <p className="text-xs text-slate-400 ">
+            * This operation is constrained by the quantity transferred from the previous stage.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-6 border-l border-slate-200 pl-6 w-full md:w-auto">
+          <div>
+            <p className="text-xs text-slate-400    mb-1">Accepted</p>
+            <p className="text-md  text-slate-900 leading-none">
+              {parseFloat(previousOperationData.accepted_quantity || 0).toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-amber-500    mb-1">Transferred</p>
+            <p className="text-md  text-amber-600 leading-none">
+              {parseFloat(previousOperationData.transferred_quantity || 0).toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-blue-500    mb-1">Received</p>
+            <p className="text-md  text-blue-600 leading-none">
+              {Math.min(totalPlanned, inputAvailable).toLocaleString()}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const UnifiedSubAssemblyStatus = ({ dependencies, buffers, bottleneck }) => {
+  if ((!dependencies || dependencies.length === 0) && (!buffers || buffers.length === 0)) return null;
+
+  // Combine data from dependencies and buffers
+  const combinedData = useMemo(() => {
+    const dataMap = {};
+
+    // First, process dependencies (production status)
+    dependencies.forEach(dep => {
+      const code = dep.child_item_code;
+      dataMap[code] = {
+        item_code: code,
+        item_name: dep.child_item_name || code,
+        uom: dep.uom || 'pcs',
+        status: dep.child_status,
+        produced: parseFloat(dep.child_produced_qty || 0),
+        accepted: parseFloat(dep.child_accepted_qty || 0),
+        planned: parseFloat(dep.child_planned_qty || 0),
+        transferred: parseFloat(dep.child_transferred_qty || 0),
+        consumed: 0,
+        available: 0
+      };
+    });
+
+    // Then, process buffers (transfer status)
+    buffers.forEach(buffer => {
+      const code = buffer.source_item_code;
+      if (!dataMap[code]) {
+        dataMap[code] = {
+          item_code: code,
+          item_name: buffer.item_name || code,
+          uom: buffer.uom || 'pcs',
+          produced: 0,
+          accepted: 0,
+          planned: 0,
+          transferred: 0,
+          consumed: 0,
+          available: 0
+        };
+      }
+      
+      const available = parseFloat(buffer.available_qty || 0);
+      const consumed = parseFloat(buffer.consumed_qty || 0);
+      
+      dataMap[code].available = available;
+      dataMap[code].consumed = consumed;
+      dataMap[code].transferred = available + consumed;
+    });
+
+    return Object.values(dataMap);
+  }, [dependencies, buffers]);
+
+  return (
+    <div className="bg-white rounded border border-slate-100 p-4 mb-4">
+      <SectionTitle 
+        title="Sub-Assembly & Component Status" 
+        icon={Boxes} 
+        subtitle="Unified tracking of component production and transfer progress" 
+      />
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {combinedData.map((item, index) => {
+          const prodProgress = item.planned > 0 ? (item.accepted / item.planned) * 100 : 0;
+          const transferTotal = item.available + item.consumed;
+          const usageProgress = transferTotal > 0 ? (item.consumed / transferTotal) * 100 : 0;
+          const isBottleneck = bottleneck && (item.item_name === bottleneck.name || item.item_code === bottleneck.name);
+
+          return (
+            <div key={index} className={`flex flex-col p-3 rounded border transition-colors group ${isBottleneck ? 'bg-rose-50 border-rose-200 ring-2 ring-rose-500/10' : 'bg-slate-50/50 border-slate-100 hover:border-indigo-200'}`}>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="min-w-0">
+                   <div className="flex items-center gap-2">
+                     <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{item.item_code}</p>
+                     {isBottleneck && (
+                        <span className="px-1.5 py-0.5 bg-rose-500 text-white text-[8px] rounded flex items-center gap-1 font-bold">
+                          <AlertTriangle size={8} /> BOTTLENECK
+                        </span>
+                     )}
+                   </div>
+                   <h4 className={`text-sm font-bold truncate ${isBottleneck ? 'text-rose-900' : 'text-slate-800'}`} title={item.item_name}>
+                     {item.item_name}
+                   </h4>
+                </div>
+                {item.status && <StatusBadge status={item.status} />}
+              </div>
+
+              {/* Production Status */}
+              <div className="mb-3 p-2 bg-white/60 rounded border border-slate-100/50">
+                <p className="text-[9px] text-slate-400 font-bold uppercase mb-2 flex items-center gap-1">
+                  <Activity size={10} /> Production Progress
+                </p>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                   <div>
+                     <p className="text-[10px] text-slate-500">Produced/Accepted</p>
+                     <p className={`text-md font-bold ${isBottleneck ? 'text-rose-600' : 'text-slate-700'}`}>
+                       {item.produced}/{item.accepted} <span className="text-[10px] font-normal text-slate-400">{item.uom}</span>
+                     </p>
+                   </div>
+                   <div className="text-right">
+                     <p className="text-[10px] text-slate-500">Target</p>
+                     <p className="text-sm font-medium text-slate-600">{item.planned}</p>
+                   </div>
+                </div>
+                <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-1000 ${prodProgress >= 100 ? 'bg-emerald-500' : (isBottleneck ? 'bg-rose-500' : 'bg-indigo-500')}`}
+                    style={{ width: `${Math.min(100, prodProgress)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Transfer/Usage Status */}
+              <div className="p-2 bg-white/60 rounded border border-slate-100/50">
+                <p className="text-[9px] text-slate-400 font-bold uppercase mb-2 flex items-center gap-1">
+                  <Truck size={10} /> Transfer & Usage
+                </p>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                   <div>
+                     <p className="text-[10px] text-slate-500">Available / Transferred</p>
+                     <p className={`text-md font-bold ${isBottleneck ? 'text-rose-600' : 'text-indigo-600'}`}>
+                       {item.available} / {item.transferred} <span className="text-[10px] font-normal text-slate-400">{item.uom}</span>
+                     </p>
+                   </div>
+                   <div className="text-right">
+                     <p className="text-[10px] text-slate-500">Consumed</p>
+                     <p className="text-sm font-medium text-slate-600">{item.consumed}</p>
+                   </div>
+                </div>
+                <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-1000 ${usageProgress >= 100 ? 'bg-emerald-500' : (isBottleneck ? 'bg-rose-500' : 'bg-indigo-500')}`}
+                    style={{ width: `${Math.min(100, usageProgress)}%` }}
+                  />
+                </div>
+              </div>
+              
+              {isBottleneck && (
+                <div className="mt-3 p-1.5 bg-rose-100/50 rounded border border-rose-200/50 text-center">
+                  <p className="text-[10px] text-rose-600 font-bold uppercase">
+                    Limiting Factor: {Math.floor(bottleneck.potential)} units
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 const checkTimeOverlap = (newStart, newEnd, existingEntries, resourceId = null, workstationName = null, excludeId = null) => {
   if (!newStart || !newEnd) return null;
@@ -589,17 +1015,66 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, color = 'indig
   )
 }
 
+const calculateTotalProduced = (logs, rejs) => {
+  const shiftMap = {};
+  logs.forEach(log => {
+    const key = `day_${log.day_number || 1}_${normalizeShift(log.shift)}_${formatDateForMatch(log.log_date)}`;
+    if (!shiftMap[key]) shiftMap[key] = { produced: 0, rejections: 0, accepted: 0 };
+    shiftMap[key].produced += (parseFloat(log.completed_qty) || 0);
+  });
+  rejs.forEach(rej => {
+    const key = `day_${rej.day_number || 1}_${normalizeShift(rej.shift)}_${formatDateForMatch(rej.log_date)}`;
+    if (!shiftMap[key]) shiftMap[key] = { produced: 0, rejections: 0, accepted: 0 };
+    const accepted = (parseFloat(rej.accepted_qty) || 0);
+    const rejected = (parseFloat(rej.rejected_qty) || 0);
+    const scrap = (parseFloat(rej.scrap_qty) || 0);
+    shiftMap[key].rejections += accepted + rejected + scrap;
+    shiftMap[key].accepted += accepted;
+  });
+
+  // Total Produced is the sum of total units processed in each shift
+  return Object.values(shiftMap).reduce((sum, s) => sum + Math.max(s.produced, s.rejections), 0);
+};
+
+const calculateTotalAccepted = (logs, rejs) => {
+  const shiftMap = {};
+  logs.forEach(log => {
+    const key = `day_${log.day_number || 1}_${normalizeShift(log.shift)}_${formatDateForMatch(log.log_date)}`;
+    if (!shiftMap[key]) shiftMap[key] = { produced: 0, rejections: 0, accepted: 0, hasRejection: false };
+    shiftMap[key].produced += (parseFloat(log.completed_qty) || 0);
+  });
+  rejs.forEach(rej => {
+    const key = `day_${rej.day_number || 1}_${normalizeShift(rej.shift)}_${formatDateForMatch(rej.log_date)}`;
+    if (!shiftMap[key]) shiftMap[key] = { produced: 0, rejections: 0, accepted: 0, hasRejection: false };
+    
+    // Count accepted quantity if quality entry is Approved OR Pending (Allows immediate transfer after logging)
+    if (rej.status === 'Approved' || rej.status === 'Pending') {
+      shiftMap[key].accepted += (parseFloat(rej.accepted_qty) || 0);
+    }
+    
+    shiftMap[key].rejections += (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0);
+    shiftMap[key].hasRejection = true;
+  });
+
+  return Object.values(shiftMap).reduce((sum, s) => {
+    // Return only the accepted quantity from quality entries (requires QC)
+    return sum + s.accepted;
+  }, 0);
+};
+
 export default function ProductionEntry() {
   const { jobCardId } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
 
   const [jobCardData, setJobCardData] = useState(null)
+  const [buffers, setBuffers] = useState([])
   const [allJobCards, setAllJobCards] = useState([])
   const [previousOperationData, setPreviousOperationData] = useState(null)
   const [previousOperationLogs, setPreviousOperationLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [itemName, setItemName] = useState('')
+  const [childDependencies, setChildDependencies] = useState([])
   const [operationCycleTime, setOperationCycleTime] = useState(0)
   const [salesOrderQuantity, setSalesOrderQuantity] = useState(0)
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -614,6 +1089,7 @@ export default function ProductionEntry() {
 
   const [shifts] = useState(['A', 'B'])
   const [warehouses, setWarehouses] = useState([])
+  const [vendors, setVendors] = useState([])
   const [workstations, setWorkstations] = useState([])
   const [operators, setOperators] = useState([])
   const [operations, setOperations] = useState([])
@@ -624,8 +1100,199 @@ export default function ProductionEntry() {
     next_operation_id: '',
     next_operation_date: getLocalDate(),
     inhouse: false,
-    outsource: false
+    outsource: false,
+    auto_transfer: false
   })
+
+  const [shipmentForm, setShipmentForm] = useState({
+    source_warehouse_id: '',
+    target_warehouse_id: 'WH-FG',
+    dispatch_qty: 0,
+    dispatch_date: getLocalDate(),
+    shipping_notes: '',
+    is_partial: false,
+    carrier_name: '',
+    tracking_number: ''
+  })
+
+  const isShipmentOp = useMemo(() => {
+    if (!jobCardData?.operation) return false;
+    const op = jobCardData.operation.toLowerCase();
+    return op.includes('shipment') || op.includes('dispatch') || op.includes('delivery');
+  }, [jobCardData?.operation]);
+
+  const isFirstOp = useMemo(() => {
+    const seq = parseInt(jobCardData?.operation_sequence || 0);
+    return seq === 1 || seq === 0;
+  }, [jobCardData?.operation_sequence]);
+
+  const hasSubAssemblies = useMemo(() => {
+    return (isFirstOp || isShipmentOp) && childDependencies && childDependencies.length > 0;
+  }, [isFirstOp, isShipmentOp, childDependencies]);
+
+  const bottleneckData = useMemo(() => 
+    calculateReadyToAssemble(jobCardData, childDependencies, buffers, true),
+    [jobCardData, childDependencies, buffers]
+  );
+
+  const totalProducedQty = useMemo(() => calculateTotalProduced(timeLogs, rejections), [timeLogs, rejections]);
+  const totalAcceptedQty = useMemo(() => calculateTotalAccepted(timeLogs, rejections), [timeLogs, rejections]);
+  const productionMinutes = useMemo(() => timeLogs.reduce((sum, log) => sum + (parseFloat(log.time_in_minutes) || 0), 0), [timeLogs]);
+  const totalDowntimeMinutes = useMemo(() => downtimes.reduce((sum, d) => sum + (parseFloat(d.duration_minutes) || 0), 0), [downtimes]);
+  const totalActualMinutes = productionMinutes + totalDowntimeMinutes;
+  const totalOperationCost = useMemo(() => totalProducedQty * (parseFloat(jobCardData?.hourly_rate || 0) * (operationCycleTime || 0) / 60), [totalProducedQty, jobCardData?.hourly_rate, operationCycleTime]);
+  const approvedRejections = useMemo(() => rejections.filter(rej => rej.status === 'Approved'), [rejections]);
+  const totalRejectedQty = useMemo(() => approvedRejections.reduce((sum, rej) => sum + (parseFloat(rej.rejected_qty) || 0), 0), [approvedRejections]);
+  const totalScrapQty = useMemo(() => approvedRejections.reduce((sum, rej) => sum + (parseFloat(rej.scrap_qty) || 0), 0), [approvedRejections]);
+  const transferredQty = parseFloat(jobCardData?.transferred_quantity || 0);
+  
+  const currentInputAvailable = (parseFloat(jobCardData?.input_qty || 0) + parseFloat(jobCardData?.input_buffer_qty || 0));
+  
+  const readyQty = useMemo(() => {
+    const totalPlanned = parseFloat(jobCardData?.planned_quantity || 0);
+    const readyToAssemble = bottleneckData.readyQty;
+    const hasPreviousOp = !isFirstOp && previousOperationData;
+    
+    // Constraints are additive: we are limited by the minimum of all bottlenecks
+    let rawReadyQty = totalPlanned;
+    if (hasSubAssemblies) rawReadyQty = Math.min(rawReadyQty, readyToAssemble);
+    if (hasPreviousOp) rawReadyQty = Math.min(rawReadyQty, currentInputAvailable);
+    
+    return Math.min(totalPlanned, rawReadyQty);
+  }, [jobCardData, bottleneckData, isFirstOp, previousOperationData, hasSubAssemblies, currentInputAvailable]);
+
+  const prevAcceptedQty = parseFloat(previousOperationData?.accepted_quantity || 0);
+  const prevTransferredQty = parseFloat(previousOperationData?.transferred_quantity || 0);
+  const prevTransferableQty = Math.max(0, prevAcceptedQty - prevTransferredQty);
+
+  const planFulfillmentStatus = useMemo(() => {
+    if (!jobCardData?.production_plan_id || !allJobCards.length) return null;
+
+    // Filter all job cards for this plan
+    const planJobCards = allJobCards.filter(jc => 
+      jc.production_plan_id === jobCardData.production_plan_id
+    );
+    
+    // Group by Work Order to see completion per item
+    const woGroups = {};
+    planJobCards.forEach(jc => {
+      if (!woGroups[jc.work_order_id]) {
+        woGroups[jc.work_order_id] = {
+          wo_id: jc.work_order_id,
+          item_code: jc.item_code,
+          item_name: jc.item_name,
+          total_planned: parseFloat(jc.planned_quantity || 0),
+          total_accepted: 0,
+          ops: []
+        };
+      }
+      woGroups[jc.work_order_id].ops.push(jc);
+    });
+
+    // For each WO, calculate overall readiness based on final operation
+    Object.values(woGroups).forEach(group => {
+      const sortedOps = [...group.ops].sort((a, b) => 
+        (parseInt(a.plan_operation_sequence || a.operation_sequence || 0) || 0) - 
+        (parseInt(b.plan_operation_sequence || b.operation_sequence || 0) || 0)
+      );
+      const lastOp = sortedOps[sortedOps.length - 1];
+      
+      group.total_planned = parseFloat(lastOp.planned_quantity || 0);
+      group.total_accepted = parseFloat(lastOp.accepted_quantity || 0);
+      group.is_ready = group.total_accepted >= group.total_planned && group.total_planned > 0;
+      group.status = lastOp.status;
+    });
+
+    const totalWOs = Object.keys(woGroups).length;
+    const readyWOs = Object.values(woGroups).filter(g => g.is_ready).length;
+    const allReady = readyWOs === totalWOs && totalWOs > 0;
+
+    return {
+      allReady,
+      totalWOs,
+      readyWOs,
+      woGroups: Object.values(woGroups),
+      percent: totalWOs > 0 ? (readyWOs / totalWOs) * 100 : 0
+    };
+  }, [jobCardData?.production_plan_id, allJobCards]);
+
+  const transferableQty = isShipmentOp 
+    ? Math.max(0, readyQty - transferredQty)
+    : Math.max(0, totalAcceptedQty - transferredQty);
+
+  const qualityInspectedTotal = useMemo(() => approvedRejections.reduce((sum, rej) =>
+    sum + (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0), 0), [approvedRejections]);
+  const qualityScore = qualityInspectedTotal > 0 ? ((totalAcceptedQty / qualityInspectedTotal) * 100).toFixed(1) : 0
+  const hasPendingApproval = useMemo(() => rejections.some(rej => rej.status !== 'Approved'), [rejections])
+
+  const maxAllowedQty = Math.max(
+    parseFloat(jobCardData?.max_allowed_quantity || 0),
+    parseFloat(jobCardData?.planned_quantity || 0),
+    previousOperationData ? parseFloat(previousOperationData.transferred_quantity || 0) : 0,
+    parseFloat(jobCardData?.input_qty || 0) + parseFloat(jobCardData?.input_buffer_qty || 0)
+  );
+
+  const totalTargetQty = Math.max(
+    parseFloat(jobCardData?.sales_qty || jobCardData?.planned_quantity || 0),
+    maxAllowedQty
+  );
+  const isOperationFinished = isShipmentOp 
+    ? (transferredQty + transferableQty >= totalTargetQty && totalTargetQty > 0 && (planFulfillmentStatus?.allReady ?? true))
+    : (totalAcceptedQty >= totalTargetQty && totalTargetQty > 0);
+
+  // Auto-fill shipment quantity and source warehouse
+  useEffect(() => {
+    if (isShipmentOp && jobCardData) {
+      const isPlanReady = planFulfillmentStatus ? planFulfillmentStatus.allReady : true;
+      
+      setShipmentForm(prev => {
+        // If plan is not ready, we FORCE partial dispatch
+        const forcePartial = !isPlanReady;
+        
+        // Calculate current available quantity to suggest
+        const currentAvailable = isShipmentOp 
+          ? Math.max(0, (prevAcceptedQty > 0 ? prevAcceptedQty : currentInputAvailable) - transferredQty)
+          : Math.max(0, totalAcceptedQty - transferredQty);
+
+        const shouldBePartial = forcePartial || prev.is_partial;
+        
+        return {
+          ...prev,
+          source_warehouse_id: prev.source_warehouse_id || jobCardData.workstation_id || jobCardData.workstation || '',
+          is_partial: shouldBePartial,
+          dispatch_qty: prev.dispatch_qty || currentAvailable.toString()
+        };
+      });
+    }
+  }, [isShipmentOp, jobCardData, planFulfillmentStatus]);
+
+  const nextOps = useMemo(() => {
+    const currentSequenceInt = parseInt(jobCardData?.operation_sequence || 0);
+    const currentPlanSeqInt = parseInt(jobCardData?.plan_operation_sequence || 0);
+    const hasPlan = !!jobCardData?.production_plan_id;
+
+    return operations.filter(op => {
+      if (hasPlan) {
+        const opPlanSeq = parseInt(op.plan_operation_sequence || op.plan_sequence || 0);
+        if (opPlanSeq <= currentPlanSeqInt) return false;
+      } else {
+        const opSeq = parseInt(op.sequence || op.seq || op.operation_seq || 0);
+        if (opSeq <= currentSequenceInt) return false;
+      }
+
+      const isCompleted = allJobCards.some(jc =>
+        (String(jc.job_card_id) === String(op.job_card_id) ||
+          jc.operation === op.operation_name ||
+          jc.operation === op.name) &&
+        normalizeStatus(jc.status) === 'completed'
+      );
+      return !isCompleted;
+    });
+  }, [operations, jobCardData, allJobCards]);
+
+  const isLastOperation = useMemo(() => {
+    return nextOps.length === 0;
+  }, [nextOps]);
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formLoading, setFormLoading] = useState(false)
   const [editingRowKey, setEditingRowKey] = useState(null)
@@ -1157,12 +1824,12 @@ export default function ProductionEntry() {
                 <div className="flex gap-1">
                   <input
                     type="time"
-                    className="w-16 p-0.5 border border-indigo-200 rounded text-[10px]"
+                    className="w-16 p-0.5 border border-indigo-200 rounded text-xs"
                     value={editFormData.from_time?.substring(0, 5)}
                     onChange={(e) => handleEditChange('from_time', e.target.value)}
                   />
                   <select
-                    className="p-0.5 border border-indigo-200 rounded text-[10px]"
+                    className="p-0.5 border border-indigo-200 rounded text-xs"
                     value={editFormData.from_period}
                     onChange={(e) => handleEditChange('from_period', e.target.value)}
                   >
@@ -1173,12 +1840,12 @@ export default function ProductionEntry() {
                 <div className="flex gap-1">
                   <input
                     type="time"
-                    className="w-16 p-0.5 border border-indigo-200 rounded text-[10px]"
+                    className="w-16 p-0.5 border border-indigo-200 rounded text-xs"
                     value={editFormData.to_time?.substring(0, 5)}
                     onChange={(e) => handleEditChange('to_time', e.target.value)}
                   />
                   <select
-                    className="p-0.5 border border-indigo-200 rounded text-[10px]"
+                    className="p-0.5 border border-indigo-200 rounded text-xs"
                     value={editFormData.to_period}
                     onChange={(e) => handleEditChange('to_period', e.target.value)}
                   >
@@ -1230,7 +1897,7 @@ export default function ProductionEntry() {
       render: (val, row) => (
         <div className="flex flex-col items-end">
           <span className="text-slate-600 font-medium text-xs">{(val || 0).toFixed(1)}</span>
-          <span className="text-[8px] text-slate-400  tracking-tighter">Expected</span>
+          <span className="text-[8px] text-slate-400  ">Expected</span>
         </div>
       )
     },
@@ -1251,7 +1918,7 @@ export default function ProductionEntry() {
         ) : (
           <div className="flex flex-col items-end">
             <span className="text-indigo-600 font-semibold text-xs">{val || 0}</span>
-            <span className="text-[8px] text-slate-400  tracking-tighter">Minutes</span>
+            <span className="text-[8px] text-slate-400  ">Minutes</span>
           </div>
         );
       }
@@ -1265,7 +1932,7 @@ export default function ProductionEntry() {
           <span className={`font-medium text-xs ${val > 5 ? 'text-rose-600' : val < -5 ? 'text-emerald-600' : 'text-slate-600'}`}>
             {val > 0 ? '+' : ''}{(val || 0).toFixed(1)}
           </span>
-          <span className="text-[8px] text-slate-400  tracking-tighter">+/- Mins</span>
+          <span className="text-[8px] text-slate-400  ">+/- Mins</span>
         </div>
       )
     },
@@ -1286,7 +1953,7 @@ export default function ProductionEntry() {
         ) : (
           <div className="flex flex-col items-end">
             <span className="text-slate-900 font-semibold text-xs">{parseFloat(val || 0).toLocaleString()}</span>
-            <span className="text-[8px] text-slate-400  tracking-tighter font-medium">Gross Total</span>
+            <span className="text-[8px] text-slate-400   font-medium">Gross Total</span>
           </div>
         );
       }
@@ -1310,7 +1977,7 @@ export default function ProductionEntry() {
         ) : (
           <div className="flex flex-col items-end">
             <span className="text-emerald-600  text-xs">{parseFloat(val || 0).toLocaleString()}</span>
-            <span className="text-[8px] text-emerald-400  tracking-tighter">Accepted</span>
+            <span className="text-[8px] text-emerald-400  ">Accepted</span>
           </div>
         );
       }
@@ -1334,7 +2001,7 @@ export default function ProductionEntry() {
         ) : (
           <div className="flex flex-col items-end">
             <span className="text-rose-600  text-xs">{parseFloat(val || 0).toLocaleString()}</span>
-            <span className="text-[8px] text-rose-400  tracking-tighter font-medium">Rejected</span>
+            <span className="text-[8px] text-rose-400   font-medium">Rejected</span>
           </div>
         );
       }
@@ -1358,7 +2025,7 @@ export default function ProductionEntry() {
         ) : (
           <div className="flex flex-col items-end">
             <span className="text-amber-600  text-xs">{parseFloat(val || 0).toLocaleString()}</span>
-            <span className="text-[8px] text-amber-500  tracking-tighter">Scrap</span>
+            <span className="text-[8px] text-amber-500  ">Scrap</span>
           </div>
         );
       }
@@ -1372,7 +2039,7 @@ export default function ProductionEntry() {
           <span className="text-amber-600 font-semibold text-xs">
             ₹{(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
-          <span className="text-[8px] text-slate-400  tracking-tighter">Production Cost</span>
+          <span className="text-[8px] text-slate-400  ">Production Cost</span>
         </div>
       )
     },
@@ -1385,7 +2052,7 @@ export default function ProductionEntry() {
           <span className={`font-semibold text-xs ${val > 0 ? 'text-rose-600' : val < 0 ? 'text-emerald-600' : 'text-slate-600'}`}>
             {val > 0 ? '+' : ''}₹{Math.abs(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
-          <span className="text-[8px] text-slate-400  tracking-tighter">+/- Cost</span>
+          <span className="text-[8px] text-slate-400  ">+/- Cost</span>
         </div>
       )
     },
@@ -1398,8 +2065,8 @@ export default function ProductionEntry() {
           <div className="flex justify-between items-center text-xs w-full">
             <span className="text-slate-400  tracking-tight font-medium">Yield</span>
             <span className={` p-1 rounded border ${parseFloat(row.yieldPercentage) >= 95 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
-                parseFloat(row.yieldPercentage) >= 85 ? 'text-blue-600 bg-blue-50 border-blue-100' :
-                  'text-rose-600 bg-rose-50 border-rose-100'
+              parseFloat(row.yieldPercentage) >= 85 ? 'text-blue-600 bg-blue-50 border-blue-100' :
+                'text-rose-600 bg-rose-50 border-rose-100'
               }`}>
               {row.yieldPercentage}%
             </span>
@@ -1438,7 +2105,7 @@ export default function ProductionEntry() {
               <span className={` text-xs ${val > 0 ? 'text-rose-600' : 'text-slate-400'}`}>{val || 0}</span>
               <span className="text-xs text-slate-400  ">min</span>
             </div>
-            <span className="text-[8px] text-slate-400  tracking-tighter">Total Loss</span>
+            <span className="text-[8px] text-slate-400  ">Total Loss</span>
           </div>
         );
       }
@@ -1495,6 +2162,17 @@ export default function ProductionEntry() {
 
   useEffect(() => {
     fetchAllData()
+    // Reset next operation form when job card changes
+    setNextOperationForm({
+      next_operator_id: '',
+      next_warehouse_id: '',
+      next_operation_id: '',
+      next_operation_date: getLocalDate(),
+      vendor_id: '',
+      auto_create_challans: false,
+      inhouse: false,
+      outsource: false
+    })
   }, [jobCardId])
 
   useEffect(() => {
@@ -1590,11 +2268,7 @@ export default function ProductionEntry() {
       if (jobCardData?.scheduled_end_date && !hasPromptedContinue && !loading) {
         const scheduledEnd = new Date(jobCardData.scheduled_end_date)
         const totalAcc = calculateTotalAccepted(timeLogs, rejections)
-        const maxQty = jobCardData?.max_allowed_quantity !== undefined
-          ? parseFloat(jobCardData.max_allowed_quantity)
-          : (previousOperationData
-            ? parseFloat(previousOperationData.transferred_quantity || 0)
-            : parseFloat(jobCardData?.planned_quantity || 0));
+        const maxQty = calculateMaxQty(jobCardData, previousOperationData, childDependencies);
 
         const remaining = maxQty - totalAcc
 
@@ -1609,7 +2283,44 @@ export default function ProductionEntry() {
     }, 60000) // Check every minute
 
     return () => clearInterval(timer)
-  }, [jobCardData, timeLogs, rejections, loading, hasPromptedContinue, operationCycleTime, previousOperationData])
+  }, [jobCardData, timeLogs, rejections, loading, hasPromptedContinue, operationCycleTime, previousOperationData, childDependencies])
+
+  // Auto-fetch Next Operation and Execution Mode
+  useEffect(() => {
+    if (operations.length > 0 && jobCardData && allJobCards.length > 0 && !nextOperationForm.next_operation_id) {
+      const currentSequence = parseInt(jobCardData.operation_sequence || 0);
+      const nextOps = operations.filter(op => {
+        const opSeq = parseInt(op.sequence || op.seq || op.operation_seq || 0);
+        if (opSeq <= currentSequence) return false;
+
+        // Follow same logic as the UI for filtering
+        const isCompleted = allJobCards.some(jc =>
+          (String(jc.job_card_id) === String(op.job_card_id) ||
+            jc.operation === op.operation_name ||
+            jc.operation === op.name) &&
+          normalizeStatus(jc.status) === 'completed'
+        );
+        return !isCompleted;
+      });
+
+      if (nextOps.length > 0) {
+        const nextOp = nextOps[0];
+        const opId = nextOp.operation_id || nextOp.id || nextOp.operation_name || nextOp.name;
+        const nextWH = nextOp.machine_id || nextOp.default_workstation || nextOp.workstation || '';
+        const mode = String(nextOp.execution_mode || nextOp.operation_type || 'IN_HOUSE').toUpperCase();
+        const isOutsource = mode.includes('OUTSOURCE') || mode.includes('OUTSOURCED') || mode.includes('SUBCONTRACT');
+
+        setNextOperationForm(prev => ({
+          ...prev,
+          next_operation_id: opId,
+          next_warehouse_id: nextWH,
+          next_operator_id: nextOp.operator_id || nextOp.assignee_id || '',
+          inhouse: !isOutsource,
+          outsource: isOutsource
+        }));
+      }
+    }
+  }, [operations, jobCardData, allJobCards, nextOperationForm.next_operation_id]);
 
   const handleContinueProduction = async () => {
     try {
@@ -1649,12 +2360,13 @@ export default function ProductionEntry() {
     try {
       setLoading(true)
       // 1. Fetch Job Card Details and basic master data
-      const [jobCardRes, wsRes, empRes, opsRes, whRes] = await Promise.all([
+      const [jobCardRes, wsRes, empRes, opsRes, whRes, vendorRes] = await Promise.all([
         productionService.getJobCardDetails(jobCardId),
         productionService.getWorkstationsList(),
         productionService.getEmployees(),
         productionService.getOperationsList(),
-        productionService.getWarehouses()
+        productionService.getWarehouses(),
+        productionService.getVendors()
       ])
 
       let jobCard = jobCardRes.data || jobCardRes
@@ -1680,7 +2392,9 @@ export default function ProductionEntry() {
       setWorkstations(wsRes.data || [])
       setOperators(empRes.data || [])
       setWarehouses(whRes.data || [])
+      setVendors(vendorRes.data || vendorRes || [])
       setJobCardData(jobCard)
+      setBuffers(jobCard.buffers || [])
 
       // 3. Fetch Work Order and Item details to get Cycle Time
       let currentCycleTime = 0;
@@ -1689,8 +2403,14 @@ export default function ProductionEntry() {
 
       if (woId) {
         try {
-          const woRes = await productionService.getWorkOrder(woId)
+          const [woRes, depRes] = await Promise.all([
+            productionService.getWorkOrder(woId),
+            productionService.getWorkOrderDependencies(woId, 'child')
+          ])
           const woData = woRes?.data || woRes
+          const dependencies = depRes?.data || depRes || []
+
+          setChildDependencies(dependencies)
           soQty = parseFloat(woData?.qty_to_manufacture || woData?.quantity || woData?.planned_quantity || 0)
           setSalesOrderQuantity(soQty)
           setItemName(woData.item_name || '')
@@ -1722,47 +2442,84 @@ export default function ProductionEntry() {
 
       // 4. Load related Job Cards and previous logs
       const currentSequence = parseInt(jobCard.operation_sequence || 0)
+      const currentPlanSequence = parseInt(jobCard.plan_operation_sequence || 0)
       let jobCards = []
       let previousLogs = []
 
       if (woId) {
-        const jcResponse = await productionService.getJobCards({ work_order_id: woId })
+        // Continuous Flow: If this Job Card is part of a plan, fetch all Job Cards in that plan
+        // This allows seeing the full operation sequence across multiple Work Orders
+        let jcResponse;
+        if (jobCard.production_plan_id) {
+          jcResponse = await productionService.getJobCards({ production_plan_id: jobCard.production_plan_id })
+        } else {
+          jcResponse = await productionService.getJobCards({ work_order_id: woId })
+        }
+
         jobCards = jcResponse.data || []
         setAllJobCards(jobCards)
 
-        if (currentSequence > 0) {
-          const prevCard = jobCards.find(c => parseInt(c.operation_sequence || 0) === currentSequence - 1)
-          if (prevCard) {
-            setPreviousOperationData(prevCard)
-            try {
-              const prevLogsRes = await productionService.getTimeLogs({ job_card_id: prevCard.job_card_id })
-              previousLogs = prevLogsRes.data || prevLogsRes || []
-              setPreviousOperationLogs(previousLogs)
-            } catch (err) {
-              console.error('Failed to fetch previous operation logs:', err)
-            }
+        // Find previous operation (either in same WO or across WO in same Plan)
+        let prevCard;
+        if (jobCard.production_plan_id && currentPlanSequence > 0) {
+          prevCard = jobCards.find(c => parseInt(c.plan_operation_sequence || 0) === currentPlanSequence - 1)
+        } else if (currentSequence > 0) {
+          prevCard = jobCards.find(c =>
+            c.work_order_id === woId &&
+            parseInt(c.operation_sequence || 0) === currentSequence - 1
+          )
+        }
+
+        if (prevCard) {
+          setPreviousOperationData(prevCard)
+          try {
+            const prevLogsRes = await productionService.getTimeLogs({ job_card_id: prevCard.job_card_id })
+            previousLogs = prevLogsRes.data || prevLogsRes || []
+            setPreviousOperationLogs(previousLogs)
+          } catch (err) {
+            console.error('Failed to fetch previous operation logs:', err)
           }
         }
       }
 
       // 5. Load Operations List
-      let allOperations = opsRes.data || []
-      const globalOps = opsRes.data || []
-      const enrichedOperations = allOperations.map(op => {
-        const matchingJobCard = jobCards.find(jc =>
-          String(jc.operation_id) === String(op.operation_id || op.id) ||
-          parseInt(jc.operation_sequence) === parseInt(op.sequence || op.seq || op.operation_seq)
+      let globalOps = opsRes.data || []
+
+      // CRITICAL FIX: Base operations on Job Cards for this Work Order or Plan, 
+      // enriched with global operation details
+      const filteredJobCards = jobCard.production_plan_id
+        ? jobCards // Already contains all JC in the plan from step 4
+        : jobCards.filter(c => c.work_order_id === woId);
+
+      const enrichedOperations = filteredJobCards.map(jc => {
+        const globalOp = globalOps.find(g =>
+          String(g.operation_id) === String(jc.operation_id) ||
+          g.name === jc.operation ||
+          g.operation_name === jc.operation
         )
-        let opName = op.operation_name || op.name || matchingJobCard?.operation
-        if (!opName && (op.operation_id || op.id)) {
-          const globalOp = globalOps.find(g => String(g.operation_id) === String(op.operation_id || op.id))
-          opName = globalOp?.name || globalOp?.operation_name
+
+        const mode = String(jc.execution_mode || globalOp?.execution_mode || globalOp?.operation_type || 'IN_HOUSE').toUpperCase();
+        const isOutsourceMode = mode.includes('OUTSOURCE') || mode.includes('OUTSOURCED') || mode.includes('SUBCONTRACT');
+
+        return {
+          ...globalOp,
+          ...jc,
+          operation_id: jc.operation_id || globalOp?.operation_id || globalOp?.id,
+          operation_name: jc.operation || globalOp?.operation_name || globalOp?.name,
+          name: jc.operation || globalOp?.name || globalOp?.operation_name,
+          sequence: parseInt(jc.operation_sequence || globalOp?.sequence || 0),
+          plan_sequence: parseInt(jc.plan_operation_sequence || 0),
+          execution_mode: isOutsourceMode ? 'OUTSOURCE' : 'IN_HOUSE',
+          default_workstation: jc.machine_id || globalOp?.default_workstation || globalOp?.workstation || ''
         }
-        return { ...op, name: opName, operation_name: opName }
       })
-      const sortedOperations = enrichedOperations.sort((a, b) =>
-        parseInt(a.sequence || 0) - parseInt(b.sequence || 0)
-      )
+
+      // Sort by plan sequence if available, otherwise fallback to WO sequence
+      const sortedOperations = enrichedOperations.sort((a, b) => {
+        if (a.plan_sequence !== b.plan_sequence) return a.plan_sequence - b.plan_sequence;
+        return a.sequence - b.sequence;
+      })
+
       setOperations(sortedOperations)
 
       // 6. Fetch Logs, Rejections, Downtimes
@@ -1814,11 +2571,7 @@ export default function ProductionEntry() {
 
       // Auto-calculation based on Expected Time
       const totalAcc = calculateTotalAccepted(logs, rejs);
-      const maxQty = jobCard?.max_allowed_quantity !== undefined
-        ? parseFloat(jobCard.max_allowed_quantity)
-        : (currentSequence > 0 && jobCards.find(c => parseInt(c.operation_sequence) === currentSequence - 1)?.transferred_quantity
-          ? parseFloat(jobCards.find(c => parseInt(c.operation_sequence) === currentSequence - 1).transferred_quantity)
-          : parseFloat(jobCard?.planned_quantity || 0));
+      const maxQty = calculateMaxQty(jobCard, previousOperationData, childDependencies);
 
       const remainingQty = Math.max(0, maxQty - totalAcc);
       let autoFillData = {};
@@ -1844,6 +2597,71 @@ export default function ProductionEntry() {
           completed_qty: completedQty,
           time_in_minutes: Math.round(durationMinutes)
         };
+      }
+
+      // Auto-select next operation if not already selected
+      const currentSequenceInt = parseInt(jobCard.operation_sequence || 0);
+      const currentPlanSeqInt = parseInt(jobCard.plan_operation_sequence || 0);
+      const hasPlan = !!jobCard.production_plan_id;
+
+      const nextOpsList = sortedOperations.filter(op => {
+        if (hasPlan) {
+          const opPlanSeq = parseInt(op.plan_operation_sequence || op.plan_sequence || 0);
+          if (opPlanSeq <= currentPlanSeqInt) return false;
+        } else {
+          const opSeq = parseInt(op.sequence || op.seq || op.operation_seq || 0);
+          if (opSeq <= currentSequenceInt) return false;
+        }
+
+        // Use consistent filtering as in UI: exclude completed operations
+        const isCompleted = jobCards.some(jc =>
+          (String(jc.job_card_id) === String(op.job_card_id) ||
+            jc.operation === op.operation_name ||
+            jc.operation === op.name) &&
+          normalizeStatus(jc.status) === 'completed'
+        );
+        return !isCompleted;
+      });
+
+      if (nextOpsList.length > 0) {
+        const firstNextOp = nextOpsList[0];
+        const nextOpId = firstNextOp.operation_id || firstNextOp.id || firstNextOp.operation_name || firstNextOp.name;
+        const nextWH = firstNextOp.machine_id || firstNextOp.default_workstation || firstNextOp.workstation || '';
+        const mode = String(firstNextOp.execution_mode || firstNextOp.operation_type || 'IN_HOUSE').toUpperCase();
+        const isOutsource = mode.includes('OUTSOURCE') || mode.includes('OUTSOURCED') || mode.includes('SUBCONTRACT');
+
+        console.log('Auto-filling Next Stage:', { nextOpId, nextWH, mode, isOutsource });
+
+        setNextOperationForm(prev => ({
+          ...prev,
+          next_operation_id: nextOpId,
+          next_operation_date: next.date,
+          next_warehouse_id: nextWH,
+          next_operator_id: firstNextOp.operator_id || firstNextOp.assignee_id || '',
+          inhouse: !isOutsource,
+          outsource: isOutsource
+        }));
+      } else {
+        // Last operation: default to Finished Goods warehouse
+        setNextOperationForm(prev => ({
+          ...prev,
+          next_operation_id: '',
+          next_operation_date: next.date,
+          next_warehouse_id: 'WH-FG', // Standard FG warehouse code
+          inhouse: true,
+          outsource: false
+        }));
+      }
+
+      // Auto-fill shipment form if it's a shipment operation
+      if (isShipmentOp) {
+        setShipmentForm(prev => ({
+          ...prev,
+          source_warehouse_id: jobCard.machine_id || 'WH-FG',
+          target_warehouse_id: 'WH-FG', // Transfer to Finished Goods warehouse by default
+          dispatch_qty: remainingQty,
+          dispatch_date: next.date
+        }));
       }
 
       syncAllForms({
@@ -1914,52 +2732,6 @@ export default function ProductionEntry() {
     };
   };
 
-  const calculateTotalProduced = (logs, rejs) => {
-    const shiftMap = {};
-    logs.forEach(log => {
-      const key = `day_${log.day_number || 1}_${normalizeShift(log.shift)}_${formatDateForMatch(log.log_date)}`;
-      if (!shiftMap[key]) shiftMap[key] = { produced: 0, rejections: 0, accepted: 0 };
-      shiftMap[key].produced += (parseFloat(log.completed_qty) || 0);
-    });
-    rejs.forEach(rej => {
-      const key = `day_${rej.day_number || 1}_${normalizeShift(rej.shift)}_${formatDateForMatch(rej.log_date)}`;
-      if (!shiftMap[key]) shiftMap[key] = { produced: 0, rejections: 0, accepted: 0 };
-      const accepted = (parseFloat(rej.accepted_qty) || 0);
-      const rejected = (parseFloat(rej.rejected_qty) || 0);
-      const scrap = (parseFloat(rej.scrap_qty) || 0);
-      shiftMap[key].rejections += accepted + rejected + scrap;
-      shiftMap[key].accepted += accepted;
-    });
-
-    // Total Produced is the sum of total units processed in each shift
-    return Object.values(shiftMap).reduce((sum, s) => sum + Math.max(s.produced, s.rejections), 0);
-  };
-
-  const calculateTotalAccepted = (logs, rejs) => {
-    const shiftMap = {};
-    logs.forEach(log => {
-      const key = `day_${log.day_number || 1}_${normalizeShift(log.shift)}_${formatDateForMatch(log.log_date)}`;
-      if (!shiftMap[key]) shiftMap[key] = { produced: 0, rejections: 0, accepted: 0, hasRejection: false };
-      shiftMap[key].produced += (parseFloat(log.completed_qty) || 0);
-    });
-    rejs.forEach(rej => {
-      const key = `day_${rej.day_number || 1}_${normalizeShift(rej.shift)}_${formatDateForMatch(rej.log_date)}`;
-      if (!shiftMap[key]) shiftMap[key] = { produced: 0, rejections: 0, accepted: 0, hasRejection: false };
-      shiftMap[key].accepted += (parseFloat(rej.accepted_qty) || 0);
-      shiftMap[key].rejections += (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0);
-      shiftMap[key].hasRejection = true;
-    });
-
-    return Object.values(shiftMap).reduce((sum, s) => {
-      // If a shift has rejection entries, count only the accepted ones
-      if (s.hasRejection) {
-        return sum + s.accepted;
-      }
-      // If no rejection entry yet, assume everything produced is currently "accepted" (optimistic)
-      return sum + s.produced;
-    }, 0);
-  };
-
   const syncAllForms = (data, skipTimings = false, logs = timeLogs, rejs = rejections) => {
     let shift = data.shift !== undefined ? data.shift : timeLogForm.shift;
     let log_date = data.log_date !== undefined ? data.log_date : timeLogForm.log_date;
@@ -1996,11 +2768,7 @@ export default function ProductionEntry() {
         .reduce((sum, dt) => sum + (parseFloat(dt.duration_minutes) || 0), 0);
 
       const totalAcc = calculateTotalAccepted(logs, rejs);
-      const maxQty = jobCardData?.max_allowed_quantity !== undefined
-        ? parseFloat(jobCardData.max_allowed_quantity)
-        : (previousOperationData
-          ? parseFloat(previousOperationData.transferred_quantity || 0)
-          : parseFloat(jobCardData?.planned_quantity || 0));
+      const maxQty = calculateMaxQty(jobCardData, previousOperationData, childDependencies, buffers);
 
       const remainingQty = Math.max(0, maxQty - totalAcc);
 
@@ -2068,7 +2836,7 @@ export default function ProductionEntry() {
       return updated;
     });
 
-    if (updates.log_date) {
+    if (updates.log_date && !nextOperationForm.next_operation_id) {
       setNextOperationForm(prev => ({
         ...prev,
         next_operation_date: updates.log_date
@@ -2224,7 +2992,7 @@ export default function ProductionEntry() {
       // Allow entries before/after schedule if job is active/started, just log a warning
       if (entryStart && entryStart < scheduledStart) {
         if (!isJobActive) {
-          toast.addToast(`Entry start time (${entryStart.toLocaleString('en-IN')}) cannot be before the scheduled start (${scheduledStart.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'error');
+          toast.addToast(`Time Error: The entry cannot start before the scheduled time (${scheduledStart.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'error');
           return;
         } else {
           console.warn(`Production entry before schedule: ${entryStart.toLocaleString()} < ${scheduledStart.toLocaleString()}`);
@@ -2233,7 +3001,7 @@ export default function ProductionEntry() {
 
       if (scheduledEnd && entryEnd && entryEnd > scheduledEnd) {
         if (!isJobActive) {
-          toast.addToast(`Entry end time (${entryEnd.toLocaleString('en-IN')}) cannot be after the scheduled end (${scheduledEnd.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'error');
+          toast.addToast(`Time Error: The entry cannot end after the scheduled time (${scheduledEnd.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'error');
           return;
         } else {
           console.warn(`Production entry after schedule: ${entryEnd.toLocaleString()} > ${scheduledEnd.toLocaleString()}`);
@@ -2272,19 +3040,96 @@ export default function ProductionEntry() {
       actualProductionMinutes = Math.max(0, actualProductionMinutes);
     }
 
+    // Quantity Validation: Total produced cannot exceed planned/transferred quantity
+    // ALLOWANCE: If items were rejected, they can be re-produced.
+    const inputQty = parseFloat(timeLogForm.completed_qty || 0);
+    const allowanceLimit = maxAllowedQty + totalRejectedQty;
+
+    if (totalProducedQty + inputQty > allowanceLimit + 0.001) {
+      toast.addToast(`Production Limit Reached: You cannot record more than ${allowanceLimit.toLocaleString()} units for this operation. (Already produced: ${totalProducedQty.toLocaleString()})`, 'error');
+      return;
+    }
+
+    // Flow Manufacturing: Buffer Bottleneck Logic
+    // If we have upstream dependencies (buffers), check if we have enough components
+    if (buffers && buffers.length > 0) {
+      let minBottleneck = Infinity;
+      let bottleneckItem = '';
+
+      buffers.forEach(buffer => {
+        const available = parseFloat(buffer.available_qty || 0);
+        if (available < minBottleneck) {
+          minBottleneck = available;
+          bottleneckItem = buffer.item_name || buffer.source_item_code;
+        }
+      });
+
+      if (inputQty > minBottleneck + 0.001) {
+        toast.addToast(`Missing Materials: You only have ${minBottleneck.toLocaleString()} units of '${bottleneckItem}' available. Please transfer more units from the previous stage.`, 'error');
+        return;
+      }
+    }
+
     try {
       setFormLoading(true)
+
+      // Find next job card if auto_transfer is enabled
+      let nextJobCardId = null;
+      if (nextOperationForm.auto_transfer && nextOperationForm.next_operation_id) {
+        const selectedOp = operations.find(op =>
+          String(op.operation_id || op.id) === String(nextOperationForm.next_operation_id) ||
+          op.operation_name === nextOperationForm.next_operation_id ||
+          op.name === nextOperationForm.next_operation_id
+        );
+
+        const selectedSeq = selectedOp ? parseInt(selectedOp.sequence || selectedOp.operation_sequence || 0) : 0;
+
+        const nextJobCard = allJobCards.find(c => {
+          const isOpMatch = String(c.operation_id) === String(nextOperationForm.next_operation_id) ||
+            c.operation === nextOperationForm.next_operation_id ||
+            c.operation === (selectedOp?.operation_name || selectedOp?.name);
+          const isSeqMatch = parseInt(c.operation_sequence) === selectedSeq;
+          return isOpMatch && isSeqMatch;
+        });
+
+        if (nextJobCard) {
+          nextJobCardId = nextJobCard.job_card_id;
+        }
+      }
+
       await productionService.createTimeLog({
         ...timeLogForm,
         time_in_minutes: actualProductionMinutes,
         workstation_name: timeLogForm.machine_id,
         accepted_qty: timeLogForm.completed_qty,
-        job_card_id: jobCardId
+        job_card_id: jobCardId,
+        auto_transfer: nextOperationForm.auto_transfer,
+        transfer_quantity: timeLogForm.completed_qty,
+        next_job_card_id: nextJobCardId,
+        next_operator_id: nextOperationForm.next_operator_id,
+        next_machine_id: nextOperationForm.next_warehouse_id
       })
+
+      // Sync operator and machine to Job Card if they are not assigned
+      if (!jobCardData.operator_id || !jobCardData.machine_id) {
+        const updateData = {};
+        if (!jobCardData.operator_id && timeLogForm.employee_id) {
+          updateData.operator_id = timeLogForm.employee_id;
+        }
+        if (!jobCardData.machine_id && timeLogForm.machine_id) {
+          updateData.machine_id = timeLogForm.machine_id;
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await productionService.updateJobCard(jobCardId, updateData);
+        }
+      }
+
       toast.addToast(`Time log added successfully.${overlappingDowntimes.length > 0 ? ` Deducted ${durationMins - actualProductionMinutes} mins downtime.` : ''}`, 'success')
       fetchAllData()
     } catch (err) {
-      toast.addToast(err.message || 'Failed to add time log', 'error')
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to add time log';
+      toast.addToast(errorMsg, 'error')
     } finally {
       setFormLoading(false)
     }
@@ -2327,9 +3172,39 @@ export default function ProductionEntry() {
 
     try {
       setFormLoading(true)
+
+      // Find next job card if auto_transfer is enabled
+      let nextJobCardId = null;
+      if (nextOperationForm.auto_transfer && nextOperationForm.next_operation_id) {
+        const selectedOp = operations.find(op =>
+          String(op.operation_id || op.id) === String(nextOperationForm.next_operation_id) ||
+          op.operation_name === nextOperationForm.next_operation_id ||
+          op.name === nextOperationForm.next_operation_id
+        );
+
+        const selectedSeq = selectedOp ? parseInt(selectedOp.sequence || selectedOp.operation_sequence || 0) : 0;
+
+        const nextJobCard = allJobCards.find(c => {
+          const isOpMatch = String(c.operation_id) === String(nextOperationForm.next_operation_id) ||
+            c.operation === nextOperationForm.next_operation_id ||
+            c.operation === (selectedOp?.operation_name || selectedOp?.name);
+          const isSeqMatch = parseInt(c.operation_sequence) === selectedSeq;
+          return isOpMatch && isSeqMatch;
+        });
+
+        if (nextJobCard) {
+          nextJobCardId = nextJobCard.job_card_id;
+        }
+      }
+
       await productionService.createRejection({
         ...rejectionForm,
         job_card_id: jobCardId,
+        auto_transfer: nextOperationForm.auto_transfer,
+        transfer_quantity: rejectionForm.accepted_qty,
+        next_job_card_id: nextJobCardId,
+        next_operator_id: nextOperationForm.next_operator_id,
+        next_machine_id: nextOperationForm.next_warehouse_id,
         rejection_reason: rejectionForm.reason
       })
       toast.addToast('Quality entry added successfully', 'success')
@@ -2648,73 +3523,216 @@ export default function ProductionEntry() {
     }
   };
 
-  const totalProducedQty = calculateTotalProduced(timeLogs, rejections);
-  const totalAcceptedQty = calculateTotalAccepted(timeLogs, rejections);
-  const productionMinutes = timeLogs.reduce((sum, log) => sum + (parseFloat(log.time_in_minutes) || 0), 0);
-  const totalDowntimeMinutes = downtimes.reduce((sum, d) => sum + (parseFloat(d.duration_minutes) || 0), 0)
-  const totalActualMinutes = productionMinutes + totalDowntimeMinutes;
-  const totalOperationCost = totalProducedQty * (parseFloat(jobCardData?.hourly_rate || 0) * (operationCycleTime || 0) / 60);
-  const approvedRejections = rejections.filter(rej => rej.status === 'Approved');
-  const totalRejectedQty = approvedRejections.reduce((sum, rej) => sum + (parseFloat(rej.rejected_qty) || 0), 0)
-  const totalScrapQty = approvedRejections.reduce((sum, rej) => sum + (parseFloat(rej.scrap_qty) || 0), 0)
-  const transferredQty = parseFloat(jobCardData?.transferred_quantity || 0);
-  const transferableQty = Math.max(0, totalAcceptedQty - transferredQty);
-  const qualityInspectedTotal = approvedRejections.reduce((sum, rej) =>
-    sum + (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0), 0)
-  const qualityScore = qualityInspectedTotal > 0 ? ((totalAcceptedQty / qualityInspectedTotal) * 100).toFixed(1) : 0
-  const hasPendingApproval = rejections.some(rej => rej.status !== 'Approved')
+  const currentSequenceInt = parseInt(jobCardData?.operation_sequence || 0);
+  const currentPlanSeqInt = parseInt(jobCardData?.plan_operation_sequence || 0);
+  const hasPlan = !!jobCardData?.production_plan_id;
 
-  const maxAllowedQty = jobCardData?.max_allowed_quantity !== undefined
-    ? parseFloat(jobCardData.max_allowed_quantity)
-    : (previousOperationData
-      ? parseFloat(previousOperationData.transferred_quantity || 0)
-      : parseFloat(jobCardData?.planned_quantity || 0));
-
-  const isOperationFinished = totalAcceptedQty >= (maxAllowedQty - 0.1);
   const canTransfer = transferableQty > 0 || isOperationFinished;
 
-  const handleSubmitProduction = async () => {
+  const handleUpdateProduction = async () => {
     try {
       setIsSubmitting(true)
+
+      // Strict check: if the user tries to update while marked as "Complete Operation" 
+      // but quantity doesn't match, we should handle it gracefully.
+      // In this UI, 'isOperationFinished' determines the automatic completion.
       const shouldComplete = isOperationFinished
+
       const updatePayload = {
         produced_quantity: totalProducedQty,
         accepted_quantity: totalAcceptedQty,
         rejected_quantity: totalRejectedQty,
-        scrap_quantity: totalScrapQty
+        scrap_quantity: totalScrapQty,
+        status: shouldComplete ? 'completed' : 'in-progress'
       }
 
-      if (nextOperationForm.next_operation_id) {
-        updatePayload.transfer_to_next_op = true;
-        const selectedOp = operations.find(op => (op.operation_id || op.id || op.operation_name || op.name) === nextOperationForm.next_operation_id);
-        const selectedSeq = selectedOp ? parseInt(selectedOp.sequence || selectedOp.seq || selectedOp.operation_seq || 0) : 0;
-        const nextJobCard = allJobCards.find(c => {
-          const isOpMatch = c.operation_id === nextOperationForm.next_operation_id || c.operation === nextOperationForm.next_operation_id || c.operation === (selectedOp?.operation_name || selectedOp?.name);
-          const isSeqMatch = parseInt(c.operation_sequence) === selectedSeq;
-          return isOpMatch && isSeqMatch;
-        });
-        if (nextJobCard) {
-          updatePayload.next_job_card_id = nextJobCard.job_card_id;
-          updatePayload.next_operator_id = nextOperationForm.next_operator_id;
-          updatePayload.next_machine_id = nextOperationForm.next_warehouse_id; // In UI it's called target warehouse but it's used for machine assignment in Job Card
-        }
+      if (isShipmentOp && isLastOperation) {
+        updatePayload.is_shipment = true;
+        updatePayload.source_warehouse_id = shipmentForm.source_warehouse_id;
+        updatePayload.target_warehouse_id = shipmentForm.target_warehouse_id;
+        updatePayload.dispatch_qty = shipmentForm.is_partial ? parseFloat(shipmentForm.dispatch_qty) : transferableQty;
+        updatePayload.dispatch_date = shipmentForm.dispatch_date;
+        updatePayload.shipping_notes = shipmentForm.shipping_notes;
+        updatePayload.is_partial = shipmentForm.is_partial;
       }
 
       if (shouldComplete) {
-        updatePayload.status = 'completed'
         updatePayload.actual_end_date = new Date().toISOString()
-      } else {
-        updatePayload.status = 'in-progress'
       }
 
       await productionService.updateJobCard(jobCardId, updatePayload)
-      toast.addToast(shouldComplete ? 'Production stage completed successfully' : 'Partial quantity transferred successfully', 'success')
-      if (shouldComplete) navigate('/manufacturing/job-cards')
-      else fetchAllData()
+
+      if (shouldComplete) {
+        if (isLastOperation) {
+          const isSubAsm = String(jobCardData?.work_order_id || '').includes('-SA-');
+          if (isSubAsm) {
+            toast.addToast('Sub-assembly completed. Units are now available for parent assembly.', 'success');
+          } else {
+            toast.addToast('Final operation completed. Finished goods sent to inventory.', 'success');
+          }
+        } else {
+          toast.addToast('Operation completed successfully', 'success');
+        }
+        navigate('/manufacturing/job-cards')
+      } else {
+        toast.addToast('Production data updated successfully', 'success')
+        fetchAllData()
+      }
     } catch (err) {
-      toast.addToast(err.message || 'Failed to complete production', 'error')
+      toast.addToast(err.message || 'Failed to update production', 'error')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleTransferUnits = async () => {
+    try {
+      if (transferableQty <= 0 && !isOperationFinished) {
+        toast.addToast('No units available for transfer', 'warning');
+        return;
+      }
+
+      setIsSubmitting(true)
+      const updatePayload = {
+        produced_quantity: totalProducedQty,
+        accepted_quantity: totalAcceptedQty,
+        rejected_quantity: totalRejectedQty,
+        scrap_quantity: totalScrapQty,
+        status: isOperationFinished ? 'completed' : 'in-progress',
+        transfer_to_next_op: true,
+        transfer_quantity: transferableQty
+      }
+
+      if (isShipmentOp) {
+        updatePayload.is_shipment = true;
+        updatePayload.source_warehouse_id = shipmentForm.source_warehouse_id;
+        updatePayload.target_warehouse_id = shipmentForm.target_warehouse_id;
+        updatePayload.dispatch_qty = shipmentForm.is_partial ? parseFloat(shipmentForm.dispatch_qty) : transferableQty;
+        updatePayload.dispatch_date = shipmentForm.dispatch_date;
+        updatePayload.shipping_notes = shipmentForm.shipping_notes;
+        updatePayload.is_partial = shipmentForm.is_partial;
+        updatePayload.carrier_name = shipmentForm.carrier_name;
+        updatePayload.tracking_number = shipmentForm.tracking_number;
+        
+        // Use dispatch_qty for transfer if it's a shipment
+        updatePayload.transfer_quantity = updatePayload.dispatch_qty;
+      }
+
+      if (nextOperationForm.next_operation_id) {
+        const selectedOp = operations.find(op =>
+          String(op.operation_id || op.id) === String(nextOperationForm.next_operation_id) ||
+          op.operation_name === nextOperationForm.next_operation_id ||
+          op.name === nextOperationForm.next_operation_id
+        );
+
+        if (selectedOp && selectedOp.job_card_id) {
+          updatePayload.next_job_card_id = selectedOp.job_card_id;
+          updatePayload.next_operator_id = nextOperationForm.next_operator_id;
+          updatePayload.next_machine_id = nextOperationForm.next_warehouse_id;
+        } else if (selectedOp) {
+          // Fallback matching if job_card_id not directly on enriched op
+          const selectedSeq = parseInt(selectedOp.sequence || selectedOp.operation_sequence || 0);
+          const nextJobCard = allJobCards.find(c => {
+            const isOpMatch = String(c.operation_id) === String(nextOperationForm.next_operation_id) ||
+              c.operation === nextOperationForm.next_operation_id ||
+              c.operation === (selectedOp?.operation_name || selectedOp?.name);
+            const isSeqMatch = parseInt(c.operation_sequence) === selectedSeq;
+            // Cross-WO matching: also check item code or WO ID if sequence matches
+            const isWoMatch = c.work_order_id === selectedOp.work_order_id;
+            return isOpMatch && isSeqMatch && isWoMatch;
+          });
+
+          if (nextJobCard) {
+            updatePayload.next_job_card_id = nextJobCard.job_card_id;
+            updatePayload.next_operator_id = nextOperationForm.next_operator_id;
+            updatePayload.next_machine_id = nextOperationForm.next_warehouse_id;
+          }
+        }
+      }
+
+      await productionService.updateJobCard(jobCardId, updatePayload)
+
+      const targetOpName = isShipmentOp ? (shipmentForm.is_partial ? 'Partial Dispatch' : 'Final Dispatch') : (nextOperationForm.next_operation_id ?
+        (operations.find(op =>
+          String(op.operation_id || op.id) === String(nextOperationForm.next_operation_id) ||
+          op.operation_name === nextOperationForm.next_operation_id ||
+          op.name === nextOperationForm.next_operation_id
+        )?.operation_name || nextOperationForm.next_operation_id) : 'inventory');
+
+      toast.addToast(isShipmentOp ? `Items dispatched successfully` : `Units transferred to ${targetOpName} successfully`, 'success')
+      fetchAllData()
+    } catch (err) {
+      toast.addToast(err.message || 'Failed to transfer units', 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleSubmitProduction = async () => {
+    if (nextOperationForm.outsource) {
+      return await handleSubcontractDispatch();
+    } else {
+      return await handleTransferUnits();
+    }
+  }
+
+  const handleSubcontractDispatch = async () => {
+    try {
+      if (transferableQty <= 0) {
+        toast.addToast('No units available for transfer', 'warning');
+        return;
+      }
+
+      setIsSubmitting(true);
+      const selectedOp = operations.find(op =>
+        String(op.operation_id || op.id) === String(nextOperationForm.next_operation_id) ||
+        op.operation_name === nextOperationForm.next_operation_id ||
+        op.name === nextOperationForm.next_operation_id
+      );
+
+      let nextJobCardId = selectedOp?.job_card_id;
+
+      if (!nextJobCardId && selectedOp) {
+        const selectedSeq = parseInt(selectedOp.sequence || selectedOp.operation_sequence || 0);
+        const nextJobCard = allJobCards.find(c => {
+          const isOpMatch = String(c.operation_id) === String(nextOperationForm.next_operation_id) ||
+            c.operation === nextOperationForm.next_operation_id ||
+            c.operation === (selectedOp?.operation_name || selectedOp?.name);
+          const isSeqMatch = parseInt(c.operation_sequence) === selectedSeq;
+          const isWoMatch = c.work_order_id === selectedOp.work_order_id;
+          return isOpMatch && isSeqMatch && isWoMatch;
+        });
+        nextJobCardId = nextJobCard?.job_card_id;
+      }
+
+      if (!nextJobCardId) {
+        toast.addToast('Next job card not found', 'error');
+        return;
+      }
+
+      // 1. Update next job card with execution mode
+      await productionService.updateJobCard(nextJobCardId, {
+        execution_mode: 'OUTSOURCE'
+      });
+
+      // 2. Update current job card to transfer units
+      await productionService.updateJobCard(jobCardId, {
+        produced_quantity: totalProducedQty,
+        accepted_quantity: totalAcceptedQty,
+        rejected_quantity: totalRejectedQty,
+        scrap_quantity: totalScrapQty,
+        status: isOperationFinished ? 'completed' : 'in-progress',
+        transfer_to_next_op: true,
+        transfer_quantity: transferableQty,
+        next_job_card_id: nextJobCardId
+      });
+
+      toast.addToast(`Units transferred to ${selectedOp.operation_name || selectedOp.name} successfully`, 'success');
+      fetchAllData();
+    } catch (err) {
+      toast.addToast(err.message || 'Failed to transfer units', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -2973,7 +3991,7 @@ export default function ProductionEntry() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-6 font-sans antialiased text-slate-900">
+    <div className="min-h-screen bg-slate-50/50 p-4  antialiased text-slate-900">
       <div className="mx-auto">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
@@ -2994,25 +4012,29 @@ export default function ProductionEntry() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/manufacturing/job-cards')}
-              className="flex items-center gap-2 px-4 py-2 text-xs  text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded transition-all"
+              className="flex items-center gap-2 p-2  text-xs  text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded transition-all"
             >
               <ArrowLeft size={15} />
               Back
             </button>
-            {isOperationFinished && normalizeStatus(jobCardData?.status) !== 'completed' && (
+
+
+
+
+            {isOperationFinished && normalizeStatus(jobCardData?.status) !== 'completed' && transferableQty <= 0 && (
               <button
-                onClick={handleSubmitProduction}
+                onClick={handleUpdateProduction}
                 disabled={isSubmitting}
-                className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 shadow-lg shadow-emerald-200 transition-all text-xs "
+                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-200 transition-all text-xs"
               >
-                {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded  animate-spin" /> : <CheckCircle size={15} />}
-                Complete Production
+                {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded animate-spin" /> : <CheckCircle size={15} />}
+                Complete Stage
               </button>
             )}
           </div>
         </div>
 
-        {jobCardData?.execution_mode === 'OUTSOURCE' && (
+        {String(jobCardData?.execution_mode || '').toUpperCase().includes('OUTSOURCE') && (
           <div className="mb-6 p-8 bg-indigo-50 border-2 border-dashed border-indigo-200 rounded text-center">
             <div className="w-16 h-16 bg-white rounded  flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-100">
               <Package className="text-indigo-600" size={32} />
@@ -3031,7 +4053,7 @@ export default function ProductionEntry() {
           </div>
         )}
 
-        <div className={jobCardData?.execution_mode === 'OUTSOURCE' ? 'opacity-50 pointer-events-none grayscale' : ''}>
+        <div className={String(jobCardData?.execution_mode || '').toUpperCase().includes('OUTSOURCE') ? 'opacity-50 pointer-events-none grayscale' : ''}>
           <ProductionRibbon
             jobCardData={jobCardData}
             itemName={itemName}
@@ -3043,6 +4065,15 @@ export default function ProductionEntry() {
             totalOperationCost={totalOperationCost}
             transferableQty={transferableQty}
             previousOperationData={previousOperationData}
+            handleUpdateProduction={handleUpdateProduction}
+            handleTransferUnits={handleTransferUnits}
+            handleSubcontractDispatch={handleSubcontractDispatch}
+            isSubmitting={isSubmitting}
+            hasPendingApproval={hasPendingApproval}
+            nextOperationForm={nextOperationForm}
+            isOperationFinished={isOperationFinished}
+            childDependencies={childDependencies}
+            buffers={buffers}
           />
 
           <div className="grid grid-cols-12 gap-2 my-3">
@@ -3053,40 +4084,33 @@ export default function ProductionEntry() {
                 const actualMinutes = productionMinutes + totalDowntimeMinutes
                 const efficiency = actualMinutes > 0 ? ((expectedMinutes / actualMinutes) * 100).toFixed(0) : 0
 
-                return (
+                return !isShipmentOp ? (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <StatCard label="Efficiency" value={`${efficiency}%`} icon={Activity} color={efficiency >= 90 ? 'emerald' : efficiency >= 75 ? 'amber' : 'rose'} subtitle={`${actualMinutes.toFixed(0)} / ${expectedMinutes.toFixed(0)} MIN`} />
                     <StatCard label="Quality Yield" value={`${qualityScore}%`} icon={ShieldCheck} color={hasPendingApproval ? 'amber' : (qualityScore >= 98 ? 'emerald' : 'amber')} subtitle={hasPendingApproval ? "PENDING APPROVAL" : "ACCEPTANCE RATE"} />
                     <StatCard label="Productivity" value={actualMinutes > 0 ? ((totalAcceptedQty / (actualMinutes / 60)).toFixed(1)) : '0'} icon={Boxes} color="indigo" subtitle="UNITS PER HOUR" />
                   </div>
-                )
+                ) : null;
               })()}
+
+              <HandoverStatusSection 
+                previousOperationData={previousOperationData} 
+                totalPlanned={parseFloat(jobCardData?.planned_quantity || 0)}
+                inputAvailable={parseFloat(jobCardData?.input_qty || 0) + parseFloat(jobCardData?.input_buffer_qty || 0)}
+              />
+              {!isShipmentOp && (
+                <UnifiedSubAssemblyStatus 
+                  dependencies={childDependencies} 
+                  buffers={buffers}
+                  bottleneck={bottleneckData.bottleneck}
+                />
+              )}
             </div>
 
-            <div className="col-span-12 space-y-8 pb-20">
-              {previousOperationData && (
-                <div className="bg-emerald-50/20 border border-emerald-100 rounded p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded flex items-center justify-center"><CheckCircle size={20} /></div>
-                    <div>
-                      <p className="text-xs   text-emerald-600 ">Previous Phase Complete</p>
-                      <h3 className="text-xs  text-slate-900">{previousOperationData.operation}</h3>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-8">
-                    <div className="">
-                      <p className="text-xs   text-slate-400 ">Accepted</p>
-                      <p className="text-xs  text-emerald-600">{parseFloat(previousOperationData.accepted_quantity || 0).toLocaleString()} Units</p>
-                    </div>
-                    <div className="">
-                      <p className="text-xs   text-slate-400 ">Transferred</p>
-                      <p className="text-xs  text-indigo-600">{parseFloat(previousOperationData.transferred_quantity || 0).toLocaleString()} Units</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div id="time-logs" className="bg-white rounded  border border-slate-100 p-4 scroll-mt-6">
+            <div className="col-span-12 space-y-2 pb-20">
+              {!isShipmentOp && (
+                <>
+                  <div id="time-logs" className="bg-white rounded  border border-slate-100 p-4 scroll-mt-6">
                 <div className="flex items-center justify-between">
                   <SectionTitle title="Production Logging" icon={Plus} subtitle="Record production output per operator and shift" />
                   {(() => {
@@ -3104,7 +4128,7 @@ export default function ProductionEntry() {
                       <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded  text-amber-700 animate-in fade-in slide-in-from-right-4 duration-500">
                         <AlertTriangle size={14} className="animate-pulse" />
                         <span className="text-xs   tracking-tight">Shift Downtime:</span>
-                        <span className="text-xs font-black">{shiftDowntime} mins</span>
+                        <span className="text-xs ">{shiftDowntime} mins</span>
                       </div>
                     );
                   })()}
@@ -3134,10 +4158,39 @@ export default function ProductionEntry() {
                       </FieldWrapper>
                     </div>
                     <div className="col-span-12 lg:col-span-2"><FieldWrapper label="Operator" required><SearchableSelect value={timeLogForm.employee_id} onChange={handleOperatorChange} options={operators.map(op => ({ value: op.employee_id, label: `${op.first_name} ${op.last_name}` }))} placeholder="Select Operator" /></FieldWrapper></div>
-                    <div className="col-span-12 lg:col-span-1"><FieldWrapper label="Produced" required><div className="relative"><input type="number" step="0.01" value={timeLogForm.completed_qty} onChange={(e) => setTimeLogForm({ ...timeLogForm, completed_qty: e.target.value })} className="w-full p-2 bg-white border border-slate-200 rounded text-xs  text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all" required /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs  text-slate-400">units</span></div></FieldWrapper></div>
+                    <div className="col-span-12 lg:col-span-1">
+                      <FieldWrapper label="Produced" required>
+                        <div className="relative">
+                          <input 
+                            type="number" 
+                            step="0.01" 
+                            max={readyQty}
+                            value={timeLogForm.completed_qty} 
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              if (val > readyQty) {
+                                toast.addToast(`Quantity exceeds available material (${readyQty} units)`, 'warning');
+                              }
+                              setTimeLogForm({ ...timeLogForm, completed_qty: e.target.value });
+                            }} 
+                            className={`w-full p-2 bg-white border rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${parseFloat(timeLogForm.completed_qty) > readyQty ? 'border-rose-500 text-rose-600' : 'border-slate-200 text-slate-700'}`} 
+                            required 
+                            title={`Maximum allowed: ${readyQty} units`}
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">units</span>
+                        </div>
+                        
+                      </FieldWrapper>
+                    </div>
                     <div className="col-span-12 lg:col-span-5"><div className="flex gap-2 items-end"><div className="flex-1"><FieldWrapper label="Start Time" required><div className="flex gap-1"><input type="time" value={timeLogForm.from_time} onChange={(e) => handleTimeFieldChange('from_time', e.target.value, 'timeLog')} className="flex-1 p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none" /><select value={timeLogForm.from_period} onChange={(e) => handleTimeFieldChange('from_period', e.target.value, 'timeLog')} className="p-2 bg-slate-50 border border-slate-200 rounded text-xs"><option value="AM">AM</option><option value="PM">PM</option></select></div></FieldWrapper></div><div className="flex-1"><FieldWrapper label="End Time" required><div className="flex gap-1"><input type="time" value={timeLogForm.to_time} onChange={(e) => handleTimeFieldChange('to_time', e.target.value, 'timeLog')} className="flex-1 p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none" /><select value={timeLogForm.to_period} onChange={(e) => handleTimeFieldChange('to_period', e.target.value, 'timeLog')} className="p-2 bg-slate-50 border border-slate-200 rounded text-xs"><option value="AM">AM</option><option value="PM">PM</option></select></div></FieldWrapper></div><button type="submit" disabled={formLoading} className="p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 p-2"><Plus size={15} /><span className="text-xs   ">Log</span></button></div></div>
                   </form>
                 </div>
+                {hasSubAssemblies && (
+                           <div className="my-1.5 flex items-center gap-1.5 p-1.5 bg-indigo-50 rounded border border-indigo-100 text-[10px] text-indigo-600 font-medium animate-in fade-in zoom-in duration-300">
+                             <Boxes size={12} className="shrink-0" />
+                             <span>Capped by component availability: <b>{readyQty.toLocaleString()} units</b></span>
+                           </div>
+                        )}
                 <DataTable columns={timeLogColumns} data={timeLogs} renderActions={(row) => renderTableActions(row, 'timeLog')} />
               </div>
 
@@ -3265,17 +4318,17 @@ export default function ProductionEntry() {
                           <>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-slate-400   ">Shift Capacity:</span>
-                              <span className="text-xs font-black text-slate-700">{capacity} Units</span>
+                              <span className="text-xs  text-slate-700">{capacity} Units</span>
                             </div>
                             <div className="w-px h-3 bg-amber-200" />
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-slate-400   ">Produced:</span>
-                              <span className="text-xs font-black text-emerald-600">{produced} Units</span>
+                              <span className="text-xs  text-emerald-600">{produced} Units</span>
                             </div>
                             <div className="w-px h-3 bg-amber-200" />
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-slate-400   ">Shortfall:</span>
-                              <span className={`text-xs font-black ${shortfall > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                              <span className={`text-xs  ${shortfall > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
                                 {shortfall} Units ({formatDuration(shortfallMins)})
                               </span>
                             </div>
@@ -3347,7 +4400,7 @@ export default function ProductionEntry() {
                                   }));
                                   toast.addToast(`Automatically calculated downtime: ${shortfallMins} mins for ${shortfall} units shortfall`, 'info');
                                 }}
-                                className="ml-auto flex items-center gap-1.5 px-2 py-1 bg-amber-600 text-white rounded text-xs   hover:bg-amber-700 transition-colors shadow-sm"
+                                className="ml-auto flex items-center gap-1.5 px-2 py-1 bg-amber-600 text-white rounded text-xs   hover:bg-amber-700 transition-colors "
                               >
                                 <Activity size={12} />
                                 Auto-Fill
@@ -3426,145 +4479,429 @@ export default function ProductionEntry() {
                 </div>
                 <DataTable columns={downtimeColumns} data={downtimes} renderActions={(row) => renderTableActions(row, 'downtime')} />
               </div>
+            </>
+          )}
 
-              <div id="next-operation" className="bg-white rounded  border border-slate-100 p-4 scroll-mt-6">
+          <div id="next-operation" className="bg-white rounded  border border-slate-100 p-4 scroll-mt-6">
                 <SectionTitle title="Next Stage Configuration" icon={ArrowRight} subtitle="Specify destination and operational parameters for the next manufacturing phase" />
-                {(() => {
-                  const currentSequence = parseInt(jobCardData?.operation_sequence || 0);
-                  const nextOps = operations.filter(op => {
-                    const opSeq = parseInt(op.sequence || op.seq || op.operation_seq || 0);
-                    if (opSeq <= currentSequence) return false;
-                    const isCompleted = allJobCards.some(jc => (jc.operation_id === op.operation_id || jc.operation === op.operation_name || jc.operation === op.name) && normalizeStatus(jc.status) === 'completed');
-                    return !isCompleted;
-                  });
-
-                  return (
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                      <div className="col-span-12 md:col-span-3"><FieldWrapper label="Next Operation" required><SearchableSelect value={nextOperationForm.next_operation_id} onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_operation_id: val })} options={nextOps.map(op => ({ value: op.operation_id || op.id || op.operation_name || op.name, label: op.operation_name || op.name }))} placeholder="Select Next Op" /></FieldWrapper></div>
-                      <div className="col-span-12 md:col-span-3"><FieldWrapper label="Target Warehouse" required><SearchableSelect value={nextOperationForm.next_warehouse_id} onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_warehouse_id: val })} options={warehouses.map(w => ({ value: w.warehouse_id, label: w.warehouse_name || w.name }))} placeholder="Select Destination" /></FieldWrapper></div>
-                      <div className="col-span-12 md:col-span-3">
-                        <FieldWrapper label="Next Op Date" required>
-                          <input
-                            type="date"
-                            value={nextOperationForm.next_operation_date}
-                            onChange={(e) => setNextOperationForm({ ...nextOperationForm, next_operation_date: e.target.value })}
-                            className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20"
-                            required
-                          />
-                        </FieldWrapper>
-                      </div>
-                      <div className="col-span-12 md:col-span-3">
-                        <FieldWrapper label="Execution Mode">
-                          <div className="flex gap-4 mt-2">
-                            <button onClick={() => setNextOperationForm({ ...nextOperationForm, inhouse: true, outsource: false })} className={`flex items-center gap-2 px-4 py-2 rounded border-2 transition-all ${nextOperationForm.inhouse ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white border-slate-100 text-slate-400'}`}><span className="text-xs ">In-house</span></button>
-                            <button onClick={() => setNextOperationForm({ ...nextOperationForm, outsource: true, inhouse: false })} className={`flex items-center gap-2 px-4 py-2 rounded border-2 transition-all ${nextOperationForm.outsource ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-slate-100 text-slate-400'}`}><span className="text-xs ">Outsource</span></button>
+                {isShipmentOp && planFulfillmentStatus && (
+                  <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-4">
+                       <div>
+                         <h4 className="text-sm font-bold text-slate-800">Overall Production Plan Status</h4>
+                         <p className="text-xs text-slate-500">Validation across all work orders in plan: {jobCardData.production_plan_id}</p>
+                       </div>
+                       <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${planFulfillmentStatus.allReady ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-700 border border-amber-200'}`}>
+                         {planFulfillmentStatus.allReady ? 'Ready for Dispatch' : 'Production Incomplete'}
+                       </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {planFulfillmentStatus.woGroups.map((group, idx) => (
+                        <div key={idx} className="p-3 bg-white border border-slate-100 rounded shadow-sm hover:border-indigo-100 transition-colors">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="min-w-0">
+                              <p className="text-[10px] text-slate-400 font-medium truncate uppercase">{group.item_code}</p>
+                              <h5 className="text-xs font-bold text-slate-700 truncate" title={group.item_name}>{group.item_name}</h5>
+                            </div>
+                            {group.is_ready ? (
+                              <div className="bg-emerald-100 p-1 rounded-full"><CheckCircle2 size={14} className="text-emerald-600" /></div>
+                            ) : (
+                              <div className="bg-amber-100 p-1 rounded-full animate-pulse"><Clock size={14} className="text-amber-600" /></div>
+                            )}
                           </div>
-                        </FieldWrapper>
+                          <div className="flex justify-between items-end">
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-slate-400 font-medium">Ready Qty</span>
+                              <span className={`text-sm font-bold ${group.is_ready ? 'text-emerald-600' : 'text-slate-700'}`}>
+                                {group.total_accepted.toFixed(0)} <span className="text-[10px] text-slate-400 font-normal">/ {group.total_planned.toFixed(0)}</span>
+                              </span>
+                            </div>
+                            <div className="text-right">
+                               <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter ${
+                                 normalizeStatus(group.status) === 'completed' ? 'bg-emerald-50 text-emerald-600' : 
+                                 normalizeStatus(group.status) === 'in-progress' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-500'
+                               }`}>
+                                 {group.status}
+                               </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {!planFulfillmentStatus.allReady && (
+                      <div className="mt-4 p-2 bg-amber-50 border border-amber-100 rounded-md flex items-center gap-3 text-amber-700">
+                        <div className="bg-amber-500 text-white p-1 rounded-full shadow-sm">
+                          <AlertTriangle size={14} />
+                        </div>
+                        <p className="text-xs font-semibold">Production plan is not fully fulfilled. Full dispatch is disabled to prevent shipping errors.</p>
                       </div>
+                    )}
+                  </div>
+                )}
+
+                {(() => {
+                  return (
+                    <div className="flex flex-col gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                        <div className="col-span-12 md:col-span-4">
+                          <FieldWrapper label={isLastOperation ? "Final Stage" : "Next Operation"} required={!isLastOperation}>
+                            {isLastOperation ? (
+                              <div className="p-2 bg-emerald-50 border border-emerald-100 rounded text-xs text-emerald-700 font-medium flex items-center gap-2">
+                                <CheckCircle size={14} className="text-emerald-500" />
+                                {isShipmentOp ? "Shipment / Dispatch" : "Transfer to Stock / Finished Goods"}
+                              </div>
+                            ) : (
+                              <SearchableSelect
+                                value={nextOperationForm.next_operation_id}
+                                onChange={(val) => {
+                                  const op = nextOps.find(o => (o.operation_id || o.id || o.operation_name || o.name) === val);
+                                  const mode = String(op?.execution_mode || op?.operation_type || '').toUpperCase();
+                                  const isOutsource = mode.includes('OUTSOURCE') || mode.includes('OUTSOURCED') || mode.includes('SUBCONTRACT');
+
+                                  setNextOperationForm({
+                                    ...nextOperationForm,
+                                    next_operation_id: val,
+                                    next_warehouse_id: op?.default_workstation || op?.workstation || nextOperationForm.next_warehouse_id,
+                                    inhouse: !isOutsource,
+                                    outsource: isOutsource
+                                  });
+                                }}
+                                options={nextOps.map(op => {
+                                  const mode = String(op.execution_mode || op.operation_type || 'IN_HOUSE').toUpperCase();
+                                  const isOut = mode.includes('OUTSOURCE') || mode.includes('OUTSOURCED') || mode.includes('SUBCONTRACT');
+                                  return {
+                                    value: op.operation_id || op.id || op.operation_name || op.name,
+                                    label: `${op.operation_name || op.name} ${isOut ? '[Outsource]' : '[In-house]'}`
+                                  };
+                                })}
+                                placeholder="Select Next Op"
+                              />
+                            )}
+                          </FieldWrapper>
+                        </div>
+                        {isShipmentOp ? (
+                          <>
+                            <div className="col-span-12 md:col-span-4">
+                              <FieldWrapper label="Dispatch Mode" required>
+                                <div className="flex items-center gap-4 p-2 bg-slate-50 border border-slate-200 rounded">
+                                  <label className={`flex items-center gap-2 ${(!planFulfillmentStatus || planFulfillmentStatus.allReady) ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`} title={planFulfillmentStatus && !planFulfillmentStatus.allReady ? "Full dispatch disabled until all plan components are ready" : ""}>
+                                    <input 
+                                      type="radio" 
+                                      checked={!shipmentForm.is_partial} 
+                                      onChange={() => setShipmentForm({...shipmentForm, is_partial: false})}
+                                      disabled={planFulfillmentStatus && !planFulfillmentStatus.allReady}
+                                      className="w-4 h-4 text-indigo-600 disabled:opacity-50"
+                                    />
+                                    <span className="text-xs font-medium text-slate-700">Full Dispatch</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input 
+                                      type="radio" 
+                                      checked={shipmentForm.is_partial} 
+                                      onChange={() => setShipmentForm({...shipmentForm, is_partial: true})}
+                                      className="w-4 h-4 text-indigo-600"
+                                    />
+                                    <span className="text-xs font-medium text-slate-700">
+                                      Partial Dispatch {planFulfillmentStatus && !planFulfillmentStatus.allReady && <span className="text-[10px] text-amber-600 ml-1">(Recommended)</span>}
+                                    </span>
+                                  </label>
+                                </div>
+                              </FieldWrapper>
+                            </div>
+                            <div className="col-span-12 md:col-span-4">
+                              <FieldWrapper label="Dispatch Date" required>
+                                <input
+                                  type="date"
+                                  value={shipmentForm.dispatch_date}
+                                  onChange={(e) => setShipmentForm({ ...shipmentForm, dispatch_date: e.target.value })}
+                                  className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                  required
+                                />
+                              </FieldWrapper>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="col-span-12 md:col-span-4">
+                              <FieldWrapper label="Target Warehouse" required>
+                                <SearchableSelect
+                                  value={nextOperationForm.next_warehouse_id}
+                                  onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_warehouse_id: val })}
+                                  options={[
+                                    ...warehouses.map(w => ({ value: String(w.warehouse_id || w.name), label: `[WH] ${w.warehouse_name || w.name}` })),
+                                    ...workstations.map(ws => ({ value: String(ws.name || ws.workstation_id), label: `[WS] ${ws.workstation_name || ws.name}` }))
+                                  ]}
+                                  placeholder="Select Destination"
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="col-span-12 md:col-span-4">
+                              <FieldWrapper label="Next Op Date" required>
+                                <input
+                                  type="date"
+                                  value={nextOperationForm.next_operation_date}
+                                  onChange={(e) => setNextOperationForm({ ...nextOperationForm, next_operation_date: e.target.value })}
+                                  className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                  required
+                                />
+                              </FieldWrapper>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {isShipmentOp && (
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pt-2 border-t border-slate-50">
+                          <div className="col-span-12 md:col-span-4">
+                            <FieldWrapper label="Source Warehouse" required>
+                              <SearchableSelect
+                                value={shipmentForm.source_warehouse_id}
+                                onChange={(val) => setShipmentForm({ ...shipmentForm, source_warehouse_id: val })}
+                                options={[
+                                  ...warehouses.map(w => ({ value: String(w.warehouse_id || w.name), label: `[WH] ${w.warehouse_name || w.name}` })),
+                                  ...workstations.map(ws => ({ value: String(ws.name || ws.workstation_id), label: `[WS] ${ws.workstation_name || ws.name}` }))
+                                ]}
+                                placeholder="Select Source"
+                              />
+                            </FieldWrapper>
+                          </div>
+                          <div className="col-span-12 md:col-span-4">
+                            <FieldWrapper label="Target Warehouse" required>
+                              <div className="p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-500 font-medium">
+                                Finished Goods Store
+                              </div>
+                            </FieldWrapper>
+                          </div>
+                          {shipmentForm.is_partial ? (
+                            <div className="col-span-12 md:col-span-4">
+                              <FieldWrapper label="Dispatch Quantity" required>
+                                <div className="relative group">
+                                  <input
+                                    type="number"
+                                    placeholder="Enter quantity"
+                                    value={shipmentForm.dispatch_qty}
+                                    onChange={(e) => setShipmentForm({ ...shipmentForm, dispatch_qty: e.target.value })}
+                                    className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                    max={transferableQty}
+                                  />
+                                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-slate-500 font-bold pointer-events-none group-focus-within:border-indigo-200 group-focus-within:bg-indigo-50 group-focus-within:text-indigo-600 transition-colors">
+                                     Ready: {transferableQty.toFixed(0)}
+                                  </div>
+                                </div>
+                                {planFulfillmentStatus && !planFulfillmentStatus.allReady && (
+                                  <p className="mt-1 text-[10px] text-amber-600 font-medium italic">Recommended: Only dispatch {transferableQty.toFixed(0)} units which have passed quality check.</p>
+                                )}
+                              </FieldWrapper>
+                            </div>
+                          ) : (
+                            <div className="col-span-12 md:col-span-4">
+                              <FieldWrapper label="Dispatch Quantity">
+                                <div className={`p-2 border rounded text-xs font-bold flex items-center justify-between ${planFulfillmentStatus?.allReady ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                                  <span>{transferableQty.toFixed(0)} Units (Full)</span>
+                                  {planFulfillmentStatus?.allReady && <CheckCircle2 size={12} />}
+                                </div>
+                              </FieldWrapper>
+                            </div>
+                          )}
+                          <div className="col-span-12 md:col-span-6">
+                            <FieldWrapper label="Carrier / Courier Name">
+                              <input
+                                type="text"
+                                placeholder="e.g. FedEx, BlueDart, Self-Delivery"
+                                value={shipmentForm.carrier_name}
+                                onChange={(e) => setShipmentForm({ ...shipmentForm, carrier_name: e.target.value })}
+                                className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                              />
+                            </FieldWrapper>
+                          </div>
+                          <div className="col-span-12 md:col-span-6">
+                            <FieldWrapper label="Tracking Number / Docket No">
+                              <input
+                                type="text"
+                                placeholder="Enter tracking ID"
+                                value={shipmentForm.tracking_number}
+                                onChange={(e) => setShipmentForm({ ...shipmentForm, tracking_number: e.target.value })}
+                                className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                              />
+                            </FieldWrapper>
+                          </div>
+                          <div className="col-span-12">
+                            <FieldWrapper label="Shipping Notes">
+                              <input
+                                type="text"
+                                placeholder="Any additional details"
+                                value={shipmentForm.shipping_notes}
+                                onChange={(e) => setShipmentForm({ ...shipmentForm, shipping_notes: e.target.value })}
+                                className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                              />
+                            </FieldWrapper>
+                          </div>
+                        </div>
+                      )}
+
+                        <div className="flex items-center gap-2 mt-2 px-1">
+                          <input
+                            type="checkbox"
+                            id="auto-transfer"
+                            checked={nextOperationForm.auto_transfer}
+                            onChange={(e) => setNextOperationForm({ ...nextOperationForm, auto_transfer: e.target.checked })}
+                            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                          />
+                          <label htmlFor="auto-transfer" className="text-xs text-slate-600 font-medium cursor-pointer">
+                            Enable Auto-transfer on Production Log
+                          </label>
+                        </div>
                     </div>
                   );
                 })()}
 
-                <div className="p-2 border-t border-slate-100 flex justify-end">
-                  {canTransfer && (
+                <div className="p-2 border-t border-slate-100 flex flex-col items-end gap-2">
+                  <div className="text-xs text-slate-400 flex gap-3 px-2">
+                    <span className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> 
+                      Accepted: {(isShipmentOp ? (prevAcceptedQty > 0 ? prevAcceptedQty : currentInputAvailable) : totalAcceptedQty).toFixed(0)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" /> 
+                      Transferred: {transferredQty.toFixed(0)}
+                    </span>
+                    <span className={`flex items-center gap-1  ${transferableQty > 0 ? 'text-indigo-600' : 'text-slate-400'}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${transferableQty > 0 ? 'bg-indigo-600' : 'bg-slate-300'}`} />
+                      Available: {transferableQty.toFixed(0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {nextOperationForm.outsource && transferableQty > 0 && (
+                      <button
+                        onClick={async () => {
+                          // In a real scenario, this would navigate to Challan creation or open a modal
+                          toast.addToast('Generating Outward Challan...', 'info');
+                          // For now, we simulate it by calling the subcontract dispatch
+                          await handleSubcontractDispatch();
+                        }}
+                        className="flex items-center gap-2 p-2 bg-rose-600 text-white rounded text-xs hover:bg-rose-700 transition-all shadow-lg shadow-rose-100"
+                      >
+                        <FileText size={16} />
+                        Create Outward Challan
+                      </button>
+                    )}
                     <button
                       onClick={handleSubmitProduction}
-                      disabled={isSubmitting || (hasPendingApproval && totalAcceptedQty === 0)}
-                      className={`flex items-center gap-3 px-8 py-3 rounded  transition-all shadow-lg active:scale-95 text-white ${isOperationFinished ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'}`}
+                      disabled={
+                        isSubmitting ||
+                        (!canTransfer && !isOperationFinished) ||
+                        (hasPendingApproval && totalAcceptedQty === 0) ||
+                        (!isOperationFinished && !isLastOperation && !isShipmentOp && !nextOperationForm.next_operation_id)
+                      }
+                      className={`flex items-center gap-3 p-2 rounded text-xs transition-all  active:scale-95 text-white ${isOperationFinished
+                        ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'
+                        : (transferableQty > 0 ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200' : 'bg-slate-300 cursor-not-allowed shadow-none')
+                        }`}
                     >
                       {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded  animate-spin" /> : (isOperationFinished ? <CheckCircle2 size={20} /> : <ArrowRight size={20} />)}
-                      {isOperationFinished ? 'Finalize & Dispatch' : `Transfer ${transferableQty.toFixed(0)} Units`}
+                      {isShipmentOp ? 
+                        (shipmentForm.is_partial 
+                          ? `Dispatch ${parseFloat(shipmentForm.dispatch_qty || 0).toFixed(0)} Units (Partial)` 
+                          : `Full Dispatch & Finalize (${transferableQty.toFixed(0)} Units)`) : 
+                        (isOperationFinished ? 'Finalize & Transfer' : (transferableQty > 0 ? (nextOperationForm.next_operation_id ? `Transfer ${transferableQty.toFixed(0)} Units to ${operations.find(op => (op.operation_id || op.id || op.operation_name || op.name) === nextOperationForm.next_operation_id)?.name || 'Next Op'}` : `Transfer ${transferableQty.toFixed(0)} Units to Stock`) : 'Transfer Units'))}
                     </button>
+                  </div>
+                  {!isOperationFinished && !isLastOperation && !nextOperationForm.next_operation_id && transferableQty > 0 && (
+                    <p className="text-xs text-rose-500 animate-pulse">Please select Next Operation to enable transfer</p>
                   )}
                 </div>
               </div>
 
-              <div id="production-history" className="bg-white rounded  border border-slate-100 p-4 scroll-mt-6">
-                <div className="flex items-center justify-between mb-6">
-                  <SectionTitle title="Detailed Production Report" icon={FileText} subtitle="Comprehensive log-level production metrics and shift quality results" />
-                  <button onClick={downloadReport} className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded border border-indigo-100  text-xs hover:bg-indigo-100 transition-all"><FileText size={14} />Download CSV</button>
-                </div>
-                <DataTable
-                  columns={dailyReportColumns}
-                  data={generateDailyReport()}
-                  renderActions={(row) => {
-                    const key = row.uniqueKey;
-                    const isEditing = editingRowKey === key;
+              {!isShipmentOp && (
+                <div id="production-history" className="bg-white rounded  border border-slate-100 p-4 scroll-mt-6">
+                  <div className="flex items-center justify-between">
+                    <SectionTitle title="Detailed Production Report" icon={FileText} subtitle="Comprehensive log-level production metrics and shift quality results" />
+                    <button onClick={downloadReport} className="flex items-center gap-2 p-2  bg-indigo-50 text-indigo-600 rounded border border-indigo-100  text-xs hover:bg-indigo-100 transition-all"><FileText size={14} />Download CSV</button>
+                  </div>
+                  <DataTable
+                    columns={dailyReportColumns}
+                    data={generateDailyReport()}
+                    renderActions={(row) => {
+                      const key = row.uniqueKey;
+                      const isEditing = editingRowKey === key;
+                      return (
+                        <div className="flex items-center justify-center gap-1">
+                          {isEditing ? (
+                            <>
+                              <button onClick={handleSaveRow} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-all" title="Save"><Save size={14} /></button>
+                              <button onClick={handleCancelEdit} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-all" title="Cancel"><X size={14} /></button>
+                            </>
+                          ) : (
+                            <button onClick={() => handleEditRow(row)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all" title="Edit Row"><Edit2 size={14} /></button>
+                          )}
+                        </div>
+                      )
+                    }}
+                  />
+
+                  {/* Production Summary Section */}
+                  {(() => {
+                    const reportData = generateDailyReport();
+                    const totalExpected = reportData.reduce((sum, row) => sum + (row.expected_mins || 0), 0);
+                    const productionMinutes = reportData.reduce((sum, row) => sum + (row.total_mins || 0), 0);
+                    const totalDowntime = reportData.reduce((sum, row) => sum + (row.downtime || 0), 0);
+                    const totalActual = productionMinutes + totalDowntime;
+                    const totalOpCost = reportData.reduce((sum, row) => sum + (row.operation_cost || 0), 0);
+                    const totalVariance = totalActual - totalExpected;
+                    const costVariance = totalVariance * (parseFloat(jobCardData?.hourly_rate || 0) / 60);
+
                     return (
-                      <div className="flex items-center justify-center gap-1">
-                        {isEditing ? (
-                          <>
-                            <button onClick={handleSaveRow} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-all" title="Save"><Save size={14} /></button>
-                            <button onClick={handleCancelEdit} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-all" title="Cancel"><X size={14} /></button>
-                          </>
-                        ) : (
-                          <button onClick={() => handleEditRow(row)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all" title="Edit Row"><Edit2 size={14} /></button>
-                        )}
-                      </div>
-                    )
-                  }}
-                />
-
-                {/* Production Summary Section */}
-                {(() => {
-                  const reportData = generateDailyReport();
-                  const totalExpected = reportData.reduce((sum, row) => sum + (row.expected_mins || 0), 0);
-                  const productionMinutes = reportData.reduce((sum, row) => sum + (row.total_mins || 0), 0);
-                  const totalDowntime = reportData.reduce((sum, row) => sum + (row.downtime || 0), 0);
-                  const totalActual = productionMinutes + totalDowntime;
-                  const totalOpCost = reportData.reduce((sum, row) => sum + (row.operation_cost || 0), 0);
-                  const totalVariance = totalActual - totalExpected;
-                  const costVariance = totalVariance * (parseFloat(jobCardData?.hourly_rate || 0) / 60);
-
-                  return (
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-5 gap-2 p-2 bg-slate-50 rounded border border-slate-100">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-slate-400   ">Total Expected Time</span>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-md  text-slate-700">{formatDuration(totalExpected)}</span>
-                          <span className="text-xs text-slate-400">({totalExpected.toFixed(0)} mins)</span>
+                      <div className="mt-6 grid grid-cols-1 md:grid-cols-5 gap-2 p-2 bg-slate-50 rounded border border-slate-100">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs text-slate-400   ">Total Expected Time</span>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-md  text-slate-700">{formatDuration(totalExpected)}</span>
+                            <span className="text-xs text-slate-400">({totalExpected.toFixed(0)} mins)</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs text-slate-400   ">Total Actual Time</span>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-md  text-indigo-600">{formatDuration(totalActual)}</span>
+                            <span className="text-xs text-slate-400">({totalActual.toFixed(0)} mins)</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-indigo-400 font-medium">Prod: {productionMinutes}m</span>
+                            {totalDowntime > 0 && <span className="text-xs text-amber-400 font-medium">+ Loss: {totalDowntime}m</span>}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs text-slate-400   ">Production Variance</span>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className={`text-lg  ${totalVariance > 5 ? 'text-rose-600' : totalVariance < -5 ? 'text-emerald-600' : 'text-slate-600'}`}>
+                              {totalVariance > 0 ? '+' : ''}{totalVariance.toFixed(1)} mins
+                            </span>
+                            <span className="text-xs text-slate-400">({((totalVariance / (totalExpected || 1)) * 100).toFixed(1)}%)</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1 border-l border-slate-200 pl-4">
+                          <span className="text-xs text-amber-500   ">Total Operation Cost</span>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-lg  text-amber-600">
+                              ₹{totalOpCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1 border-l border-slate-200 pl-4">
+                          <span className={`text-xs ${costVariance > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>{costVariance > 0 ? 'Cost Increase' : 'Cost Saving'}</span>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className={`text-lg ${costVariance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                              {costVariance > 0 ? '+' : ''}₹{Math.abs(costVariance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-slate-400   ">Total Actual Time</span>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-md  text-indigo-600">{formatDuration(totalActual)}</span>
-                          <span className="text-xs text-slate-400">({totalActual.toFixed(0)} mins)</span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-indigo-400 font-medium">Prod: {productionMinutes}m</span>
-                          {totalDowntime > 0 && <span className="text-xs text-amber-400 font-medium">+ Loss: {totalDowntime}m</span>}
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-slate-400   ">Production Variance</span>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className={`text-lg  ${totalVariance > 5 ? 'text-rose-600' : totalVariance < -5 ? 'text-emerald-600' : 'text-slate-600'}`}>
-                            {totalVariance > 0 ? '+' : ''}{totalVariance.toFixed(1)} mins
-                          </span>
-                          <span className="text-xs text-slate-400">({((totalVariance / (totalExpected || 1)) * 100).toFixed(1)}%)</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1 border-l border-slate-200 pl-4">
-                        <span className="text-xs text-amber-500   ">Total Operation Cost</span>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-lg  text-amber-600">
-                            ₹{totalOpCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1 border-l border-slate-200 pl-4">
-                        <span className={`text-xs ${costVariance > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>{costVariance > 0 ? 'Cost Increase' : 'Cost Saving'}</span>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className={`text-lg ${costVariance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                            {costVariance > 0 ? '+' : ''}₹{Math.abs(costVariance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           </div>
         </div>

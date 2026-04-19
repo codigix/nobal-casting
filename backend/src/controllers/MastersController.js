@@ -469,6 +469,132 @@ class MastersController {
     }
   }
 
+  static async getProjectDispatchReport(req, res) {
+    try {
+      const database = MastersController.getDb()
+      const [rows] = await database.query(`
+        SELECT 
+          sso.sales_order_id,
+          sso.project_name,
+          sso.customer_name,
+          sso.qty as total_qty,
+          COALESCE(SUM(sdn.quantity), 0) as dispatched_qty,
+          CASE 
+            WHEN COALESCE(SUM(sdn.quantity), 0) >= sso.qty THEN 'Fully Dispatched'
+            WHEN COALESCE(SUM(sdn.quantity), 0) > 0 THEN 'Partially Dispatched'
+            ELSE 'Not Dispatched'
+          END as dispatch_status,
+          MAX(sdn.delivery_date) as last_dispatch_date
+        FROM selling_sales_order sso
+        LEFT JOIN selling_delivery_note sdn ON sso.sales_order_id = sdn.sales_order_id AND sdn.deleted_at IS NULL
+        WHERE sso.deleted_at IS NULL
+        GROUP BY sso.sales_order_id
+        ORDER BY sso.created_at DESC
+      `)
+      
+      res.json({
+        success: true,
+        data: rows,
+        message: 'Project dispatch report fetched successfully'
+      })
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message })
+    }
+  }
+
+  static async getIndividualDispatches(req, res) {
+    try {
+      const database = MastersController.getDb()
+      const [rows] = await database.query(`
+        SELECT 
+          sdn.delivery_note_id,
+          sdn.sales_order_id,
+          sdn.job_card_id,
+          sso.project_name,
+          sso.customer_name,
+          sdn.delivery_date,
+          sdn.quantity,
+          sdn.driver_name,
+          sdn.vehicle_info,
+          sdn.remarks,
+          sdn.status
+        FROM selling_delivery_note sdn
+        LEFT JOIN selling_sales_order sso ON sdn.sales_order_id = sso.sales_order_id
+        WHERE sdn.deleted_at IS NULL
+        ORDER BY sdn.delivery_date DESC, sdn.created_at DESC
+      `)
+      
+      res.json({
+        success: true,
+        data: rows,
+        message: 'Individual dispatches fetched successfully'
+      })
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message })
+    }
+  }
+
+  static async getProjectMaterialReport(req, res) {
+    try {
+      const database = MastersController.getDb()
+      const [rows] = await database.query(`
+        SELECT 
+          sso.sales_order_id,
+          sso.project_name,
+          sso.customer_name,
+          COALESCE(
+            (
+              SELECT SUM(prm.plan_to_request_qty) 
+              FROM production_plan pp
+              JOIN production_plan_raw_material prm ON pp.plan_id = prm.plan_id
+              WHERE pp.sales_order_id = sso.sales_order_id
+            ),
+            (
+              SELECT SUM(ma.allocated_qty)
+              FROM material_allocation ma
+              JOIN work_order wo ON ma.work_order_id = wo.wo_id
+              WHERE wo.sales_order_id = sso.sales_order_id
+            ),
+            0
+          ) as allocated_qty,
+          (
+            SELECT COALESCE(SUM(mri.qty), 0)
+            FROM material_request mr
+            JOIN material_request_item mri ON mr.mr_id = mri.mr_id
+            WHERE (
+              mr.production_plan_id IN (SELECT plan_id FROM production_plan WHERE sales_order_id = sso.sales_order_id)
+              OR 
+              mr.mr_id IN (
+                SELECT jc.mr_id FROM job_card jc 
+                JOIN work_order wo ON jc.work_order_id = wo.wo_id 
+                WHERE wo.sales_order_id = sso.sales_order_id AND jc.mr_id IS NOT NULL
+              )
+            )
+            AND mr.purpose = 'material_issue'
+            AND mr.status IN ('received', 'completed')
+          ) as consumed_qty
+        FROM selling_sales_order sso
+        WHERE sso.deleted_at IS NULL
+        ORDER BY sso.created_at DESC
+      `)
+      
+      const data = rows.map(row => ({
+        ...row,
+        allocated_qty: parseFloat(row.allocated_qty || 0),
+        consumed_qty: parseFloat(row.consumed_qty || 0),
+        remaining_qty: Math.max(0, parseFloat(row.allocated_qty || 0) - parseFloat(row.consumed_qty || 0))
+      }))
+
+      res.json({
+        success: true,
+        data: data,
+        message: 'Project material report fetched successfully'
+      })
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message })
+    }
+  }
+
   static async getDetailedProjectAnalysis(req, res) {
     try {
       const { id } = req.params
@@ -779,6 +905,39 @@ class MastersController {
           };
         });
 
+        // 4.5.5 Fetch Dispatch details (Formal Delivery Notes and Orders)
+        const [dispatchRows] = await database.query(
+          `SELECT 
+             delivery_note_id as dispatch_id,
+             delivery_date as dispatch_date,
+             COALESCE(carrier_name, CONCAT(COALESCE(driver_name, ''), ' ', COALESCE(vehicle_info, ''))) as carrier,
+             tracking_number,
+             status
+           FROM selling_delivery_note
+           WHERE sales_order_id = ? AND deleted_at IS NULL
+           UNION ALL
+           SELECT 
+             dispatch_id,
+             dispatch_date,
+             carrier,
+             tracking_number,
+             status
+           FROM dispatch_order
+           WHERE sales_order_id = ?`,
+          [id, id]
+        )
+        project.dispatches = dispatchRows
+
+        // Also check if any job card has shipment details directly
+        const [jcShipments] = await database.query(
+          `SELECT job_card_id, operation, carrier_name, tracking_number, dispatch_date, shipping_notes, is_partial, accepted_quantity
+           FROM job_card jc
+           JOIN work_order wo ON jc.work_order_id = wo.wo_id
+           WHERE wo.sales_order_id = ? AND (carrier_name IS NOT NULL OR tracking_number IS NOT NULL)`,
+          [id]
+        )
+        project.job_card_shipments = jcShipments
+
         // 4.6 Fetch Daily Production for Chart Data
         const [dailyProduction] = await database.query(
           `SELECT 
@@ -1048,17 +1207,41 @@ class MastersController {
       
       const processedProjects = allProjects.map(p => {
         let finishedGoods = [];
+        let calculatedPlannedQty = 0;
         try {
           const items = p.items ? (typeof p.items === 'string' ? JSON.parse(p.items) : p.items) : [];
           const bomFG = p.bom_finished_goods ? (typeof p.bom_finished_goods === 'string' ? JSON.parse(p.bom_finished_goods) : p.bom_finished_goods) : [];
           
           finishedGoods = [...items, ...bomFG].map(i => i.item_name || i.name || i.component_name || i.item_code).filter(Boolean);
+          
+          // Calculate true planned quantity from items
+          calculatedPlannedQty = items.reduce((sum, item) => sum + (parseFloat(item.qty) || 0), 0);
+          
+          // If items don't have qty but the sales order has a total quantity multiplier
+          if (calculatedPlannedQty === 0 && p.planned_qty > 0) {
+            calculatedPlannedQty = p.planned_qty;
+          }
         } catch (e) {
           console.error('Error parsing project items:', e);
+          calculatedPlannedQty = p.planned_qty;
+        }
+
+        // Recalculate progress based on true planned qty if it's available and not 100% already from status
+        let finalProgress = p.progress;
+        if (calculatedPlannedQty > 0) {
+          const rawProgress = Math.round((p.produced_qty / calculatedPlannedQty) * 100);
+          // Only override if rawProgress is more conservative or if it's clearly under production
+          if (p.status !== 'delivered' && p.status !== 'complete') {
+            finalProgress = Math.min(rawProgress, 99);
+          } else {
+            finalProgress = 100;
+          }
         }
         
         return {
           ...p,
+          planned_qty: calculatedPlannedQty,
+          progress: finalProgress,
           finished_goods: finishedGoods.join(', ')
         }
       });
