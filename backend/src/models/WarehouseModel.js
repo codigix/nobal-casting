@@ -109,14 +109,14 @@ class WarehouseModel {
   static async update(id, data) {
     try {
       const db = this.getDb()
-      const { warehouse_name, warehouse_type, location, department, capacity, is_active, updated_by } = data
+      const { warehouse_name, warehouse_type, location, department, capacity, parent_warehouse_id, is_active, updated_by } = data
 
       await db.query(
         `UPDATE warehouses SET 
           warehouse_name = ?, warehouse_type = ?, location = ?, 
-          department = ?, capacity = ?, is_active = ?, updated_by = ?
+          department = ?, capacity = ?, parent_warehouse_id = ?, is_active = ?, updated_by = ?
         WHERE id = ?`,
-        [warehouse_name, warehouse_type, location, department, capacity, is_active, updated_by, id]
+        [warehouse_name, warehouse_type, location, department, capacity, parent_warehouse_id, is_active, updated_by, id]
       )
 
       return await this.getById(id)

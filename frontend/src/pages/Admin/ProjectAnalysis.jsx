@@ -69,7 +69,7 @@ export default function ProjectAnalysis() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('all')
   const [viewMode, setViewMode] = useState('list')
-  const [segmentTab, setSegmentTab] = useState(location.state?.filterSegment || 'all')
+  const [segmentTab, setSegmentTab] = useState(location.state?.filterSegment || 'Other')
   const [totalRevenue, setTotalRevenue] = useState(0)
   const [completionRate, setCompletionRate] = useState(0)
   const [trends, setTrends] = useState(null)
@@ -243,24 +243,8 @@ export default function ProjectAnalysis() {
             <div className=" bg-slate-200 hidden md:block" />
 
             <div className="flex items-center gap-2">
-              
-              <div className="flex">
-                {['all', 'draft','under_production', 'complete'].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`py-2 px-4 rounded text-xs transition-all whitespace-nowrap ${activeTab === tab ? 'bg-blue-600 text-white ' : 'text-slate-400 hover:text-slate-600'}`}
-                  >
-                    {tab === 'all' ? 'All Portfolio' : (statusConfig[tab]?.label || tab.replace(/_/g, ' '))}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              
               <div className="flex p-1 bg-white rounded border border-slate-200 ">
-                {['all', 'Premium', 'Other'].map((seg) => (
+                {['Other'].map((seg) => (
                   <button
                     key={seg}
                     onClick={() => setSegmentTab(seg)}

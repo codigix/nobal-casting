@@ -73,11 +73,19 @@ export default function Warehouses() {
     e.preventDefault()
     try {
       setLoading(true)
+      
+      // Clean data before sending
+      const submissionData = {
+        ...formData,
+        capacity: formData.capacity === '' ? null : parseFloat(formData.capacity),
+        parent_warehouse_id: formData.parent_warehouse_id === '' ? null : parseInt(formData.parent_warehouse_id)
+      }
+
       if (editingId) {
-        await api.put(`/stock/warehouses/${editingId}`, formData)
+        await api.put(`/stock/warehouses/${editingId}`, submissionData)
         setSuccess('Warehouse updated successfully')
       } else {
-        await api.post('/stock/warehouses', formData)
+        await api.post('/stock/warehouses', submissionData)
         setSuccess('Warehouse created successfully')
       }
       setFormData({
@@ -102,7 +110,12 @@ export default function Warehouses() {
 
   const handleEdit = (warehouse) => {
     setFormData({
-      ...warehouse,
+      warehouse_code: warehouse.warehouse_code || '',
+      warehouse_name: warehouse.warehouse_name || '',
+      warehouse_type: warehouse.warehouse_type || 'Raw Material',
+      location: warehouse.location || '',
+      capacity: warehouse.capacity || '',
+      parent_warehouse_id: warehouse.parent_warehouse_id || '',
       department: warehouse.department || 'all'
     })
     setEditingId(warehouse.id)

@@ -37,20 +37,24 @@ export const getWarehouse = async (req, res) => {
 
 export const createWarehouse = async (req, res) => {
   try {
-    const { warehouse_code, warehouse_name, warehouse_type, location, capacity, department } = req.body
+    const { warehouse_code, warehouse_name, warehouse_type, location, capacity, department, parent_warehouse_id } = req.body
 
     if (!warehouse_code || !warehouse_name || !warehouse_type) {
       return res.status(400).json({ success: false, error: 'Missing required fields' })
     }
 
+    // Sanitize capacity and parent_warehouse_id
+    const sanitizedCapacity = (capacity === '' || capacity === undefined) ? null : capacity
+    const sanitizedParentId = (parent_warehouse_id === '' || parent_warehouse_id === undefined) ? null : parent_warehouse_id
+
     const warehouse = await WarehouseModel.create({
       warehouse_code,
       warehouse_name,
       warehouse_type,
-      parent_warehouse_id: req.body.parent_warehouse_id || null,
+      parent_warehouse_id: sanitizedParentId,
       location,
       department: department || req.user?.department || 'all',
-      capacity,
+      capacity: sanitizedCapacity,
       created_by: req.user?.id
     })
 
@@ -62,13 +66,19 @@ export const createWarehouse = async (req, res) => {
 
 export const updateWarehouse = async (req, res) => {
   try {
-    const { warehouse_name, warehouse_type, location, capacity, is_active } = req.body
+    const { warehouse_name, warehouse_type, location, capacity, is_active, department, parent_warehouse_id } = req.body
+
+    // Sanitize capacity and parent_warehouse_id
+    const sanitizedCapacity = (capacity === '' || capacity === undefined) ? null : capacity
+    const sanitizedParentId = (parent_warehouse_id === '' || parent_warehouse_id === undefined) ? null : parent_warehouse_id
 
     const warehouse = await WarehouseModel.update(req.params.id, {
       warehouse_name,
       warehouse_type,
       location,
-      capacity,
+      department: department || 'all',
+      capacity: sanitizedCapacity,
+      parent_warehouse_id: sanitizedParentId,
       is_active,
       updated_by: req.user?.id
     })

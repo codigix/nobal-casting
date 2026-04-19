@@ -53,23 +53,27 @@ export default function DepartmentLayout({ children }) {
   let userDept = user?.department?.toLowerCase() || 'manufacturing'
   if (userDept === 'production') userDept = 'manufacturing'
 
-  const getInitialExpandedMenu = () => {
+  const getInitialExpandedMenus = () => {
     const deptMenus = {
-      'inventory': 'inventory',
-      'manufacturing': 'manufacturing',
-      'admin': 'project_tracking',
-      'accounts': 'accounts'
+      'inventory': ['inventory'],
+      'manufacturing': ['manufacturing'],
+      'admin': ['project_tracking'],
+      'accounts': ['accounts', 'financial_reports']
     }
-    return deptMenus[userDept] || null
+    return deptMenus[userDept] || []
   }
 
-  const [expandedMenu, setExpandedMenu] = useState(getInitialExpandedMenu())
+  const [expandedMenus, setExpandedMenus] = useState(getInitialExpandedMenus())
 
   const isActive = (path) => location.pathname.startsWith(path)
   const sidebarWidth = sidebarCollapsed ? 20 : 230
 
-  const toggleMenu = (menu) => {
-    setExpandedMenu(expandedMenu === menu ? null : menu)
+  const toggleMenu = (menuId) => {
+    setExpandedMenus(prev => 
+      prev.includes(menuId) 
+        ? prev.filter(id => id !== menuId) 
+        : [...prev, menuId]
+    )
   }
 
   const handleCollapsedSubmenuClick = (item, event) => {
@@ -264,7 +268,7 @@ export default function DepartmentLayout({ children }) {
                         {item.submenu ? (
                           <div>
                             <button
-                              className={`nav-item submenu-toggle ${expandedMenu === item.id ? 'expanded' : ''}`}
+                              className={`nav-item submenu-toggle ${expandedMenus.includes(item.id) ? 'expanded' : ''}`}
                               onClick={() => toggleMenu(item.id)}
                               title={item.label}
                             >
@@ -272,7 +276,7 @@ export default function DepartmentLayout({ children }) {
                               <span className="nav-label">{item.label}</span>
                               <ChevronRight className="submenu-arrow-icon" size={18} />
                             </button>
-                            {expandedMenu === item.id && (
+                            {expandedMenus.includes(item.id) && (
                               <div className="submenu">
                                 {item.submenu.map((subitem) => {
                                   const SubIconComponent = subitem.icon
