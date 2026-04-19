@@ -470,7 +470,7 @@ export default function BOMForm() {
         const material = updatedMaterials[i]
         const item = items.find(it => it.item_code === material.item_code)
 
-        if (item && (item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')) {
+        if (item && ['sub assemblies', 'sub-assembly'].includes((item.item_group || '').trim().toLowerCase())) {
           try {
             const bomsResponse = await productionService.getBOMs({ item_code: material.item_code })
             if (bomsResponse && bomsResponse.data && bomsResponse.data.length > 0) {
@@ -610,7 +610,12 @@ export default function BOMForm() {
   const fetchUOMs = async () => {
     try {
       const response = await productionService.getUOMList()
-      setUomList(response.data || [])
+      const data = response.data || []
+      const normalizedUoms = data.map(u => ({
+        label: typeof u === 'string' ? u : (u.name || u.label || 'Unknown'),
+        value: typeof u === 'string' ? u : (u.name || u.value || 'Unknown')
+      }))
+      setUomList(normalizedUoms)
     } catch (err) {
       console.error('Failed to fetch UOM list:', err)
     }
@@ -735,7 +740,7 @@ export default function BOMForm() {
     if (value) {
       const selectedItem = items.find(item =>
         (item.name === value || item.item_name === value) &&
-        (item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
+        ['finished goods', 'finished good', 'sub assemblies', 'sub-assembly'].includes((item.item_group || '').trim().toLowerCase())
       )
       if (selectedItem) {
         setFormData(prev => ({
@@ -788,7 +793,7 @@ export default function BOMForm() {
           let valuationRate = itemData.valuation_rate || '0'
           let rate = (valuationRate !== '0' && valuationRate !== 0) ? valuationRate : (itemData.selling_rate || '0')
 
-          if (itemData.item_group === 'Sub Assemblies' || itemData.item_group === 'Sub-assembly') {
+          if (['sub assemblies', 'sub-assembly'].includes((itemData.item_group || '').trim().toLowerCase())) {
             try {
               const bomsResponse = await productionService.getBOMs({ item_code: value })
               if (bomsResponse && bomsResponse.data && bomsResponse.data.length > 0) {
@@ -893,8 +898,9 @@ export default function BOMForm() {
       }
     }
 
-    const isFinishedGoods = item?.item_group === 'Finished Goods' || item?.item_group === 'Finished good'
-    const isSubAssembly = item?.item_group === 'Sub Assemblies' || item?.item_group === 'Sub-assembly'
+    const normalizedGroup = (item?.item_group || '').trim().toLowerCase()
+    const isFinishedGoods = normalizedGroup === 'finished goods' || normalizedGroup === 'finished good'
+    const isSubAssembly = normalizedGroup === 'sub assemblies' || normalizedGroup === 'sub-assembly'
 
     if (isFinishedGoods || isSubAssembly) {
       try {
@@ -1014,7 +1020,7 @@ export default function BOMForm() {
       }
     }
 
-    if (item?.item_group === 'Sub Assemblies' || item?.item_group === 'Sub-assembly') {
+    if (['sub assemblies', 'sub-assembly'].includes((item?.item_group || '').trim().toLowerCase())) {
       try {
         const bomsResponse = await productionService.getBOMs({ item_code: value })
         if (bomsResponse && bomsResponse.data && bomsResponse.data.length > 0) {
@@ -1565,7 +1571,7 @@ export default function BOMForm() {
                             value={formData.product_name}
                             onChange={handleProductNameChange}
                             options={items
-                              .filter(item => item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
+                              .filter(item => ['finished goods', 'finished good', 'sub assemblies', 'sub-assembly'].includes((item.item_group || '').trim().toLowerCase()))
                               .map(item => ({
                                 label: `${item.name || item.item_name || 'No Name'} [${item.item_code}]`,
                                 value: item.name || item.item_name
@@ -1582,7 +1588,7 @@ export default function BOMForm() {
                             value={formData.item_code}
                             onChange={handleItemCodeChange}
                             options={items
-                              .filter(item => item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
+                              .filter(item => ['finished goods', 'finished good', 'sub assemblies', 'sub-assembly'].includes((item.item_group || '').trim().toLowerCase()))
                               .map(item => ({
                                 label: `${item.name || item.item_name || 'No Name'} [${item.item_code}]`,
                                 value: item.item_code
@@ -1629,10 +1635,7 @@ export default function BOMForm() {
                             <SearchableSelect
                               value={formData.uom}
                               onChange={(value) => setFormData({ ...formData, uom: value })}
-                              options={uomList.map(uom => ({
-                                label: uom,
-                                value: uom
-                              }))}
+                              options={uomList}
                               placeholder="UOM"
                               className="border-none"
                             />
@@ -1946,10 +1949,7 @@ export default function BOMForm() {
                               <SearchableSelect
                                 value={newLine.uom}
                                 onChange={(value) => setNewLine({ ...newLine, uom: value })}
-                                options={uomList.map(uom => ({
-                                  label: uom,
-                                  value: uom
-                                }))}
+                                options={uomList}
                                 placeholder="Select"
                                 className="glass-input"
                               />
@@ -2160,7 +2160,7 @@ export default function BOMForm() {
                                 <SearchableSelect
                                   value={newRawMaterial.item_code}
                                   onChange={handleRawMaterialItemChange}
-                                  options={items.filter(item => item && item.item_code && item.name && item.item_group !== 'Finished Goods').map(item => ({
+                                  options={items.filter(item => item && item.item_code && (item.name || item.item_name) && !['finished goods', 'finished good'].includes((item.item_group || '').trim().toLowerCase())).map(item => ({
                                     label: `${item.name || item.item_name || 'No Name'} [${item.item_code}]`,
                                     value: item.item_code
                                   }))}
@@ -2228,10 +2228,7 @@ export default function BOMForm() {
                                 <SearchableSelect
                                   value={newRawMaterial.uom}
                                   onChange={(value) => setNewRawMaterial({ ...newRawMaterial, uom: value })}
-                                  options={uomList.map(uom => ({
-                                    label: uom,
-                                    value: uom
-                                  }))}
+                                  options={uomList}
                                   placeholder="Select"
                                   className="glass-input"
                                 />

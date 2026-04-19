@@ -22,21 +22,53 @@ export class ItemModel {
       ]
 
       const values = [
-        item_code, data.item_name || data.name, data.item_group, data.description, 
-        data.uom || 'Nos', data.hsn_code, data.gst_rate || 0, data.disabled ? false : true,
-        data.disabled || false, data.allow_alternative_item || false, data.maintain_stock !== false,
-        data.has_variants || false, data.opening_stock || 0, data.valuation_rate || 0,
-        data.valuation_method || 'FIFO', data.standard_selling_rate || 0, data.selling_rate || 0, data.is_fixed_asset || false,
-        data.shelf_life_in_days || null, data.warranty_period_in_days || null, data.end_of_life || null,
-        data.weight_per_unit || null, data.weight_uom || null, data.allow_negative_stock || false,
-        data.has_batch_no || false, data.has_serial_no || false, data.automatically_create_batch || false,
-        data.batch_number_series || null, data.has_expiry_date || false, data.retain_sample || false,
-        data.max_sample_quantity || null, data.default_purchase_uom || 'Nos', data.lead_time_days || 0,
-        data.minimum_order_qty || 1, data.safety_stock || 0, data.is_customer_provided_item || false,
-        data.default_sales_uom || 'Nos', data.max_discount_percentage || 0, data.grant_commission || false,
-        data.allow_sales !== false, data.cess_rate || 0, data.inclusive_tax || false,
-        data.supply_raw_materials_for_purchase || false, data.include_item_in_manufacturing || false,
-        data.no_of_cavities || 1, data.family_mould || false, data.mould_number || null,
+        item_code, 
+        (data.item_name || data.name || '').trim(), 
+        (data.item_group || '').trim(), 
+        (data.description || '').trim(), 
+        (data.uom || 'Nos').trim(), 
+        (data.hsn_code || '').trim(), 
+        data.gst_rate || 0, 
+        data.disabled ? false : true,
+        data.disabled || false, 
+        data.allow_alternative_item || false, 
+        data.maintain_stock !== false,
+        data.has_variants || false, 
+        data.opening_stock || 0, 
+        data.valuation_rate || 0,
+        data.valuation_method || 'FIFO', 
+        data.standard_selling_rate || 0, 
+        data.selling_rate || 0, 
+        data.is_fixed_asset || false,
+        data.shelf_life_in_days || null, 
+        data.warranty_period_in_days || null, 
+        data.end_of_life || null,
+        data.weight_per_unit || null, 
+        data.weight_uom || null, 
+        data.allow_negative_stock || false,
+        data.has_batch_no || false, 
+        data.has_serial_no || false, 
+        data.automatically_create_batch || false,
+        data.batch_number_series || null, 
+        data.has_expiry_date || false, 
+        data.retain_sample || false,
+        data.max_sample_quantity || null, 
+        (data.default_purchase_uom || 'Nos').trim(), 
+        data.lead_time_days || 0,
+        data.minimum_order_qty || 1, 
+        data.safety_stock || 0, 
+        data.is_customer_provided_item || false,
+        (data.default_sales_uom || 'Nos').trim(), 
+        data.max_discount_percentage || 0, 
+        data.grant_commission || false,
+        data.allow_sales !== false, 
+        data.cess_rate || 0, 
+        data.inclusive_tax || false,
+        data.supply_raw_materials_for_purchase || false, 
+        data.include_item_in_manufacturing || false,
+        data.no_of_cavities || 1, 
+        data.family_mould || false, 
+        data.mould_number || null,
         data.loss_percentage || 0
       ]
 
@@ -323,6 +355,10 @@ export class ItemModel {
       for (const field of allowedFields) {
         if (data[field] !== undefined) {
           let value = data[field]
+          
+          if (typeof value === 'string') {
+            value = value.trim()
+          }
           
           if (numericFields.includes(field) && value === '') {
             value = (['shelf_life_in_days', 'warranty_period_in_days', 'weight_per_unit', 'max_sample_quantity'].includes(field)) ? null : 0
