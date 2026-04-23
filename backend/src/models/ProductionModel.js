@@ -1929,7 +1929,17 @@ async deleteAllBOMRawMaterials(bom_id) {
           CONCAT(em.first_name, ' ', em.last_name) as operator_name,
           s.name as vendor_name,
           sso.project_name,
-          sso.created_at as project_created_at
+          sso.created_at as project_created_at,
+          (
+            (SELECT COUNT(*) FROM work_order_dependency WHERE parent_wo_id = jc.work_order_id) + 
+            (SELECT COUNT(*) FROM job_card jc_prev WHERE jc_prev.work_order_id = jc.work_order_id AND CAST(jc_prev.operation_sequence AS DECIMAL(18,6)) < CAST(jc.operation_sequence AS DECIMAL(18,6)))
+          ) as total_dependencies,
+          (
+            (SELECT COUNT(*) FROM work_order_dependency wod 
+             JOIN work_order wo_child ON wod.child_wo_id = wo_child.wo_id 
+             WHERE wod.parent_wo_id = jc.work_order_id AND wo_child.status = 'Completed') +
+            (SELECT COUNT(*) FROM job_card jc_prev WHERE jc_prev.work_order_id = jc.work_order_id AND CAST(jc_prev.operation_sequence AS DECIMAL(18,6)) < CAST(jc.operation_sequence AS DECIMAL(18,6)) AND jc_prev.status = 'Completed')
+          ) as completed_dependencies
         FROM job_card jc
         LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
         LEFT JOIN item i ON wo.item_code = i.item_code
@@ -2016,7 +2026,17 @@ async deleteAllBOMRawMaterials(bom_id) {
           ws.last_job_card_id as machine_current_jc,
           CONCAT(em.first_name, ' ', em.last_name) as operator_name,
           s.name as vendor_name,
-          sso.project_name
+          sso.project_name,
+          (
+            (SELECT COUNT(*) FROM work_order_dependency WHERE parent_wo_id = jc.work_order_id) + 
+            (SELECT COUNT(*) FROM job_card jc_prev WHERE jc_prev.work_order_id = jc.work_order_id AND CAST(jc_prev.operation_sequence AS DECIMAL(18,6)) < CAST(jc.operation_sequence AS DECIMAL(18,6)))
+          ) as total_dependencies,
+          (
+            (SELECT COUNT(*) FROM work_order_dependency wod 
+             JOIN work_order wo_child ON wod.child_wo_id = wo_child.wo_id 
+             WHERE wod.parent_wo_id = jc.work_order_id AND wo_child.status = 'Completed') +
+            (SELECT COUNT(*) FROM job_card jc_prev WHERE jc_prev.work_order_id = jc.work_order_id AND CAST(jc_prev.operation_sequence AS DECIMAL(18,6)) < CAST(jc.operation_sequence AS DECIMAL(18,6)) AND jc_prev.status = 'Completed')
+          ) as completed_dependencies
         FROM job_card jc
         LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
         LEFT JOIN item i ON wo.item_code = i.item_code

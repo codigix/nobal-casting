@@ -7,7 +7,7 @@ async function testProductionPlanAPI() {
     
     const options = {
       hostname: 'localhost',
-      port: 5001,
+      port: 5000,
       path: `/api/production-planning/generate/sales-order/${salesOrderId}`,
       method: 'POST',
       headers: {

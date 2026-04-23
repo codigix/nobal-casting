@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:5001/api'
+const BASE_URL = 'http://localhost:5000/api'
 
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))

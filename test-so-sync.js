@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, 'backend', '.env') });
 
-const API_BASE = 'http://localhost:5001/api';
+const API_BASE = 'http://localhost:5000/api';
 
 async function test() {
   const connection = await mysql.createConnection({

@@ -1153,7 +1153,7 @@ export default function JobCard() {
           <div className="flex flex-col gap-1">
             <div className="flex justify-between items-center">
               <span className={`text-[10px]    ${isReady ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {isReady ? 'Ready to Start' : 'Pending Sub-Assembly'}
+                {isReady ? 'Ready to Start' : 'Pending Dependencies'}
               </span>
               <span className="text-xs  text-gray-500">{completed}/{total}</span>
             </div>
@@ -1165,7 +1165,7 @@ export default function JobCard() {
             </div>
             {!isReady && (
               <span className="text-[9px] text-gray-400 ">
-                Waiting for {total - completed} component{total - completed > 1 ? 's' : ''}
+                Waiting for {total - completed} task{total - completed > 1 ? 's' : ''}
               </span>
             )}
           </div>

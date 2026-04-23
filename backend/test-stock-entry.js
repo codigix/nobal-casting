@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import axios from 'axios'
 
-const API_BASE = process.env.API_URL || 'http://localhost:5001'
+const API_BASE = process.env.API_URL || 'http://localhost:5000'
 console.log('Using API_BASE:', API_BASE)
 
 const colors = {

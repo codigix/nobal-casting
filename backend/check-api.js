@@ -3,7 +3,7 @@ import axios from 'axios';
 
 async function checkApi() {
   try {
-    const response = await axios.get('http://localhost:5001/api/oee/dashboard', {
+    const response = await axios.get('http://localhost:5000/api/oee/dashboard', {
       params: {
         startDate: '2026-02-15',
         endDate: '2026-02-15'

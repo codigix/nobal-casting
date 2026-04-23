@@ -8,7 +8,7 @@ const payload = {
   terms_conditions: 'Test order'
 };
 
-const res = await fetch('http://localhost:5001/api/selling/sales-orders', {
+const res = await fetch('http://localhost:5000/api/selling/sales-orders', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(payload)

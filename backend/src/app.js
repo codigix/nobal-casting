@@ -40,7 +40,7 @@ const app = express()
 const corsOptions = {
   origin: process.env.CORS_ORIGIN 
     ? process.env.CORS_ORIGIN.split(',').map(item => item.trim())
-    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:5174', 'http://127.0.0.1:5175'],
+    : [ 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:5174', 'http://127.0.0.1:5175'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -1060,7 +1060,7 @@ function setupRoutes() {
   })
 }
 
-const PORT = process.env.PORT || 5001
+const PORT = process.env.PORT || 5000
 
 async function start() {
   await initializeDatabase()

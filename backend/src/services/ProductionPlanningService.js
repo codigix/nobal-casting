@@ -396,16 +396,14 @@ export class ProductionPlanningService {
         const bomId = sa.bom_no
         if (bomId) {
           const bomData = await this.getBOMDetails(bomId)
-          if (bomData && (bomData.lines || bomData.raw_materials)) {
+          if (bomData) {
             const allLines = [...(bomData.lines || []), ...(bomData.raw_materials || [])]
             for (const line of allLines) {
-              const isSA = await this.isSubAssembly(line)
-              if (isSA) {
-                const childCode = line.component_code || line.item_code
-                // Only care about dependencies that are part of THIS plan
-                if (allItemCodes.has(childCode)) {
-                  dependencyGraph.get(sa.item_code).add(childCode)
-                }
+              const childCode = line.component_code || line.item_code
+              // If this component is itself a sub-assembly in the current plan, mark it as a dependency
+              if (childCode && allItemCodes.has(childCode) && childCode !== sa.item_code) {
+                console.log(`[ProductionPlanningService] Dependency found: ${sa.item_code} depends on ${childCode}`)
+                dependencyGraph.get(sa.item_code).add(childCode)
               }
             }
           }

@@ -475,7 +475,7 @@ node setup-material-deduction.js
 
 ### 2. Test Allocation
 ```bash
-curl -X POST http://localhost:5001/api/inventory/allocate-materials \
+curl -X POST http://localhost:5000/api/inventory/allocate-materials \
   -H "Content-Type: application/json" \
   -d '{
     "work_order_id": "WO-TEST",
@@ -492,7 +492,7 @@ curl -X POST http://localhost:5001/api/inventory/allocate-materials \
 
 ### 3. Test Consumption
 ```bash
-curl -X POST http://localhost:5001/api/inventory/track-consumption \
+curl -X POST http://localhost:5000/api/inventory/track-consumption \
   -H "Content-Type: application/json" \
   -d '{
     "job_card_id": "JC-TEST",
@@ -510,7 +510,7 @@ curl -X POST http://localhost:5001/api/inventory/track-consumption \
 
 ### 4. Test Finalize
 ```bash
-curl -X POST http://localhost:5001/api/inventory/finalize-materials/WO-TEST
+curl -X POST http://localhost:5000/api/inventory/finalize-materials/WO-TEST
 ```
 
 ---
