@@ -467,13 +467,13 @@ const ProductionRibbon = ({
         </div>
       )}
 
-      <div className="bg-white rounded  border border-slate-100 p-2 mb-2 flex flex-wrap items-center gap-y-2">
+      <div className="mb-2 flex flex-wrap items-center gap-y-2">
         {/* Target Item Info */}
         <div className="flex items-center gap-5 p-2 border-r border-slate-100 flex-1 ">
 
           <div className="min-w-0">
             <p className="text-xs   text-slate-400  mb-1">Target Item</p>
-            <h2 className="text-md  text-slate-900 truncate leading-tight mb-1" title={itemName || jobCardData?.item_name}>
+            <h2 className="text-sm  text-slate-900 truncate leading-tight mb-1" title={itemName || jobCardData?.item_name}>
               {itemName || jobCardData?.item_name || 'N/A'}
             </h2>
             <div className="flex items-center gap-2">
@@ -481,7 +481,7 @@ const ProductionRibbon = ({
                 {jobCardData?.item_code || '---'}
               </span>
               {jobCardData?.execution_mode && (
-                <span className={`p-1 text-xs  rounded border   ${String(jobCardData.execution_mode).toUpperCase().includes('INHOUSE') || String(jobCardData.execution_mode).toUpperCase().includes('IN_HOUSE')
+                <span className={`p-1 text-xs  rounded border   ${String(jobCardData.execution_mode).toUpperCase().includes('Inhouse') || String(jobCardData.execution_mode).toUpperCase().includes('In_house')
                   ? 'bg-blue-50 text-blue-600 border-blue-100'
                   : 'bg-amber-50 text-amber-600 border-amber-100'
                   }`}>
@@ -507,14 +507,14 @@ const ProductionRibbon = ({
         </div>
 
         {/* Action Center - Integrated into Ribbon */}
-        <div className="flex items-center gap-3 px-4">
+        <div className="flex items-center gap-3 p-2">
           <button
             onClick={handleUpdateProduction}
             disabled={isSubmitting}
             className="flex items-center gap-2 p-2  bg-slate-800 text-white rounded hover:bg-slate-700 disabled:opacity-50 transition-all text-xs   "
             title="Save production logs and quality data"
           >
-            {isSubmitting ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded animate-spin" /> : <Activity size={14} />}
+            {isSubmitting ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded animate-spin" /> : <Activity size={14} />}
             Update Progress
           </button>
 
@@ -525,7 +525,7 @@ const ProductionRibbon = ({
               className="flex items-center gap-2 p-2  bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 shadow-md shadow-emerald-100 transition-all text-xs   "
               title={`Transfer ${transferableQty} accepted units to next operation`}
             >
-              {isSubmitting ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded animate-spin" /> : <ArrowRightLeft size={14} />}
+              {isSubmitting ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded animate-spin" /> : <ArrowRightLeft size={14} />}
               Transfer {transferableQty.toFixed(0)} Units
             </button>
           )}
@@ -538,7 +538,7 @@ const ProductionRibbon = ({
               disabled={isSubmitting}
               className="flex items-center gap-2 p-2  bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 shadow-md shadow-blue-100 transition-all text-xs   "
             >
-              {isSubmitting ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded animate-spin" /> : <CheckCircle size={14} />}
+              {isSubmitting ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded animate-spin" /> : <CheckCircle size={14} />}
               Complete Stage
             </button>
           )}
@@ -551,7 +551,7 @@ const ProductionRibbon = ({
           <div className="">
             <p className="text-xs   text-slate-400  mb-2">{readyLabel}</p>
             <div className="flex items-baseline  gap-1.5">
-              <span className={`text-md ${readyQty >= totalPlanned ? 'text-emerald-600' : (readyQty > 0 ? 'text-amber-600' : 'text-rose-600')} `}>
+              <span className={`text-sm ${readyQty >= totalPlanned ? 'text-emerald-600' : (readyQty > 0 ? 'text-amber-600' : 'text-rose-600')} `}>
                 {parseFloat(readyQty || 0).toLocaleString()}
               </span>
               {(hasSubAssemblies || hasPreviousOp) && (
@@ -594,7 +594,7 @@ const ProductionRibbon = ({
             </>
           )}
           <div className="">
-            <p className={`text-xs mb-2 ${isShipmentOp ? 'text-blue-500' : 'text-amber-500'}`}>{isShipmentOp ? 'Ready for Dispatch' : 'Ready for Transfer'}</p>
+            <p className={`text-xs mb-2 ${isShipmentOp ? 'text-blue-500' : 'text-amber-500'}`}>{isShipmentOp ? 'Ready for Dispatch' : 'Ready to Transfer'}</p>
             <div className="flex items-baseline justify-left gap-1.5">
               <span className={`text-md ${isShipmentOp ? 'text-blue-600 font-bold' : 'text-amber-600'} `}>
                 {transferableQty.toLocaleString()}
@@ -741,7 +741,13 @@ const HandoverStatusSection = ({ previousOperationData, totalPlanned, inputAvail
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-6 border-l border-slate-200 pl-6 w-full md:w-auto">
+        <div className="grid grid-cols-4 gap-6 border-l border-slate-200 pl-6 w-full md:w-auto">
+          <div>
+            <p className="text-xs text-slate-400    mb-1">Produced</p>
+            <p className="text-md  text-slate-600 leading-none">
+              {parseFloat(previousOperationData.produced_quantity || 0).toLocaleString()}
+            </p>
+          </div>
           <div>
             <p className="text-xs text-slate-400    mb-1">Accepted</p>
             <p className="text-md  text-slate-900 leading-none">
@@ -766,7 +772,7 @@ const HandoverStatusSection = ({ previousOperationData, totalPlanned, inputAvail
   );
 };
 
-const UnifiedSubAssemblyStatus = ({ dependencies, buffers, bottleneck }) => {
+const UnifiedSubAssemblyStatus = ({ dependencies, buffers, bottleneck, jobCardData }) => {
   if ((!dependencies || dependencies.length === 0) && (!buffers || buffers.length === 0)) return null;
 
   // Combine data from dependencies and buffers
@@ -776,15 +782,24 @@ const UnifiedSubAssemblyStatus = ({ dependencies, buffers, bottleneck }) => {
     // First, process dependencies (production status)
     dependencies.forEach(dep => {
       const code = dep.child_item_code;
+      const parentPlanned = parseFloat(jobCardData?.planned_quantity) || 1;
+      const requiredTotal = parseFloat(dep.required_qty) || 0;
+      const qtyPerParent = requiredTotal / parentPlanned;
+      const accepted = parseFloat(dep.child_accepted_qty || 0);
+      
       dataMap[code] = {
         item_code: code,
         item_name: dep.child_item_name || code,
+        child_wo_id: dep.child_wo_id,
         uom: dep.uom || 'pcs',
         status: dep.child_status,
         produced: parseFloat(dep.child_produced_qty || 0),
-        accepted: parseFloat(dep.child_accepted_qty || 0),
+        accepted: accepted,
         planned: parseFloat(dep.child_planned_qty || 0),
         transferred: parseFloat(dep.child_transferred_qty || 0),
+        required_total: requiredTotal,
+        qty_per_parent: qtyPerParent,
+        ready_units: qtyPerParent > 0 ? accepted / qtyPerParent : accepted,
         consumed: 0,
         available: 0
       };
@@ -793,6 +808,10 @@ const UnifiedSubAssemblyStatus = ({ dependencies, buffers, bottleneck }) => {
     // Then, process buffers (transfer status)
     buffers.forEach(buffer => {
       const code = buffer.source_item_code;
+      const available = parseFloat(buffer.available_qty || 0);
+      const consumed = parseFloat(buffer.consumed_qty || 0);
+      const qtyPerParent = parseFloat(buffer.qty_per_unit || 1.0);
+      
       if (!dataMap[code]) {
         dataMap[code] = {
           item_code: code,
@@ -802,31 +821,45 @@ const UnifiedSubAssemblyStatus = ({ dependencies, buffers, bottleneck }) => {
           accepted: 0,
           planned: 0,
           transferred: 0,
+          qty_per_parent: qtyPerParent,
+          ready_units: qtyPerParent > 0 ? available / qtyPerParent : available,
           consumed: 0,
           available: 0
         };
       }
       
-      const available = parseFloat(buffer.available_qty || 0);
-      const consumed = parseFloat(buffer.consumed_qty || 0);
-      
       dataMap[code].available = available;
       dataMap[code].consumed = consumed;
       dataMap[code].transferred = available + consumed;
+      
+      // Update ready units if buffer info is more specific
+      if (buffer.qty_per_unit) {
+        dataMap[code].qty_per_parent = qtyPerParent;
+        dataMap[code].ready_units = qtyPerParent > 0 ? available / qtyPerParent : available;
+      }
     });
 
     return Object.values(dataMap);
-  }, [dependencies, buffers]);
+  }, [dependencies, buffers, jobCardData?.planned_quantity]);
 
   return (
-    <div className="bg-white rounded border border-slate-100 p-4 mb-4">
-      <SectionTitle 
-        title="Sub-Assembly & Component Status" 
-        icon={Boxes} 
-        subtitle="Unified tracking of component production and transfer progress" 
-      />
+    <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm mb-4 overflow-hidden">
+      <div className="bg-slate-50/50 px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="p-1 bg-white rounded shadow-sm text-indigo-600 border border-slate-100">
+            <Boxes size={14} />
+          </div>
+          <h3 className="text-xs font-bold text-slate-700">Sub-Assembly & Component Flow</h3>
+        </div>
+        {bottleneck && (
+          <div className="px-2 py-0.5 bg-rose-50 border border-rose-100 rounded-full flex items-center gap-1.5 animate-pulse">
+            <AlertTriangle size={10} className="text-rose-500" />
+            <span className="text-[9px] text-rose-600 font-bold uppercase">Bottleneck: {Math.floor(bottleneck.potential)} units</span>
+          </div>
+        )}
+      </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
         {combinedData.map((item, index) => {
           const prodProgress = item.planned > 0 ? (item.accepted / item.planned) * 100 : 0;
           const transferTotal = item.available + item.consumed;
@@ -834,82 +867,48 @@ const UnifiedSubAssemblyStatus = ({ dependencies, buffers, bottleneck }) => {
           const isBottleneck = bottleneck && (item.item_name === bottleneck.name || item.item_code === bottleneck.name);
 
           return (
-            <div key={index} className={`flex flex-col p-3 rounded border transition-colors group ${isBottleneck ? 'bg-rose-50 border-rose-200 ring-2 ring-rose-500/10' : 'bg-slate-50/50 border-slate-100 hover:border-indigo-200'}`}>
-              {/* Header */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="min-w-0">
-                   <div className="flex items-center gap-2">
-                     <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{item.item_code}</p>
-                     {isBottleneck && (
-                        <span className="px-1.5 py-0.5 bg-rose-500 text-white text-[8px] rounded flex items-center gap-1 font-bold">
-                          <AlertTriangle size={8} /> BOTTLENECK
-                        </span>
-                     )}
-                   </div>
-                   <h4 className={`text-sm font-bold truncate ${isBottleneck ? 'text-rose-900' : 'text-slate-800'}`} title={item.item_name}>
-                     {item.item_name}
-                   </h4>
+            <div key={index} className={`flex flex-col p-2 rounded border transition-all ${isBottleneck ? 'bg-rose-50/40 border-rose-200 shadow-sm shadow-rose-100' : 'bg-white border-slate-100 hover:border-indigo-200'}`}>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isBottleneck ? 'bg-rose-500 animate-pulse' : (prodProgress >= 100 ? 'bg-emerald-500' : 'bg-indigo-400')}`} />
+                  <div className="flex flex-col min-w-0">
+                    <h4 className="text-[11px] font-bold text-slate-700 truncate leading-none mb-0.5" title={item.item_name}>{item.item_name}</h4>
+                    {item.child_wo_id && (
+                      <span className="text-[8px] text-slate-400 font-medium truncate">{item.child_wo_id}</span>
+                    )}
+                  </div>
                 </div>
-                {item.status && <StatusBadge status={item.status} />}
-              </div>
-
-              {/* Production Status */}
-              <div className="mb-3 p-2 bg-white/60 rounded border border-slate-100/50">
-                <p className="text-[9px] text-slate-400 font-bold uppercase mb-2 flex items-center gap-1">
-                  <Activity size={10} /> Production Progress
-                </p>
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                   <div>
-                     <p className="text-[10px] text-slate-500">Produced/Accepted</p>
-                     <p className={`text-md font-bold ${isBottleneck ? 'text-rose-600' : 'text-slate-700'}`}>
-                       {item.produced}/{item.accepted} <span className="text-[10px] font-normal text-slate-400">{item.uom}</span>
-                     </p>
-                   </div>
-                   <div className="text-right">
-                     <p className="text-[10px] text-slate-500">Target</p>
-                     <p className="text-sm font-medium text-slate-600">{item.planned}</p>
-                   </div>
-                </div>
-                <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-1000 ${prodProgress >= 100 ? 'bg-emerald-500' : (isBottleneck ? 'bg-rose-500' : 'bg-indigo-500')}`}
-                    style={{ width: `${Math.min(100, prodProgress)}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Transfer/Usage Status */}
-              <div className="p-2 bg-white/60 rounded border border-slate-100/50">
-                <p className="text-[9px] text-slate-400 font-bold uppercase mb-2 flex items-center gap-1">
-                  <Truck size={10} /> Transfer & Usage
-                </p>
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                   <div>
-                     <p className="text-[10px] text-slate-500">Available / Transferred</p>
-                     <p className={`text-md font-bold ${isBottleneck ? 'text-rose-600' : 'text-indigo-600'}`}>
-                       {item.available} / {item.transferred} <span className="text-[10px] font-normal text-slate-400">{item.uom}</span>
-                     </p>
-                   </div>
-                   <div className="text-right">
-                     <p className="text-[10px] text-slate-500">Consumed</p>
-                     <p className="text-sm font-medium text-slate-600">{item.consumed}</p>
-                   </div>
-                </div>
-                <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-1000 ${usageProgress >= 100 ? 'bg-emerald-500' : (isBottleneck ? 'bg-rose-500' : 'bg-indigo-500')}`}
-                    style={{ width: `${Math.min(100, usageProgress)}%` }}
-                  />
+                <div className="flex flex-col items-end flex-shrink-0">
+                   <span className="text-[9px] font-bold text-slate-400 leading-none">{item.item_code.split('-').pop()}</span>
+                   <span className={`text-[8px] font-bold uppercase mt-0.5 ${item.status === 'Completed' ? 'text-emerald-600' : 'text-amber-500'}`}>{item.status}</span>
                 </div>
               </div>
               
-              {isBottleneck && (
-                <div className="mt-3 p-1.5 bg-rose-100/50 rounded border border-rose-200/50 text-center">
-                  <p className="text-[10px] text-rose-600 font-bold uppercase">
-                    Limiting Factor: {Math.floor(bottleneck.potential)} units
-                  </p>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                <div className="flex flex-col">
+                  <div className="flex justify-between text-[9px] mb-0.5 leading-none">
+                    <span className="text-slate-400">Accepted</span>
+                    <span className="font-bold text-slate-600">{Math.round(item.accepted)} / {Math.round(item.required_total || item.planned)}</span>
+                  </div>
+                  <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-1000 ${prodProgress >= 100 ? 'bg-emerald-500' : (isBottleneck ? 'bg-rose-500' : 'bg-indigo-500')}`} 
+                      style={{ width: `${Math.min(100, prodProgress)}%` }} 
+                    />
+                  </div>
                 </div>
-              )}
+                <div className="flex flex-col">
+                  <div className="flex justify-between text-[9px] mb-0.5 leading-none">
+                    <span className="text-slate-400">Ready Qty</span>
+                    <span className={`font-bold ${isBottleneck ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      {Math.floor(item.ready_units)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[8px] text-slate-400 leading-none mt-1">
+                    <span>Ratio: {item.qty_per_parent > 0 ? `1:${item.qty_per_parent.toFixed(1)}` : 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           );
         })}
@@ -1028,7 +1027,7 @@ const calculateTotalProduced = (logs, rejs) => {
     const accepted = (parseFloat(rej.accepted_qty) || 0);
     const rejected = (parseFloat(rej.rejected_qty) || 0);
     const scrap = (parseFloat(rej.scrap_qty) || 0);
-    shiftMap[key].rejections += accepted + rejected + scrap;
+    shiftMap[key].rejections += accepted + Math.max(rejected, scrap);
     shiftMap[key].accepted += accepted;
   });
 
@@ -1052,7 +1051,7 @@ const calculateTotalAccepted = (logs, rejs) => {
       shiftMap[key].accepted += (parseFloat(rej.accepted_qty) || 0);
     }
     
-    shiftMap[key].rejections += (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0);
+    shiftMap[key].rejections += (parseFloat(rej.accepted_qty) || 0) + Math.max((parseFloat(rej.rejected_qty) || 0), (parseFloat(rej.scrap_qty) || 0));
     shiftMap[key].hasRejection = true;
   });
 
@@ -1225,11 +1224,9 @@ export default function ProductionEntry() {
   const qualityScore = qualityInspectedTotal > 0 ? ((totalAcceptedQty / qualityInspectedTotal) * 100).toFixed(1) : 0
   const hasPendingApproval = useMemo(() => rejections.some(rej => rej.status !== 'Approved'), [rejections])
 
-  const maxAllowedQty = Math.max(
-    parseFloat(jobCardData?.max_allowed_quantity || 0),
+  const maxAllowedQty = Math.min(
     parseFloat(jobCardData?.planned_quantity || 0),
-    previousOperationData ? parseFloat(previousOperationData.transferred_quantity || 0) : 0,
-    parseFloat(jobCardData?.input_qty || 0) + parseFloat(jobCardData?.input_buffer_qty || 0)
+    bottleneckData?.readyQty !== undefined ? bottleneckData.readyQty : parseFloat(jobCardData?.planned_quantity || 0)
   );
 
   const totalTargetQty = Math.max(
@@ -1238,7 +1235,7 @@ export default function ProductionEntry() {
   );
   const isOperationFinished = isShipmentOp 
     ? (transferredQty + transferableQty >= totalTargetQty && totalTargetQty > 0 && (planFulfillmentStatus?.allReady ?? true))
-    : (totalAcceptedQty >= totalTargetQty && totalTargetQty > 0);
+    : (transferredQty >= totalTargetQty && totalTargetQty > 0 && transferableQty <= 0);
 
   // Auto-fill shipment quantity and source warehouse
   useEffect(() => {
@@ -1338,12 +1335,20 @@ export default function ProductionEntry() {
             editingId
           );
 
+          // If rejected_qty is changed, automatically update scrap_qty as well
+          if (field === 'rejected_qty') {
+            updated.scrap_qty = value;
+          }
+
           const p = stats.produced;
           const i = stats.totalInspected;
           const r = parseFloat(field === 'rejected_qty' ? value : updated.rejected_qty) || 0;
           const s = parseFloat(field === 'scrap_qty' ? value : updated.scrap_qty) || 0;
 
-          updated.accepted_qty = Math.max(0, p - i - r - s);
+          // Accepted = Produced - Inspected - Max(Rejected, Scrap)
+          // Since they are synced, max(r,s) is fine, but using max for robustness
+          const totalLoss = Math.max(r, s);
+          updated.accepted_qty = Math.max(0, p - i - totalLoss);
         }
       }
 
@@ -2213,7 +2218,10 @@ export default function ProductionEntry() {
       const r = parseFloat(prev.rejected_qty) || 0;
       const s = parseFloat(prev.scrap_qty) || 0;
       const i = parseFloat(prev.inspected_qty) || 0;
-      const expected = Math.max(0, p - r - s - i);
+      // Calculate total loss (Scrap should already include Rejected units as per requirement)
+      // We use Math.max to ensure we at least subtract the rejections even if scrap is somehow lower
+      const totalLoss = Math.max(r, s);
+      const expected = Math.max(0, p - totalLoss - i);
 
       if (prev.accepted_qty !== expected) {
         return {
@@ -2377,16 +2385,24 @@ export default function ProductionEntry() {
         return
       }
 
-      // 2. Auto-start the job card if needed
+      // 2. Auto-start the job card if needed (ONLY if workstation and operator are assigned)
       const jobCardStatus = normalizeStatus(jobCard?.status)
-      if (jobCardStatus === 'draft' || jobCardStatus === 'pending' || jobCardStatus === 'ready') {
+      const hasAssignment = (jobCard?.machine_id || jobCard?.workstation_id) && (jobCard?.operator_id || jobCard?.assignee_id || jobCard?.operator_name || jobCard?.assignee_name);
+      const isOutsourced = String(jobCard?.execution_mode || '').toUpperCase().includes('OUTSOURCE') || String(jobCard?.execution_mode || '').toUpperCase().includes('SUBCONTRACT');
+
+      if ((jobCardStatus === 'draft' || jobCardStatus === 'pending' || jobCardStatus === 'ready') && (hasAssignment || isOutsourced)) {
         const updateData = { status: 'in-progress' };
         if (!jobCard.actual_start_date) {
           updateData.actual_start_date = getLocalDate();
           jobCard.actual_start_date = updateData.actual_start_date;
         }
-        await productionService.updateJobCard(jobCard.job_card_id, updateData)
-        jobCard.status = 'in-progress'
+        try {
+          await productionService.updateJobCard(jobCard.job_card_id, updateData)
+          jobCard.status = 'in-progress'
+        } catch (startErr) {
+          console.warn('Failed to auto-start job card:', startErr.message);
+          // Don't block the page load, just don't set to in-progress
+        }
       }
 
       setWorkstations(wsRes.data || [])
@@ -2461,8 +2477,17 @@ export default function ProductionEntry() {
 
         // Find previous operation (either in same WO or across WO in same Plan)
         let prevCard;
-        if (jobCard.production_plan_id && currentPlanSequence > 0) {
-          prevCard = jobCards.find(c => parseInt(c.plan_operation_sequence || 0) === currentPlanSequence - 1)
+        if (jobCard.production_plan_id) {
+          // If part of a plan, we prioritize plan_operation_sequence
+          // Fallback to operation_sequence if plan_operation_sequence is not set (backfill compatibility)
+          const targetSequence = currentPlanSequence > 0 ? currentPlanSequence - 1 : (currentSequence > 0 ? currentSequence - 1 : -1);
+          
+          if (targetSequence >= 0) {
+            prevCard = jobCards.find(c => {
+              const seq = parseInt(c.plan_operation_sequence || c.operation_sequence || 0);
+              return seq === targetSequence;
+            });
+          }
         } else if (currentSequence > 0) {
           prevCard = jobCards.find(c =>
             c.work_order_id === woId &&
@@ -3040,15 +3065,44 @@ export default function ProductionEntry() {
       actualProductionMinutes = Math.max(0, actualProductionMinutes);
     }
 
-    // Quantity Validation: Total produced cannot exceed planned/transferred quantity
-    // ALLOWANCE: If items were rejected, they can be re-produced.
+    // Quantity Validation: Total produced cannot exceed material availability
+    // We calculate the absolute physical limit based on sub-assembly transfers (bottleneck)
     const inputQty = parseFloat(timeLogForm.completed_qty || 0);
-    const allowanceLimit = maxAllowedQty + totalRejectedQty;
+    const materialLimit = bottleneckData?.readyQty ?? Infinity;
 
-    if (totalProducedQty + inputQty > allowanceLimit + 0.001) {
-      toast.addToast(`Production Limit Reached: You cannot record more than ${allowanceLimit.toLocaleString()} units for this operation. (Already produced: ${totalProducedQty.toLocaleString()})`, 'error');
-      return;
-    }
+    // We calculate the impact of this new log on the total processed quantity
+    // using the same shift-aware logic as the backend and the UI summary
+    const currentShift = normalizeShift(timeLogForm.shift);
+    const currentDay = timeLogForm.day_number || 1;
+    const currentDate = formatDateForMatch(timeLogForm.log_date);
+    const currentKey = `day_${currentDay}_${currentShift}_${currentDate}`;
+    
+    const shiftLogs = timeLogs.filter(log => 
+      `day_${log.day_number || 1}_${normalizeShift(log.shift)}_${formatDateForMatch(log.log_date)}` === currentKey
+    );
+    const shiftRejs = rejections.filter(rej => 
+      `day_${rej.day_number || 1}_${normalizeShift(rej.shift)}_${formatDateForMatch(rej.log_date)}` === currentKey
+    );
+    
+    const shiftProduced = shiftLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0);
+    const shiftRejProcessed = shiftRejs.reduce((sum, rej) => 
+      sum + (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0), 0
+    );
+    
+    const currentShiftMax = Math.max(shiftProduced, shiftRejProcessed);
+    const newShiftMax = Math.max(shiftProduced + inputQty, shiftRejProcessed);
+    const shiftImpact = newShiftMax - currentShiftMax;
+
+    const projectedTotalProcessed = totalProducedQty + shiftImpact;
+
+  if (projectedTotalProcessed > materialLimit + 0.001) {
+    const reason = projectedTotalProcessed > materialLimit ? 
+      `Material Shortage: Total units processed (${projectedTotalProcessed.toLocaleString()}) would exceed the available material limit (${materialLimit.toLocaleString()}).` :
+      `Production Limit: Total units processed (${projectedTotalProcessed.toLocaleString()}) would exceed the planned quantity plus rejections.`;
+    
+    toast.addToast(`${reason} (Already processed: ${totalProducedQty.toLocaleString()})`, 'error');
+    return;
+  }
 
     // Flow Manufacturing: Buffer Bottleneck Logic
     // If we have upstream dependencies (buffers), check if we have enough components
@@ -3106,8 +3160,8 @@ export default function ProductionEntry() {
         auto_transfer: nextOperationForm.auto_transfer,
         transfer_quantity: timeLogForm.completed_qty,
         next_job_card_id: nextJobCardId,
-        next_operator_id: nextOperationForm.next_operator_id,
-        next_machine_id: nextOperationForm.next_warehouse_id
+        next_operator_id: nextOperationForm.next_operator_id || null,
+        next_machine_id: nextOperationForm.next_warehouse_id || null
       })
 
       // Sync operator and machine to Job Card if they are not assigned
@@ -3137,6 +3191,42 @@ export default function ProductionEntry() {
 
   const handleAddRejection = async (e) => {
     e.preventDefault()
+
+    // Quantity Validation: Total processed cannot exceed material availability
+    const inputQty = (parseFloat(rejectionForm.accepted_qty) || 0) + 
+                     (parseFloat(rejectionForm.rejected_qty) || 0) + 
+                     (parseFloat(rejectionForm.scrap_qty) || 0);
+    const materialLimit = bottleneckData?.readyQty ?? Infinity;
+    
+    // We calculate the impact of this new rejection on the total processed quantity
+    // using the same shift-aware logic as the backend and the UI summary
+    const currentShift = normalizeShift(rejectionForm.shift);
+    const currentDay = rejectionForm.day_number || 1;
+    const currentDate = formatDateForMatch(rejectionForm.log_date);
+    const currentKey = `day_${currentDay}_${currentShift}_${currentDate}`;
+    
+    const shiftLogs = timeLogs.filter(log => 
+      `day_${log.day_number || 1}_${normalizeShift(log.shift)}_${formatDateForMatch(log.log_date)}` === currentKey
+    );
+    const shiftRejs = rejections.filter(rej => 
+      `day_${rej.day_number || 1}_${normalizeShift(rej.shift)}_${formatDateForMatch(rej.log_date)}` === currentKey
+    );
+    
+    const shiftProduced = shiftLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0);
+    const shiftRejProcessed = shiftRejs.reduce((sum, rej) => 
+      sum + (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0), 0
+    );
+    
+    const currentShiftMax = Math.max(shiftProduced, shiftRejProcessed);
+    const newShiftMax = Math.max(shiftProduced, shiftRejProcessed + inputQty);
+    const shiftImpact = newShiftMax - currentShiftMax;
+    
+    const projectedTotalProcessed = totalProducedQty + shiftImpact;
+
+    if (projectedTotalProcessed > materialLimit + 0.001) {
+      toast.addToast(`Material Shortage: Total units processed (${projectedTotalProcessed.toLocaleString()}) would exceed the available material limit (${materialLimit.toLocaleString()}).`, 'error');
+      return;
+    }
 
     // Validation: Scheduled Date Range Check
     if (jobCardData?.scheduled_start_date) {
@@ -3203,8 +3293,8 @@ export default function ProductionEntry() {
         auto_transfer: nextOperationForm.auto_transfer,
         transfer_quantity: rejectionForm.accepted_qty,
         next_job_card_id: nextJobCardId,
-        next_operator_id: nextOperationForm.next_operator_id,
-        next_machine_id: nextOperationForm.next_warehouse_id,
+        next_operator_id: nextOperationForm.next_operator_id || null,
+        next_machine_id: nextOperationForm.next_warehouse_id || null,
         rejection_reason: rejectionForm.reason
       })
       toast.addToast('Quality entry added successfully', 'success')
@@ -3394,6 +3484,8 @@ export default function ProductionEntry() {
   const handleSaveInlineEdit = async () => {
     try {
       setIsSubmitting(true);
+      const materialLimit = bottleneckData?.readyQty ?? Infinity;
+      
       if (editingType === 'timeLog') {
         const entryStart = getEntryDateTime(editForm.log_date, editForm.from_time, editForm.from_period);
         let entryEnd = getEntryDateTime(editForm.log_date, editForm.to_time, editForm.to_period);
@@ -3408,8 +3500,32 @@ export default function ProductionEntry() {
           return;
         }
 
+        // Production Limit Validation
+        const oldLog = timeLogs.find(l => l.time_log_id === editingId);
+        const diff = (parseFloat(editForm.completed_qty) || 0) - (parseFloat(oldLog?.completed_qty) || 0);
+        if (diff > 0) {
+            // Simple check for now: if we are increasing, check against limit
+            // (Strictly we should use the shiftMap logic, but totalProducedQty + diff is a safe upper bound)
+            if (totalProducedQty + diff > materialLimit + 0.001) {
+                toast.addToast(`Material Shortage: Increasing this log would exceed the material limit of ${materialLimit.toLocaleString()}.`, 'error');
+                return;
+            }
+        }
+
         await productionService.updateTimeLog(editingId, editForm);
       } else if (editingType === 'rejection') {
+        // Production Limit Validation
+        const oldRej = rejections.find(r => r.rejection_id === editingId);
+        const oldProcessed = (parseFloat(oldRej?.accepted_qty) || 0) + (parseFloat(oldRej?.rejected_qty) || 0) + (parseFloat(oldRej?.scrap_qty) || 0);
+        const newProcessed = (parseFloat(editForm.accepted_qty) || 0) + (parseFloat(editForm.rejected_qty) || 0) + (parseFloat(editForm.scrap_qty) || 0);
+        const diff = newProcessed - oldProcessed;
+        
+        if (diff > 0) {
+            if (totalProducedQty + diff > materialLimit + 0.001) {
+                toast.addToast(`Material Shortage: Increasing this quality entry would exceed the material limit of ${materialLimit.toLocaleString()}.`, 'error');
+                return;
+            }
+        }
         await productionService.updateRejection(editingId, editForm);
       } else if (editingType === 'downtime') {
         const entryStart = getEntryDateTime(editForm.log_date, editForm.from_time, editForm.from_period);
@@ -3533,17 +3649,28 @@ export default function ProductionEntry() {
     try {
       setIsSubmitting(true)
 
-      // Strict check: if the user tries to update while marked as "Complete Operation" 
-      // but quantity doesn't match, we should handle it gracefully.
-      // In this UI, 'isOperationFinished' determines the automatic completion.
-      const shouldComplete = isOperationFinished
+      // Progress update should NOT automatically complete the operation
+      // Operation completion is now an explicit user action via the "Complete Stage" or "Final Dispatch" button.
+      const shouldComplete = false;
+
+      const isOutsourced = String(jobCardData?.execution_mode || '').toUpperCase().includes('OUTSOURCE') || String(jobCardData?.execution_mode || '').toUpperCase().includes('SUBCONTRACT');
+      const hasAssignment = (jobCardData?.machine_id || jobCardData?.workstation_id) && (jobCardData?.operator_id || jobCardData?.assignee_id || jobCardData?.operator_name || jobCardData?.assignee_name);
+      const currentStatus = normalizeStatus(jobCardData?.status);
+
+      const isStarted = totalProducedQty > 0 || totalAcceptedQty > 0 || transferableQty > 0;
 
       const updatePayload = {
         produced_quantity: totalProducedQty,
         accepted_quantity: totalAcceptedQty,
         rejected_quantity: totalRejectedQty,
         scrap_quantity: totalScrapQty,
-        status: shouldComplete ? 'completed' : 'in-progress'
+        status: (currentStatus === 'in-progress' || hasAssignment || isOutsourced || isStarted) ? 'in-progress' : currentStatus
+      }
+
+      if (updatePayload.status === 'in-progress' && !hasAssignment && !isOutsourced && !isStarted) {
+         toast.addToast('Cannot update production: Please assign a workstation and operator first.', 'error');
+         setIsSubmitting(false);
+         return;
       }
 
       if (isShipmentOp && isLastOperation) {
@@ -3627,8 +3754,8 @@ export default function ProductionEntry() {
 
         if (selectedOp && selectedOp.job_card_id) {
           updatePayload.next_job_card_id = selectedOp.job_card_id;
-          updatePayload.next_operator_id = nextOperationForm.next_operator_id;
-          updatePayload.next_machine_id = nextOperationForm.next_warehouse_id;
+          updatePayload.next_operator_id = nextOperationForm.next_operator_id || null;
+          updatePayload.next_machine_id = nextOperationForm.next_warehouse_id || null;
         } else if (selectedOp) {
           // Fallback matching if job_card_id not directly on enriched op
           const selectedSeq = parseInt(selectedOp.sequence || selectedOp.operation_sequence || 0);
@@ -3644,8 +3771,8 @@ export default function ProductionEntry() {
 
           if (nextJobCard) {
             updatePayload.next_job_card_id = nextJobCard.job_card_id;
-            updatePayload.next_operator_id = nextOperationForm.next_operator_id;
-            updatePayload.next_machine_id = nextOperationForm.next_warehouse_id;
+            updatePayload.next_operator_id = nextOperationForm.next_operator_id || null;
+            updatePayload.next_machine_id = nextOperationForm.next_warehouse_id || null;
           }
         }
       }
@@ -4103,6 +4230,7 @@ export default function ProductionEntry() {
                   dependencies={childDependencies} 
                   buffers={buffers}
                   bottleneck={bottleneckData.bottleneck}
+                  jobCardData={jobCardData}
                 />
               )}
             </div>
@@ -4110,7 +4238,7 @@ export default function ProductionEntry() {
             <div className="col-span-12 space-y-2 pb-20">
               {!isShipmentOp && (
                 <>
-                  <div id="time-logs" className="bg-white rounded  border border-slate-100 p-4 scroll-mt-6">
+                  <div id="time-logs" className="bg-white rounded  border border-slate-100 p-2 scroll-mt-6">
                 <div className="flex items-center justify-between">
                   <SectionTitle title="Production Logging" icon={Plus} subtitle="Record production output per operator and shift" />
                   {(() => {
@@ -4194,7 +4322,7 @@ export default function ProductionEntry() {
                 <DataTable columns={timeLogColumns} data={timeLogs} renderActions={(row) => renderTableActions(row, 'timeLog')} />
               </div>
 
-              <div id="quality-control" className="bg-white rounded  border border-slate-100 p-4 scroll-mt-6">
+              <div id="quality-control" className="bg-white rounded  border border-slate-100 p-2 scroll-mt-6">
                 <SectionTitle title="Quality & Inspection" icon={ShieldCheck} subtitle="Verify production quality and log rejections" />
                 <div className="bg-emerald-50/30 rounded p-2 mb-2 border border-emerald-100/50">
                   <form onSubmit={handleAddRejection} className="grid grid-cols-12 gap-2 items-end">
@@ -4251,7 +4379,15 @@ export default function ProductionEntry() {
                         <input
                           type="number"
                           value={rejectionForm.rejected_qty}
-                          onChange={(e) => setRejectionForm({ ...rejectionForm, rejected_qty: e.target.value })}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setRejectionForm(prev => ({ 
+                              ...prev, 
+                              rejected_qty: val,
+                              // Automatically add rejected units to scrap
+                              scrap_qty: val 
+                            }));
+                          }}
                           className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-rose-600  outline-none focus:ring-2 focus:ring-rose-500/20"
                           required
                         />
@@ -4301,7 +4437,7 @@ export default function ProductionEntry() {
                 <DataTable columns={rejectionColumns} data={rejections} renderActions={(row) => renderTableActions(row, 'rejection')} />
               </div>
 
-              <div id="downtime" className="bg-white rounded  border border-slate-100 p-4 scroll-mt-6">
+              <div id="downtime" className="bg-white rounded  border border-slate-100 p-2 scroll-mt-6">
                 <SectionTitle title="Downtime Tracking" icon={AlertTriangle} subtitle="Log machine downtime and maintenance periods" />
                 <div className="bg-amber-50/30 rounded p-2 mb-2 border border-amber-100/50">
                   {/* Shift Capacity Info */}
@@ -4482,7 +4618,7 @@ export default function ProductionEntry() {
             </>
           )}
 
-          <div id="next-operation" className="bg-white rounded  border border-slate-100 p-4 scroll-mt-6">
+          <div id="next-operation" className="bg-white rounded  border border-slate-100 p-2 scroll-mt-6">
                 <SectionTitle title="Next Stage Configuration" icon={ArrowRight} subtitle="Specify destination and operational parameters for the next manufacturing phase" />
                 {isShipmentOp && planFulfillmentStatus && (
                   <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
@@ -4545,7 +4681,7 @@ export default function ProductionEntry() {
                   return (
                     <div className="flex flex-col gap-4">
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                        <div className="col-span-12 md:col-span-4">
+                        <div className="col-span-12 md:col-span-3">
                           <FieldWrapper label={isLastOperation ? "Final Stage" : "Next Operation"} required={!isLastOperation}>
                             {isLastOperation ? (
                               <div className="p-2 bg-emerald-50 border border-emerald-100 rounded text-xs text-emerald-700 font-medium flex items-center gap-2">
@@ -4563,7 +4699,8 @@ export default function ProductionEntry() {
                                   setNextOperationForm({
                                     ...nextOperationForm,
                                     next_operation_id: val,
-                                    next_warehouse_id: op?.default_workstation || op?.workstation || nextOperationForm.next_warehouse_id,
+                                    next_warehouse_id: op?.default_workstation || op?.workstation || nextOperationForm.next_warehouse_id || null,
+                                    next_operator_id: op?.operator_id || op?.assignee_id || nextOperationForm.next_operator_id || null,
                                     inhouse: !isOutsource,
                                     outsource: isOutsource
                                   });
@@ -4624,11 +4761,11 @@ export default function ProductionEntry() {
                           </>
                         ) : (
                           <>
-                            <div className="col-span-12 md:col-span-4">
+                            <div className="col-span-12 md:col-span-3">
                               <FieldWrapper label="Target Warehouse" required>
                                 <SearchableSelect
                                   value={nextOperationForm.next_warehouse_id}
-                                  onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_warehouse_id: val })}
+                                  onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_warehouse_id: val || null })}
                                   options={[
                                     ...warehouses.map(w => ({ value: String(w.warehouse_id || w.name), label: `[WH] ${w.warehouse_name || w.name}` })),
                                     ...workstations.map(ws => ({ value: String(ws.name || ws.workstation_id), label: `[WS] ${ws.workstation_name || ws.name}` }))
@@ -4637,7 +4774,17 @@ export default function ProductionEntry() {
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="col-span-12 md:col-span-4">
+                            <div className="col-span-12 md:col-span-3">
+                              <FieldWrapper label="Next Operator">
+                                <SearchableSelect
+                                  value={nextOperationForm.next_operator_id}
+                                  onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_operator_id: val || null })}
+                                  options={operators.map(op => ({ value: String(op.employee_id), label: `${op.first_name} ${op.last_name}` }))}
+                                  placeholder="Assign Operator"
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="col-span-12 md:col-span-3">
                               <FieldWrapper label="Next Op Date" required>
                                 <input
                                   type="date"
@@ -4815,7 +4962,7 @@ export default function ProductionEntry() {
               </div>
 
               {!isShipmentOp && (
-                <div id="production-history" className="bg-white rounded  border border-slate-100 p-4 scroll-mt-6">
+                <div id="production-history" className="bg-white rounded  border border-slate-100 p-2 scroll-mt-6">
                   <div className="flex items-center justify-between">
                     <SectionTitle title="Detailed Production Report" icon={FileText} subtitle="Comprehensive log-level production metrics and shift quality results" />
                     <button onClick={downloadReport} className="flex items-center gap-2 p-2  bg-indigo-50 text-indigo-600 rounded border border-indigo-100  text-xs hover:bg-indigo-100 transition-all"><FileText size={14} />Download CSV</button>

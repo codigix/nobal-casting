@@ -25,18 +25,57 @@ const getLocalDateString = (date = new Date()) => {
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-export default function SchedulingGanttView({ onJobClick, onSlotClick }) {
+export default function SchedulingGanttView({ onJobClick, onSlotClick, filters }) {
   const [currentDate, setCurrentDate] = useState(getLocalDateString());
   const [workstations, setWorkstations] = useState([]);
   const [jobCards, setJobCards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentTimePos, setCurrentTimePos] = useState(null);
+  const [projectStartDate, setProjectStartDate] = useState(null);
 
   const containerRef = React.useRef(null);
 
+  // New Effect: Find project start date when filters change
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        // Fetch ALL job cards for the project/plan to find the start date
+        // We omit day/month/year to get all cards for the plan
+        const { day, month, year, ...otherFilters } = filters || {};
+        const response = await productionService.getJobCards(otherFilters);
+        const allCards = response.data || [];
+        
+        if (allCards.length > 0) {
+          // Find earliest scheduled_start_date or created_at
+          const dates = allCards
+            .map(jc => jc.scheduled_start_date || jc.project_created_at || jc.created_at)
+            .filter(Boolean)
+            .map(d => new Date(d));
+          
+          if (dates.length > 0) {
+            const minDate = new Date(Math.min(...dates));
+            const startStr = getLocalDateString(minDate);
+            setProjectStartDate(startStr);
+            setCurrentDate(startStr); // Auto-jump to project start date
+          }
+        }
+      } catch (err) {
+        console.error('Failed to find project start date:', err);
+      }
+    };
+
+    if (filters?.production_plan_id || filters?.search) {
+      fetchInitialData();
+    } else {
+      // Reset if no project filters
+      setCurrentDate(getLocalDateString());
+      setProjectStartDate(null);
+    }
+  }, [filters?.production_plan_id, filters?.search]);
+
   useEffect(() => {
     fetchData();
-  }, [currentDate]);
+  }, [currentDate, filters?.production_plan_id, filters?.search]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -69,7 +108,12 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick }) {
       setLoading(true);
       const [wsRes, jcRes] = await Promise.all([
         productionService.getWorkstationsList(),
-        productionService.getJobCards({ day: currentDate.split('-')[2], month: currentDate.split('-')[1], year: currentDate.split('-')[0] })
+        productionService.getJobCards({ 
+          ...filters,
+          day: currentDate.split('-')[2], 
+          month: currentDate.split('-')[1], 
+          year: currentDate.split('-')[0] 
+        })
       ]);
       setWorkstations(wsRes.data || []);
       setJobCards(jcRes.data || []);
@@ -178,15 +222,28 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick }) {
 
         <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
           <button 
-            onClick={() => setCurrentDate(new Date().toISOString().split('T')[0])} 
-            className="px-3 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors border-r border-slate-100"
+            onClick={() => setCurrentDate(getLocalDateString())} 
+            className="px-3 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
           >
             Today
           </button>
-          <button onClick={() => navigateDate(-1)} className="p-1.5 hover:bg-slate-50 rounded-md text-slate-600 transition-colors">
+          {projectStartDate && (
+            <button 
+              onClick={() => setCurrentDate(projectStartDate)} 
+              className="px-3 py-1 text-xs font-semibold text-amber-600 hover:bg-amber-50 rounded-md transition-colors border-l border-slate-100"
+              title="Jump to Project Start Date"
+            >
+              Project Start
+            </button>
+          )}
+          <button 
+            onClick={() => navigateDate(-1)} 
+            disabled={projectStartDate && currentDate <= projectStartDate}
+            className={`p-1.5 rounded-md transition-colors ${projectStartDate && currentDate <= projectStartDate ? 'text-slate-300 cursor-not-allowed' : 'hover:bg-slate-50 text-slate-600'}`}
+          >
             <ChevronLeft size={18} />
           </button>
-          <div className="px-4 font-medium text-sm text-slate-700 min-w-[140px] text-center">
+          <div className="px-4 font-medium text-sm text-slate-700 min-w-[140px] text-center border-x border-slate-100">
             {new Date(currentDate).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
           </div>
           <button onClick={() => navigateDate(1)} className="p-1.5 hover:bg-slate-50 rounded-md text-slate-600 transition-colors">

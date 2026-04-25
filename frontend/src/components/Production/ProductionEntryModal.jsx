@@ -254,9 +254,20 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
 
   const handleTimeLogChange = (e) => {
     const { name, value } = e.target
+    const val = (name === 'completed_qty' || name === 'accepted_qty' || name === 'rejected_qty' || name === 'scrap_qty') 
+      ? parseFloat(value) || 0 
+      : value;
+
     setTimeLogForm(prev => ({
       ...prev,
-      [name]: value
+      [name]: val,
+      // Sync rejected_qty to scrap_qty as per requirement
+      ...(name === 'rejected_qty' ? { scrap_qty: val } : {}),
+      // Auto-calculate accepted_qty if completed_qty or rejected/scrap changes
+      ...( (name === 'completed_qty' || name === 'rejected_qty' || name === 'scrap_qty') ? {
+        accepted_qty: Math.max(0, (name === 'completed_qty' ? val : prev.completed_qty) - 
+          Math.max(name === 'rejected_qty' ? val : prev.rejected_qty, name === 'scrap_qty' ? val : prev.scrap_qty))
+      } : {})
     }))
   }
 
@@ -302,8 +313,8 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
         return
       }
 
-      if (acceptedQty + rejectedQty + scrapQty > completedQty) {
-        toast.addToast(`Accepted (${acceptedQty}) + Rejected (${rejectedQty}) + Scrap (${scrapQty}) cannot exceed Completed (${completedQty})`, 'error')
+      if (acceptedQty + Math.max(rejectedQty, scrapQty) > completedQty + 0.001) {
+        toast.addToast(`Accepted (${acceptedQty}) + Loss (${Math.max(rejectedQty, scrapQty)}) cannot exceed Completed (${completedQty})`, 'error')
         return
       }
 
@@ -370,16 +381,22 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
 
   const handleRejectionChange = (e) => {
     const { name, value } = e.target
+    const val = name === 'rejected_qty' ? parseFloat(value) || 0 : value
     setRejectionForm(prev => ({
       ...prev,
-      [name]: name === 'rejected_qty' ? parseFloat(value) || 0 : value
+      [name]: val,
+      // Sync rejected_qty to scrap_qty
+      ...(name === 'rejected_qty' ? { scrap_qty: val } : {})
     }))
   }
 
   const handleAddRejection = async (e) => {
     e.preventDefault()
     
-    if (!rejectionForm.reason || rejectionForm.rejected_qty <= 0) {
+    const rejQty = parseFloat(rejectionForm.rejected_qty) || 0;
+    const scrapQty = parseFloat(rejectionForm.scrap_qty) || rejQty;
+
+    if (!rejectionForm.reason || (rejQty <= 0 && scrapQty <= 0)) {
       toast.addToast('Please select a reason and enter quantity', 'error')
       return
     }
@@ -388,7 +405,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
     const totalRejectedSoFar = rejections.reduce((sum, r) => sum + (parseFloat(r.rejected_qty) || 0), 0)
     const totalTimeLogRejected = timeLogs.reduce((sum, log) => sum + (parseFloat(log.rejected_qty) || 0), 0)
     
-    const combinedRejected = totalRejectedSoFar + totalTimeLogRejected + rejectionForm.rejected_qty
+    const combinedRejected = totalRejectedSoFar + totalTimeLogRejected + rejQty
 
     if (combinedRejected > totalProducedSoFar) {
       toast.addToast(`Total rejections (${combinedRejected.toFixed(2)}) cannot exceed total produced quantity (${totalProducedSoFar.toFixed(2)})`, 'error')
@@ -400,9 +417,9 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
       const payload = {
         job_card_id: jobCardId,
         rejection_reason: rejectionForm.reason,
-        rejected_qty: parseFloat(rejectionForm.rejected_qty) || 0,
+        rejected_qty: rejQty,
         accepted_qty: 0, // Default to 0 as it's primarily a rejection log
-        scrap_qty: 0,
+        scrap_qty: scrapQty,
         notes: rejectionForm.notes,
         shift: timeLogForm.shift, // Use current active shift
         log_date: new Date().toISOString().split('T')[0]

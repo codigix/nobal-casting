@@ -557,6 +557,21 @@ export const getOutwardChallanItems = async (challan_id) => {
   return response.data
 }
 
+export const getInwardChallanItems = async (challan_id) => {
+  const response = await api.get(`/production/subcontract/inward-challans/${challan_id}/items`)
+  return response.data
+}
+
+export const deleteOutwardChallan = async (id) => {
+  const response = await api.delete(`/production/subcontract/outward-challans/${id}`)
+  return response.data
+}
+
+export const deleteInwardChallan = async (id) => {
+  const response = await api.delete(`/production/subcontract/inward-challans/${id}`)
+  return response.data
+}
+
 export const getItemGroups = async () => {
   const response = await api.get('/item-groups')
   return response.data

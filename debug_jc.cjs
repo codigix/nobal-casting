@@ -1,33 +1,24 @@
-
 const mysql = require('mysql2/promise');
 
-async function checkJobCards() {
+async function checkProductionEntries() {
   const connection = await mysql.createConnection({
     host: 'localhost',
-    user: 'root',
-    password: 'root',
-    database: 'nobalcasting'
+    user: 'nobalcasting_user',
+    password: 'C0digix$309',
+    database: 'nobalcasting',
+    port: 3307
   });
 
   try {
     const [rows] = await connection.execute(
-      "SELECT * FROM job_card ORDER BY created_at DESC LIMIT 5"
+      "SELECT * FROM selling_delivery_note"
     );
-    console.log('Job Cards for WO ending in 1072-5:');
-    console.table(rows);
-    
-    if (rows.length > 0) {
-        const woId = rows[0].work_order_id;
-        const [wo] = await connection.execute("SELECT * FROM work_order WHERE wo_id = ?", [woId]);
-        console.log('Work Order details:');
-        console.table(wo);
-    }
-
-  } catch (err) {
-    console.error(err);
+    console.log(JSON.stringify(rows, null, 2));
+  } catch (error) {
+    console.error(error);
   } finally {
     await connection.end();
   }
 }
 
-checkJobCards();
+checkProductionEntries();

@@ -3,6 +3,7 @@ import { Trash2, CheckCircle2 } from 'lucide-react'
 import Modal from '../Modal'
 import * as productionService from '../../services/productionService'
 import { useToast } from '../ToastContainer'
+import DataTable from '../Table/DataTable'
 
 export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCardData }) {
   const toast = useToast()
@@ -43,9 +44,12 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
 
   const handleChange = (e) => {
     const { name, value } = e.target
+    const val = (name === 'rejected_qty' || name === 'scrap_qty') ? parseFloat(value) || 0 : value
     setFormData(prev => ({
       ...prev,
-      [name]: (name === 'rejected_qty' || name === 'scrap_qty') ? parseFloat(value) || 0 : value
+      [name]: val,
+      // Sync rejected_qty to scrap_qty
+      ...(name === 'rejected_qty' ? { scrap_qty: val } : {})
     }))
   }
 
@@ -109,8 +113,7 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
     }
   }
 
-  const totalRejectedQty = rejections.reduce((sum, r) => sum + (r.rejected_qty || 0), 0)
-  const totalScrapQty = rejections.reduce((sum, r) => sum + (r.scrap_qty || 0), 0)
+  const totalLossQty = rejections.reduce((sum, r) => sum + Math.max(Number(r.rejected_qty || 0), Number(r.scrap_qty || 0)), 0)
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Rejection Entry" size="lg">
@@ -168,6 +171,10 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
             </div>
           </div>
 
+          <div style={{ marginBottom: '5px', fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic' }}>
+            Note: Rejected units are automatically treated as scrap. The system uses the maximum of both.
+          </div>
+
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '5px' }}>Notes</label>
             <textarea
@@ -198,66 +205,75 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
           </button>
         </form>
 
-        <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#fee2e2', border: '1px solid #fecaca', borderRadius: '8px', display: 'flex', gap: '20px' }}>
-          <div><strong>Total Rejected:</strong> {totalRejectedQty.toFixed(2)} units</div>
-          <div><strong>Total Scrap:</strong> {totalScrapQty.toFixed(2)} units</div>
+        <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#fee2e2', border: '1px solid #fecaca', borderRadius: '8px', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ fontSize: '1rem' }}><strong>Total Rejected (Scrap):</strong> {totalLossQty.toFixed(2)} units</div>
         </div>
 
         <h3 style={{ marginBottom: '15px', fontSize: '1rem' }}>Rejection History ({rejections.length})</h3>
         
         {rejections.length > 0 ? (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f3f4f6', borderBottom: '2px solid #e5e7eb' }}>
-                  <th style={{ padding: '10px', textAlign: 'left' }}>Status</th>
-                  <th style={{ padding: '10px', textAlign: 'left' }}>Reason</th>
-                  <th style={{ padding: '10px', textAlign: 'center' }}>Rej Qty</th>
-                  <th style={{ padding: '10px', textAlign: 'center' }}>Scrap Qty</th>
-                  <th style={{ padding: '10px', textAlign: 'left' }}>Notes</th>
-                  <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
-                  <th style={{ padding: '10px', textAlign: 'center' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rejections.map(rejection => (
-                  <tr key={rejection.rejection_id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                    <td style={{ padding: '10px' }}>
-                      {rejection.status === 'Approved' ? (
-                        <span style={{ color: '#059669', backgroundColor: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>APPROVED</span>
-                      ) : (
-                        <span style={{ color: '#d97706', backgroundColor: '#fffbeb', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>PENDING</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '10px' }}>{rejection.rejection_reason}</td>
-                    <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: '#dc2626' }}>{rejection.rejected_qty}</td>
-                    <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: '#f97316' }}>{rejection.scrap_qty || 0}</td>
-                    <td style={{ padding: '10px', fontSize: '0.85rem' }}>{rejection.notes || '-'}</td>
-                    <td style={{ padding: '10px', fontSize: '0.85rem' }}>{rejection.created_at ? new Date(rejection.created_at).toLocaleDateString() : '-'}</td>
-                    <td style={{ padding: '10px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
-                        {rejection.status !== 'Approved' && (
-                          <button
-                            onClick={() => handleApproveRejection(rejection.rejection_id)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#059669' }}
-                            title="Approve"
-                          >
-                            <CheckCircle2 size={16} />
-                          </button>
-                        )}
+          <div className="border rounded overflow-hidden">
+            <DataTable 
+              disablePagination={true}
+              columns={[
+                {
+                  key: 'status',
+                  label: 'Status',
+                  render: (val) => (
+                    val === 'Approved' ? (
+                      <span style={{ color: '#059669', backgroundColor: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>APPROVED</span>
+                    ) : (
+                      <span style={{ color: '#d97706', backgroundColor: '#fffbeb', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>PENDING</span>
+                    )
+                  )
+                },
+                { key: 'rejection_reason', label: 'Reason' },
+                { 
+                  key: 'rejected_qty', 
+                  label: 'Rej Qty', 
+                  align: 'center',
+                  render: (val) => <span style={{ fontWeight: 'bold', color: '#dc2626' }}>{val}</span>
+                },
+                { 
+                  key: 'scrap_qty', 
+                  label: 'Scrap Qty', 
+                  align: 'center',
+                  render: (val) => <span style={{ fontWeight: 'bold', color: '#f97316' }}>{val || 0}</span>
+                },
+                { key: 'notes', label: 'Notes', render: (val) => <span style={{ fontSize: '0.85rem' }}>{val || '-'}</span> },
+                { 
+                  key: 'created_at', 
+                  label: 'Date', 
+                  render: (val) => <span style={{ fontSize: '0.85rem' }}>{val ? new Date(val).toLocaleDateString() : '-'}</span> 
+                },
+                {
+                  key: 'actions',
+                  label: 'Action',
+                  align: 'center',
+                  render: (_, row) => (
+                    <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
+                      {row.status !== 'Approved' && (
                         <button
-                          onClick={() => handleDeleteRejection(rejection.rejection_id)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}
-                          title="Delete"
+                          onClick={() => handleApproveRejection(row.rejection_id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#059669' }}
+                          title="Approve"
                         >
-                          <Trash2 size={16} />
+                          <CheckCircle2 size={16} />
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      )}
+                      <button
+                        onClick={() => handleDeleteRejection(row.rejection_id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}
+                        title="Delete"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )
+                }
+              ]}
+              data={rejections}
+            />
           </div>
         ) : (
           <div style={{ padding: '30px', textAlign: 'center', color: '#9ca3af', backgroundColor: '#f9fafb', borderRadius: '8px' }}>

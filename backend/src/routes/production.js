@@ -247,6 +247,21 @@ router.delete(
     authMiddleware,
     productionController.getOutwardChallanItems.bind(productionController)
   )
+  router.get(
+    '/subcontract/inward-challans/:challan_id/items',
+    authMiddleware,
+    productionController.getInwardChallanItems.bind(productionController)
+  )
+  router.delete(
+    '/subcontract/outward-challans/:id',
+    authMiddleware,
+    productionController.deleteOutwardChallan.bind(productionController)
+  )
+  router.delete(
+    '/subcontract/inward-challans/:id',
+    authMiddleware,
+    productionController.deleteInwardChallan.bind(productionController)
+  )
 
   router.post(
     '/subcontract/outward-challans',
@@ -489,6 +504,11 @@ router.delete(
     authMiddleware,
     productionController.getOutwardChallans.bind(productionController)
   )
+  router.delete(
+    '/outward-challans/:id',
+    authMiddleware,
+    productionController.deleteOutwardChallan.bind(productionController)
+  )
 
   router.post(
     '/inward-challans',
@@ -504,6 +524,11 @@ router.delete(
     '/inward-challans/:id',
     authMiddleware,
     productionController.updateInwardChallan.bind(productionController)
+  )
+  router.delete(
+    '/inward-challans/:id',
+    authMiddleware,
+    productionController.deleteInwardChallan.bind(productionController)
   )
 
   // ============= MATERIAL DEDUCTION FLOW =============

@@ -385,13 +385,14 @@ export class ProductionPlanningService {
   async autoArrangeSubAssembliesByDependency(subAssemblies) {
     if (!subAssemblies || subAssemblies.length === 0) return []
 
-    const dependencyGraph = new Map() // item_code -> Set of its sub-assembly component item_codes
-    const allItemCodes = new Set(subAssemblies.map(sa => sa.item_code))
+    const dependencyGraph = new Map() // normalized item_code -> Set of its sub-assembly component normalized item_codes
+    const allItemCodes = new Set(subAssemblies.map(sa => (sa.item_code || '').trim().toUpperCase()))
 
     // Build the dependency graph by looking at BOMs of all sub-assemblies in the plan
     for (const sa of subAssemblies) {
-      if (!dependencyGraph.has(sa.item_code)) {
-        dependencyGraph.set(sa.item_code, new Set())
+      const normalizedParentCode = (sa.item_code || '').trim().toUpperCase()
+      if (!dependencyGraph.has(normalizedParentCode)) {
+        dependencyGraph.set(normalizedParentCode, new Set())
         
         const bomId = sa.bom_no
         if (bomId) {
@@ -399,11 +400,12 @@ export class ProductionPlanningService {
           if (bomData) {
             const allLines = [...(bomData.lines || []), ...(bomData.raw_materials || [])]
             for (const line of allLines) {
-              const childCode = line.component_code || line.item_code
-              // If this component is itself a sub-assembly in the current plan, mark it as a dependency
-              if (childCode && allItemCodes.has(childCode) && childCode !== sa.item_code) {
-                console.log(`[ProductionPlanningService] Dependency found: ${sa.item_code} depends on ${childCode}`)
-                dependencyGraph.get(sa.item_code).add(childCode)
+              const childCode = (line.component_code || line.item_code || '').trim().toUpperCase()
+              
+              // Robust check: Is this component actually a sub-assembly in the plan?
+              if (childCode && allItemCodes.has(childCode) && childCode !== normalizedParentCode) {
+                console.log(`[ProductionPlanningService] Dependency detected: ${normalizedParentCode} depends on ${childCode}`)
+                dependencyGraph.get(normalizedParentCode).add(childCode)
               }
             }
           }
@@ -411,46 +413,47 @@ export class ProductionPlanningService {
       }
     }
 
-    const levels = new Map() // item_code -> level (1-based, Level 1 has no SA dependencies)
+    const levels = new Map() // normalized item_code -> level (1-based, Level 1 has no SA dependencies)
     const visiting = new Set()
 
     const calculateLevel = (itemCode) => {
-      if (visiting.has(itemCode)) {
-        throw new Error(`Circular dependency detected involving item ${itemCode}`)
+      const normalizedCode = (itemCode || '').trim().toUpperCase()
+      if (visiting.has(normalizedCode)) {
+        throw new Error(`Circular dependency detected involving item ${normalizedCode}`)
       }
-      if (levels.has(itemCode)) {
-        return levels.get(itemCode)
+      if (levels.has(normalizedCode)) {
+        return levels.get(normalizedCode)
       }
 
-      visiting.add(itemCode)
+      visiting.add(normalizedCode)
       let maxChildLevel = 0;
-      const dependencies = dependencyGraph.get(itemCode) || new Set()
+      const dependencies = dependencyGraph.get(normalizedCode) || new Set()
 
       for (const depCode of dependencies) {
         maxChildLevel = Math.max(maxChildLevel, calculateLevel(depCode))
       }
 
       const currentLevel = maxChildLevel + 1
-      levels.set(itemCode, currentLevel)
-      visiting.delete(itemCode)
+      levels.set(normalizedCode, currentLevel)
+      visiting.delete(normalizedCode)
       return currentLevel
     }
 
-    for (const itemCode of allItemCodes) {
-      calculateLevel(itemCode)
+    for (const normalizedCode of allItemCodes) {
+      calculateLevel(normalizedCode)
     }
 
     // Now assign levels back to the sub-assemblies and sort them
     const arrangedSubAssemblies = subAssemblies.map(sa => ({
       ...sa,
-      explosion_level: levels.get(sa.item_code) || 1
+      explosion_level: levels.get((sa.item_code || '').trim().toUpperCase()) || 1
     }))
 
     arrangedSubAssemblies.sort((a, b) => {
       if (a.explosion_level !== b.explosion_level) {
         return a.explosion_level - b.explosion_level
       }
-      return a.item_code.localeCompare(b.item_code)
+      return (a.item_code || '').localeCompare(b.item_code || '')
     })
 
     return arrangedSubAssemblies
@@ -459,41 +462,40 @@ export class ProductionPlanningService {
   async validatePlanDependencies(subAssemblies) {
     if (!subAssemblies || subAssemblies.length === 0) return true
 
-    const levels = new Map() // item_code -> level
-    const dates = new Map() // item_code -> date object
+    const levels = new Map() // normalized item_code -> level
+    const dates = new Map() // normalized item_code -> date object
     
     for (const sa of subAssemblies) {
-      levels.set(sa.item_code, parseInt(sa.explosion_level || 0))
+      const normalizedCode = (sa.item_code || '').trim().toUpperCase()
+      levels.set(normalizedCode, parseInt(sa.explosion_level || 0))
       if (sa.schedule_date) {
-        dates.set(sa.item_code, new Date(sa.schedule_date))
+        dates.set(normalizedCode, new Date(sa.schedule_date))
       }
     }
 
     for (const sa of subAssemblies) {
+      const normalizedParentCode = (sa.item_code || '').trim().toUpperCase()
       const bomId = sa.bom_no
       if (bomId) {
         const bomData = await this.getBOMDetails(bomId)
         if (bomData && (bomData.lines || bomData.raw_materials)) {
           const allLines = [...(bomData.lines || []), ...(bomData.raw_materials || [])]
           for (const line of allLines) {
-            const isSA = await this.isSubAssembly(line)
-            if (isSA) {
-              const childCode = line.component_code || line.item_code
+            const childCode = (line.component_code || line.item_code || '').trim().toUpperCase()
+            
+            // If child is also in the plan, it must be at a lower level or earlier date
+            if (childCode && levels.has(childCode) && childCode !== normalizedParentCode) {
+              const parentLevel = levels.get(normalizedParentCode)
+              const childLevel = levels.get(childCode)
               
-              // If child is also in the plan, it must be at a lower level or earlier date
-              if (levels.has(childCode)) {
-                const parentLevel = levels.get(sa.item_code)
-                const childLevel = levels.get(childCode)
-                
-                if (childLevel >= parentLevel && parentLevel !== 0) {
-                  throw new Error(`Invalid sequencing: ${sa.item_code} (Level ${parentLevel}) depends on ${childCode} (Level ${childLevel}). Dependencies must have a lower level.`)
-                }
+              if (childLevel >= parentLevel && parentLevel !== 0) {
+                throw new Error(`Invalid sequencing: ${sa.item_code} (Level ${parentLevel}) depends on ${childCode} (Level ${childLevel}). Dependencies must have a lower level.`)
+              }
 
-                const parentDate = dates.get(sa.item_code)
-                const childDate = dates.get(childCode)
-                if (parentDate && childDate && childDate > parentDate) {
-                  throw new Error(`Invalid scheduling: ${sa.item_code} scheduled on ${sa.schedule_date} depends on ${childCode} scheduled on ${childDate.toISOString().split('T')[0]}. Dependencies must be scheduled earlier or on the same day.`)
-                }
+              const parentDate = dates.get(normalizedParentCode)
+              const childDate = dates.get(childCode)
+              if (parentDate && childDate && childDate > parentDate) {
+                throw new Error(`Invalid scheduling: ${sa.item_code} scheduled on ${sa.schedule_date} depends on ${childCode} scheduled on ${childDate.toISOString().split('T')[0]}. Dependencies must be scheduled earlier or on the same day.`)
               }
             }
           }

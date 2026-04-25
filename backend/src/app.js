@@ -123,6 +123,7 @@ async function initializeDatabase() {
     await createOutwardChallanTable()
     await createOutwardChallanItemTable()
     await createInwardChallanTable()
+    await createInwardChallanItemTable()
     await createDocumentSequencesTable()
 
     app.locals.db = db
@@ -973,6 +974,34 @@ async function createInwardChallanTable() {
       )
     `)
     console.log('✓ Inward challan table ready')
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function createInwardChallanItemTable() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS inward_challan_item (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        challan_id INT NOT NULL,
+        item_code VARCHAR(100) NOT NULL,
+        item_name VARCHAR(255),
+        batch_no VARCHAR(100),
+        dispatched_qty DECIMAL(18, 4) DEFAULT 0,
+        received_qty DECIMAL(18, 4) DEFAULT 0,
+        accepted_qty DECIMAL(18, 4) DEFAULT 0,
+        rejected_qty DECIMAL(18, 4) DEFAULT 0,
+        uom VARCHAR(50),
+        remarks TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (challan_id) REFERENCES inward_challan(id) ON DELETE CASCADE,
+        INDEX idx_ic_item_challan_id (challan_id),
+        INDEX idx_ic_item_code (item_code)
+      )
+    `)
+    console.log('✓ Inward challan item table ready')
   } catch (error) {
     console.log('Note:', error.message)
   }

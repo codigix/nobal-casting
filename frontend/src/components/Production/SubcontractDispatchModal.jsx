@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react'
-import { X, Package, Calendar, Info, AlertCircle, CheckCircle2, List, User, Trash2, Plus, Truck } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { 
+  X, Package, Calendar, Info, AlertCircle, CheckCircle2, List, User, 
+  Trash2, Plus, Truck, ArrowRight, ShieldCheck, HelpCircle, Save, Send
+} from 'lucide-react'
 import * as productionService from '../../services/productionService'
 import { useToast } from '../../components/ToastContainer'
 import SearchableSelect from '../SearchableSelect'
+import DataTable from '../Table/DataTable'
 
 export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onDispatchSuccess }) {
   const toast = useToast()
@@ -11,16 +15,29 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
   const [vendors, setVendors] = useState([])
   const [items, setItems] = useState([])
   const [releaseItems, setReleaseItems] = useState([])
+  const [warehouses, setWarehouses] = useState([])
+  
   const [formData, setFormData] = useState({
+    challan_no: `OC-${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`,
     job_card_id: '',
     vendor_id: '',
     vendor_name: '',
     dispatch_date: new Date().toISOString().split('T')[0],
     expected_return_date: '',
+    dispatch_type: 'Partial',
+    status: 'DRAFT',
+    work_order_id: '',
+    source_warehouse_id: 'WIP - Work In Progress',
+    vendor_warehouse_id: '',
+    reference_no: '',
+    remarks: '',
+    rate_type: 'Per Unit',
+    rate: 50.00,
+    total_cost: 0,
     transporter_name: '',
     vehicle_number: '',
-    eway_bill_no: '',
-    notes: '',
+    driver_name: '',
+    contact_no: '',
     release_quantity: 0
   })
 
@@ -28,23 +45,40 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
     if (isOpen && jobCard) {
       const plannedQty = jobCard.max_allowed_quantity !== undefined ? parseFloat(jobCard.max_allowed_quantity) : (jobCard.planned_quantity || 0)
       const remainingToDispatch = Math.max(0, plannedQty - (jobCard.total_dispatched || 0))
-      setFormData({
+      
+      setFormData(prev => ({
+        ...prev,
         job_card_id: jobCard.job_card_id,
+        work_order_id: jobCard.work_order_id,
         vendor_id: jobCard.vendor_id || '',
         vendor_name: jobCard.vendor_name || '',
-        dispatch_date: new Date().toISOString().split('T')[0],
-        expected_return_date: '',
-        transporter_name: '',
-        vehicle_number: '',
-        eway_bill_no: '',
-        notes: '',
-        release_quantity: remainingToDispatch
-      })
+        release_quantity: remainingToDispatch,
+        vendor_warehouse_id: jobCard.vendor_name ? `${jobCard.vendor_name} - Vendor WH` : ''
+      }))
+      
       fetchWorkOrderDetails(jobCard.work_order_id)
       fetchVendors()
       fetchItems()
+      fetchWarehouses()
     }
   }, [isOpen, jobCard])
+
+  // Auto-calculate total cost
+  useEffect(() => {
+    const total = (parseFloat(formData.release_quantity) || 0) * (parseFloat(formData.rate) || 0)
+    setFormData(prev => ({ ...prev, total_cost: total }))
+  }, [formData.release_quantity, formData.rate])
+
+  const fetchWarehouses = async () => {
+    try {
+      const res = await productionService.getWarehouses()
+      if (res.success) {
+        setWarehouses((res.data || []).map(w => ({ value: w.name, label: w.name })))
+      }
+    } catch (err) {
+      console.error('Failed to fetch warehouses')
+    }
+  }
 
   const fetchItems = async () => {
     try {
@@ -53,7 +87,8 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
         const itemOptions = (res.data || []).map(i => ({
           value: i.item_code,
           label: `${i.item_code} - ${i.name || ''}`,
-          uom: i.uom
+          uom: i.uom,
+          name: i.name
         }))
         setItems(itemOptions)
       }
@@ -72,37 +107,29 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
         const plannedQty = jobCard.max_allowed_quantity !== undefined ? parseFloat(jobCard.max_allowed_quantity) : (jobCard.planned_quantity || 0)
         const remainingToDispatch = Math.max(0, plannedQty - (jobCard.total_dispatched || 0))
 
-        // Filter items by operation and set initial release items
+        // Initial items from Work Order
         let opItems = (res.data.items || []).filter(item => 
           !item.operation || item.operation === jobCard.operation
         ).map(item => ({
           ...item,
+          id: Math.random().toString(36).substr(2, 9),
+          item_name: item.item_name || item.name,
+          batch_no: 'BATCH-001',
+          available_qty: 100, // Mock available qty
           release_qty: ((parseFloat(item.required_qty) / parseFloat(res.data.quantity)) * remainingToDispatch)
         }))
 
-        // If no items found for this operation, look for raw materials or previous stage WIP
         if (opItems.length === 0) {
-          const ops = res.data.operations || []
-          const currentOpIdx = ops.findIndex(o => o.operation === jobCard.operation)
-          
-          if (currentOpIdx > 0) {
-            // Suggest previous operation's output as the input (WIP)
-            opItems = [{
+           opItems = [{
+              id: Math.random().toString(36).substr(2, 9),
               item_code: res.data.item_code,
               item_name: res.data.item_name || res.data.item_code,
+              batch_no: 'BATCH-001',
+              available_qty: 100,
               required_qty: res.data.quantity,
               release_qty: remainingToDispatch,
-              uom: res.data.uom || 'pcs',
-              is_wip: true,
-              operation: ops[currentOpIdx - 1].operation
+              uom: res.data.uom || 'pcs'
             }]
-          } else {
-            // For the first operation, fetch all raw materials linked to the work order
-            opItems = (res.data.items || []).map(item => ({
-              ...item,
-              release_qty: ((parseFloat(item.required_qty) / parseFloat(res.data.quantity)) * remainingToDispatch)
-            }))
-          }
         }
         
         setReleaseItems(opItems)
@@ -118,21 +145,21 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
     const newQty = parseFloat(qty) || 0
     setFormData(prev => ({ ...prev, release_quantity: newQty }))
     
-    // Proportional update for raw materials
     if (workOrder && workOrder.quantity > 0) {
-      setReleaseItems(prev => prev.map(item => {
-        if (item.is_manual) return item
-        return {
-          ...item,
-          release_qty: ((parseFloat(item.required_qty) / parseFloat(workOrder.quantity)) * newQty)
-        }
-      }))
+      setReleaseItems(prev => prev.map(item => ({
+        ...item,
+        release_qty: ((parseFloat(item.required_qty) / parseFloat(workOrder.quantity)) * newQty)
+      })))
     }
   }
 
   const handleAddItem = () => {
     setReleaseItems(prev => [...prev, {
+      id: Math.random().toString(36).substr(2, 9),
       item_code: '',
+      item_name: '',
+      batch_no: '',
+      available_qty: 0,
       required_qty: 0,
       release_qty: 0,
       uom: '',
@@ -140,43 +167,125 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
     }])
   }
 
-  const handleUpdateItem = (idx, field, value) => {
-    const updated = [...releaseItems]
-    let finalValue = value
-    
-    if (field === 'required_qty' || field === 'release_qty') {
-      finalValue = parseFloat(value) || 0
-    }
-    
-    updated[idx] = { ...updated[idx], [field]: finalValue }
-    
-    // If selecting an item from the dropdown
-    if (field === 'item_code') {
-      const selectedItem = items.find(i => i.value === value)
-      if (selectedItem) {
-        updated[idx].uom = selectedItem.uom
+  const handleUpdateItem = (id, field, value) => {
+    setReleaseItems(prev => prev.map(item => {
+      if (item.id === id) {
+        let finalValue = value
+        if (['required_qty', 'release_qty', 'available_qty'].includes(field)) {
+          finalValue = parseFloat(value) || 0
+        }
+        
+        const updatedItem = { ...item, [field]: finalValue }
+        
+        if (field === 'item_code') {
+          const selectedItem = items.find(i => i.value === value)
+          if (selectedItem) {
+            updatedItem.uom = selectedItem.uom
+            updatedItem.item_name = selectedItem.name
+          }
+        }
+        return updatedItem
       }
-    }
-    
-    setReleaseItems(updated)
+      return item
+    }))
   }
 
-  const handleDeleteItem = (idx) => {
-    setReleaseItems(prev => prev.filter((_, i) => i !== idx))
+  const handleDeleteItem = (id) => {
+    setReleaseItems(prev => prev.filter(item => item.id !== id))
   }
+
+  const dispatchColumns = useMemo(() => [
+    {
+      key: 'index',
+      label: '#',
+      render: (_, __, idx) => idx + 1,
+      className: 'text-center text-xs font-bold text-slate-400 w-12'
+    },
+    {
+      key: 'item_code',
+      label: 'Item Code',
+      render: (value, row) => (
+        <div className="min-w-[200px]">
+          <SearchableSelect
+            options={items}
+            value={value}
+            onChange={val => handleUpdateItem(row.id, 'item_code', val)}
+            containerClassName="border-slate-200 shadow-none bg-white text-xs"
+          />
+        </div>
+      )
+    },
+    {
+      key: 'item_name',
+      label: 'Item Name',
+      render: (value) => (
+        <input type="text" className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-600 font-medium outline-none" value={value} readOnly />
+      )
+    },
+    {
+      key: 'batch_no',
+      label: 'Batch No.',
+      render: (value, row) => (
+        <input 
+          type="text" 
+          className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:border-blue-500 transition-colors" 
+          value={value} 
+          onChange={e => handleUpdateItem(row.id, 'batch_no', e.target.value)} 
+        />
+      ),
+      className: 'w-32'
+    },
+    {
+      key: 'available_qty',
+      label: 'Available Qty (Nos)',
+      className: 'text-center w-36',
+      render: (value) => (
+        <div className="bg-slate-100 p-2 rounded text-xs text-slate-600 border border-slate-200">{value}</div>
+      )
+    },
+    {
+      key: 'release_qty',
+      label: 'Dispatch Qty (Nos) *',
+      className: 'text-center w-36',
+      render: (value, row) => (
+        <input 
+          type="number" 
+          className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-center text-blue-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
+          value={value} 
+          onChange={e => handleUpdateItem(row.id, 'release_qty', e.target.value)} 
+        />
+      )
+    },
+    {
+      key: 'uom',
+      label: 'UOM',
+      className: 'text-xs text-slate-500 w-20'
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      className: 'text-right',
+      render: (value, row) => renderDispatchActions(row)
+    }
+  ], [items, releaseItems]);
+
+  const renderDispatchActions = (row) => (
+    <button onClick={() => handleDeleteItem(row.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-all">
+      <Trash2 size={16} />
+    </button>
+  );
 
   const fetchVendors = async () => {
     try {
       const res = await productionService.getVendors()
       if (res.success) {
-        const vendorOptions = (res.data || []).map(v => ({
+        setVendors((res.data || []).map(v => ({
           value: v.supplier_id,
           label: v.name || v.supplier_id
-        }))
-        setVendors(vendorOptions)
+        })))
       }
     } catch (err) {
-      console.error('Failed to fetch vendors:', err)
+      console.error('Failed to fetch vendors')
     }
   }
 
@@ -185,65 +294,33 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
     setFormData(prev => ({
       ...prev,
       vendor_id: vendorId,
-      vendor_name: selectedVendor ? selectedVendor.label : ''
+      vendor_name: selectedVendor ? selectedVendor.label : '',
+      vendor_warehouse_id: selectedVendor ? `${selectedVendor.label} - Vendor WH` : ''
     }))
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.expected_return_date) {
-      toast.addToast('Please select an expected return date', 'error')
+    
+    const validations = getValidations()
+    const allValid = Object.values(validations).every(v => v.status === 'success')
+    
+    if (!allValid) {
+      toast.addToast('Please fix validation errors before submitting', 'error')
       return
-    }
-
-    if (!formData.release_quantity || formData.release_quantity <= 0) {
-      toast.addToast('Dispatch quantity must be greater than zero', 'error')
-      return
-    }
-
-    const totalPlanned = jobCard.max_allowed_quantity !== undefined ? parseFloat(jobCard.max_allowed_quantity) : (jobCard.planned_quantity || 0)
-    const remainingToDispatch = Math.max(0, totalPlanned - (jobCard.total_dispatched || 0))
-    const tolerance = 0.001
-    if (formData.release_quantity > remainingToDispatch + tolerance) {
-      toast.addToast(`Cannot dispatch more than remaining available (${remainingToDispatch.toFixed(2)})`, 'error')
-      return
-    }
-
-    // Validate items
-    if (releaseItems.length > 0) {
-      for (const item of releaseItems) {
-        if (!item.item_code) {
-          toast.addToast('All material release items must have an item code', 'error')
-          return
-        }
-        if (!item.release_qty || item.release_qty <= 0) {
-          toast.addToast(`Item ${item.item_code} must have a release quantity greater than zero`, 'error')
-          return
-        }
-      }
     }
 
     try {
       setLoading(true)
-      
-      // 1. Create Outward Challan Record
-      // In the updated backend, createOutwardChallan automatically triggers handleSubcontractDispatch
-      // which handles incremental sent_qty and stock movement to Subcontract WIP
       await productionService.createOutwardChallan({
-        job_card_id: formData.job_card_id,
-        vendor_id: formData.vendor_id,
-        vendor_name: formData.vendor_name,
-        dispatch_date: formData.dispatch_date,
-        expected_return_date: formData.expected_return_date,
-        transporter_name: formData.transporter_name,
-        vehicle_number: formData.vehicle_number,
-        eway_bill_no: formData.eway_bill_no,
-        notes: formData.notes,
+        ...formData,
         dispatch_quantity: formData.release_quantity,
-        items: releaseItems
+        items: releaseItems,
+        transporter_name: formData.transporter_name,
+        vehicle_number: formData.vehicle_number
       })
 
-      toast.addToast(`Outward challan created for ${formData.release_quantity} units`, 'success')
+      toast.addToast(`Outward challan created successfully`, 'success')
       onDispatchSuccess()
       onClose()
     } catch (err) {
@@ -253,287 +330,381 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
     }
   }
 
+  const getValidations = () => {
+    const itemsValid = releaseItems.length > 0 && releaseItems.every(i => i.item_code && i.release_qty > 0)
+    const qtyCheck = releaseItems.every(i => i.release_qty <= i.available_qty)
+    
+    return {
+      vendor: { label: 'Vendor is selected', status: formData.vendor_id ? 'success' : 'pending' },
+      operation: { label: 'Operation is selected', status: jobCard?.operation ? 'success' : 'pending' },
+      workOrder: { label: 'Work Order is selected', status: formData.work_order_id ? 'success' : 'pending' },
+      warehouse: { label: 'Source Warehouse is selected', status: formData.source_warehouse_id ? 'success' : 'pending' },
+      items: { label: 'At least one item is added', status: releaseItems.length > 0 ? 'success' : 'pending' },
+      qtyPositive: { label: 'Dispatch quantity is greater than 0', status: formData.release_quantity > 0 ? 'success' : 'pending' },
+      qtyAvailable: { 
+        label: 'Dispatch quantity cannot exceed available quantity', 
+        status: qtyCheck ? 'success' : 'error',
+        errors: releaseItems.filter(i => i.release_qty > i.available_qty).map((i, idx) => `Item ${idx+1}: Max available is ${i.available_qty} ${i.uom}`)
+      }
+    }
+  }
+
   if (!isOpen) return null
 
-  const alreadyDispatched = parseFloat(jobCard?.total_dispatched || 0)
-  const totalPlanned = jobCard?.max_allowed_quantity !== undefined ? parseFloat(jobCard.max_allowed_quantity) : parseFloat(jobCard?.planned_quantity || 0)
-  const remainingToDispatch = Math.max(0, totalPlanned - alreadyDispatched)
+  const totalDispatchQty = releaseItems.reduce((sum, i) => sum + (parseFloat(i.release_qty) || 0), 0)
+  const totalAvailableQty = releaseItems.reduce((sum, i) => sum + (parseFloat(i.available_qty) || 0), 0)
+  const validations = getValidations()
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white rounded   w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 bg-slate-900/40 backdrop-blur-sm">
+      <div className="bg-slate-50 rounded w-full max-w-5xl overflow-hidden flex flex-col h-[90vh]  border border-slate-200">
+        
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded ">
-              <Package size={20} />
+        <div className="p-2 bg-white border-b border-slate-200 flex justify-between items-center sticky top-0 z-20">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 text-blue-600 mb-0.5">
+               <span className="text-xs   ">Manufacturing</span>
+               <ArrowRight size={12} />
+               <span className="text-xs   ">Outward Challan</span>
+               <ArrowRight size={12} />
+               <span className="text-xs    text-slate-400">Create</span>
             </div>
-            <div>
-              <h2 className="text-lg  text-gray-900">Outward Challan</h2>
-              <p className="text-xs text-gray-500">Dispatch Job Card {jobCard?.job_card_id} to Vendor</p>
-            </div>
+            <h1 className="text-xl  text-slate-800">Create Outward Challan</h1>
+            <p className="text-xs text-slate-500">Dispatch materials to vendor for subcontracting / outsourcing operation</p>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded  transition-colors"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+             <button className="flex items-center gap-2 p-2 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors text-xs ">
+                <HelpCircle size={15} />
+                Help
+             </button>
+             <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                <X size={15} />
+             </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-2">
-            {/* Quantity Info Bar */}
-            <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-100 rounded mb-4">
-               <div className="flex-1 text-center border-r border-slate-200">
-                  <p className="text-[10px] text-slate-400">Planned Total</p>
-                  <p className="text-sm font-bold text-slate-700">{totalPlanned.toFixed(2)}</p>
-               </div>
-               <div className="flex-1 text-center border-r border-slate-200">
-                  <p className="text-[10px] text-slate-400">Already Dispatched</p>
-                  <p className="text-sm font-bold text-indigo-600">{alreadyDispatched.toFixed(2)}</p>
-               </div>
-               <div className="flex-1 text-center">
-                  <p className="text-[10px] text-slate-400">Available to Dispatch</p>
-                  <p className="text-sm font-bold text-emerald-600">{remainingToDispatch.toFixed(2)}</p>
-               </div>
-            </div>
-
-            {/* Operation Info */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-slate-50 rounded  border border-slate-100">
-                <p className="text-[10px]  tracking-wider  text-slate-400 mb-1">Operation</p>
-                <p className="text-sm font-semibold text-slate-700">{jobCard?.operation}</p>
+        <div className="flex-1 overflow-hidden flex">
+          {/* Main Form Content */}
+          <div className="flex-1 overflow-y-auto p-2 space-y-2">
+            
+            {/* Section 1: Challan Details */}
+            <div className="">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">1</div>
+                <h3 className="text-base font-semibold text-slate-800">Challan Details</h3>
               </div>
-              <div className="p-4 bg-indigo-50/30 rounded  border border-indigo-100/50">
-                <p className="text-[10px]  tracking-wider  text-indigo-400 mb-1">Dispatch Quantity</p>
-                <div className="flex items-center gap-2">
-                   <input
-                     type="number"
-                     className="w-full bg-transparent text-sm font-bold text-indigo-700 outline-none"
-                     value={formData.release_quantity}
-                     onChange={(e) => handleDispatchQuantityChange(e.target.value)}
-                     max={remainingToDispatch}
-                   />
-                   <span className="text-xs text-indigo-400">{workOrder?.uom || 'units'}</span>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500  ">Challan No. <span className="text-red-500">*</span></label>
+                  <input type="text" className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none" value={formData.challan_no} readOnly />
                 </div>
-              </div>
-            </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500  ">Challan Date <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <input type="date" className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 transition-all outline-none" value={formData.dispatch_date} onChange={e => setFormData(prev => ({...prev, dispatch_date: e.target.value}))} />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500  ">Dispatch Type <span className="text-red-500">*</span></label>
+                  <select className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 transition-all outline-none appearance-none" value={formData.dispatch_type} onChange={e => setFormData(prev => ({...prev, dispatch_type: e.target.value}))}>
+                    <option value="Partial">Partial</option>
+                    <option value="Full">Full</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500  ">Status</label>
+                  <div className="w-full flex items-center">
+                    <span className="p-2 w-full bg-slate-100 text-slate-600 rounded text-xs  border border-slate-200  ">{formData.status}</span>
+                  </div>
+                </div>
 
-            {/* Vendor Info */}
-            <div className="p-4 bg-amber-50 rounded  border border-amber-100 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 text-amber-600 rounded ">
-                  <User size={16} />
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500  ">Vendor <span className="text-red-500">*</span></label>
+                  <select className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none" value={formData.vendor_id} onChange={e => handleVendorChange(e.target.value)}>
+                    <option value="">Select Vendor</option>
+                    {vendors.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
+                  </select>
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-amber-900">Assign Vendor</p>
-                  <p className="text-[10px] text-amber-600">Select the vendor for this outsourced operation</p>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500  ">Operation <span className="text-red-500">*</span></label>
+                  <select className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none" value={jobCard?.operation || ''} disabled>
+                    <option value={jobCard?.operation || ''}>{jobCard?.operation || 'Select Operation'}</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500  ">Work Order <span className="text-red-500">*</span></label>
+                  <select className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none" value={formData.work_order_id} disabled>
+                    <option value={formData.work_order_id}>{formData.work_order_id}</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500  ">Job Card</label>
+                  <select className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none" value={formData.job_card_id} disabled>
+                    <option value={formData.job_card_id}>{formData.job_card_id}</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500  ">Source Warehouse <span className="text-red-500">*</span></label>
+                  <select className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none" value={formData.source_warehouse_id} onChange={e => setFormData(prev => ({...prev, source_warehouse_id: e.target.value}))}>
+                    {warehouses.map(w => <option key={w.value} value={w.value}>{w.label}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500  ">Vendor Warehouse</label>
+                  <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none" value={formData.vendor_warehouse_id} disabled>
+                    <option value={formData.vendor_warehouse_id}>{formData.vendor_warehouse_id || 'Select Vendor WH'}</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500  ">Expected Return Date <span className="text-red-500">*</span></label>
+                  <input type="date" className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none" value={formData.expected_return_date} onChange={e => setFormData(prev => ({...prev, expected_return_date: e.target.value}))} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-500  ">Reference (PO / Contract)</label>
+                  <input type="text" className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none" value={formData.reference_no} onChange={e => setFormData(prev => ({...prev, reference_no: e.target.value}))} placeholder="PO-00456" />
                 </div>
               </div>
               
-              <SearchableSelect
-                placeholder="Search and select vendor..."
-                options={vendors}
-                value={formData.vendor_id}
-                onChange={handleVendorChange}
-                containerClassName="bg-white border-amber-200"
-              />
+             
             </div>
 
-            {/* Material Release List */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-gray-700">
-                  <List size={18} className="text-gray-400" />
-                  <h3 className="text-sm ">Required Material Release</h3>
+            {/* Section 2: Items to Dispatch */}
+            <div className="">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">2</div>
+                  <h3 className="text-base font-semibold text-slate-800">Items to Dispatch</h3>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddItem}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded  text-[11px]  hover:bg-indigo-100 transition-all border border-indigo-100"
-                >
+                <button type="button" onClick={handleAddItem} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-all text-xs  border border-blue-100  tracking-wide">
                   <Plus size={14} />
                   Add Item
                 </button>
               </div>
-              
-              <div className="border border-gray-100 rounded">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-50 text-gray-500 font-medium">
-                    <tr>
-                      <th className="p-2  text-[10px] ">Item Code</th>
-                      <th className="p-2  text-right text-[10px] ">Required Qty</th>
-                      <th className="p-2  text-right text-[10px] ">Release Qty</th>
-                      <th className="p-2  text-center text-[10px]  w-10">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {releaseItems?.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50/50 group">
-                        <td className="p-2 ">
-                          <SearchableSelect
-                            placeholder="Select Item..."
-                            options={items}
-                            value={item.item_code}
-                            onChange={(val) => handleUpdateItem(idx, 'item_code', val)}
-                            containerClassName="h-8 text-[11px]"
-                          />
-                        </td>
-                        <td className="p-2  text-right text-gray-500">
-                          <input
-                            type="number"
-                            className="w-20 p-1 bg-white border border-gray-200 rounded text-right outline-none focus:border-indigo-500"
-                            value={item.required_qty}
-                            onChange={(e) => handleUpdateItem(idx, 'required_qty', e.target.value)}
-                          />
-                        </td>
-                        <td className="p-2  text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <input
-                              type="number"
-                              className="w-24 p-1 bg-indigo-50/50 border border-indigo-100 rounded text-right  text-indigo-600 outline-none focus:ring-1 focus:ring-indigo-500"
-                              value={item.release_qty}
-                              onChange={(e) => handleUpdateItem(idx, 'release_qty', e.target.value)}
-                            />
-                            <span className="text-[10px] text-gray-400 font-medium  w-8">{item.uom}</span>
-                          </div>
-                        </td>
-                        <td className="p-2  text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteItem(idx)}
-                            className="p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all"
-                            title="Remove item"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {(!releaseItems || releaseItems.length === 0) && (
-                      <tr>
-                        <td colSpan="4" className="px-4 py-6 text-center text-gray-400 italic">
-                          <div className="flex flex-col items-center gap-2">
-                            <Info size={24} className="text-gray-200" />
-                            <p>No raw materials linked to this operation</p>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
 
-            {/* Dates */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-700 flex items-center gap-1">
-                  <Calendar size={14} className="text-gray-400" />
-                  Dispatch Date
-                </label>
-                <input
-                  type="date"
-                  required
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                  value={formData.dispatch_date}
-                  onChange={(e) => setFormData({...formData, dispatch_date: e.target.value})}
+              <div className="overflow-x-auto rounded border border-slate-100">
+                <DataTable
+                  columns={dispatchColumns}
+                  data={releaseItems}
+                  renderActions={renderDispatchActions}
+                  disablePagination={true}
+                  sortable={false}
                 />
               </div>
+              
+              <div className="flex items-center justify-between p-2 bg-emerald-50/50 border border-emerald-100 rounded">
+                 <div className="flex items-center gap-2.5 text-emerald-700  text-xs  tracking-wide">
+                    <CheckCircle2 size={16} className="text-emerald-500" />
+                    <span>Total Dispatch Qty: {totalDispatchQty} Nos</span>
+                 </div>
+                 <span className="text-xs  text-emerald-600/70  ">Total Available Qty: {totalAvailableQty} Nos</span>
+              </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-700 flex items-center gap-1">
-                  <Calendar size={14} className="text-gray-400" />
-                  Expected Return Date
-                </label>
-                <input
-                  type="date"
-                  required
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                  value={formData.expected_return_date}
-                  onChange={(e) => setFormData({...formData, expected_return_date: e.target.value})}
-                  min={formData.dispatch_date}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+               {/* Section 3: Cost Details */}
+               <div className="bg-white p-2 rounded border border-slate-200 shadow-sm space-y-2">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">3</div>
+                    <h3 className="text-base font-semibold text-slate-800">Cost Details</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500  ">Rate Type <span className="text-red-500">*</span></label>
+                      <select className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none" value={formData.rate_type} onChange={e => setFormData(prev => ({...prev, rate_type: e.target.value}))}>
+                        <option value="Per Unit">Per Unit</option>
+                        <option value="Fixed">Fixed</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500  ">Rate (₹) <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-slate-400 text-xs">₹</span>
+                        <input type="number" className="w-full pl-7 p-2 bg-white border border-slate-200 rounded text-xs  focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={formData.rate} onChange={e => setFormData(prev => ({...prev, rate: parseFloat(e.target.value) || 0}))} />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500  ">Total Cost (₹)</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-blue-400 text-xs">₹</span>
+                        <input type="text" className="w-full pl-7 p-2 bg-blue-50 border border-blue-100 rounded text-xs  text-blue-700 outline-none" value={formData.total_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} readOnly />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-400 font-medium italic">
+                    <Info size={12} />
+                    <span>Total Cost = Dispatch Qty × Rate</span>
+                  </div>
+               </div>
+
+               {/* Section 4: Logistics Details */}
+               <div className="bg-white p-2 rounded border border-slate-200 shadow-sm space-y-2">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">4</div>
+                    <h3 className="text-base font-semibold text-slate-800">Logistics Details</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500  ">Transporter</label>
+                      <div className="relative">
+                        <Truck size={14} className="absolute left-3 top-2.5 text-slate-300" />
+                        <input type="text" className="w-full pl-9 p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={formData.transporter_name} onChange={e => setFormData(prev => ({...prev, transporter_name: e.target.value}))} placeholder="Shree Transport" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500  ">Vehicle No.</label>
+                      <input type="text" className="w-full p-2 bg-white border border-slate-200 rounded text-xs  focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:font-normal " value={formData.vehicle_number} onChange={e => setFormData(prev => ({...prev, vehicle_number: e.target.value}))} placeholder="MH12 AB 1234" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500  ">Driver Name</label>
+                      <div className="relative">
+                        <User size={14} className="absolute left-3 top-2.5 text-slate-300" />
+                        <input type="text" className="w-full pl-9 p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={formData.driver_name} onChange={e => setFormData(prev => ({...prev, driver_name: e.target.value}))} placeholder="Ramesh Yadav" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-500  ">Contact No.</label>
+                      <input type="text" className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={formData.contact_no} onChange={e => setFormData(prev => ({...prev, contact_no: e.target.value}))} placeholder="9876543210" />
+                    </div>
+                  </div>
+               </div>
+            </div>
+             <div className="">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-medium text-slate-500  ">Remarks</label>
+                  <span className="text-xs text-slate-400 font-medium">{formData.remarks.length} / 250</span>
+                </div>
+                <textarea 
+                  className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none resize-none placeholder:text-slate-300" 
+                  value={formData.remarks} 
+                  onChange={e => setFormData(prev => ({...prev, remarks: e.target.value.slice(0, 250)}))} 
+                  placeholder="Please process on priority basis." 
                 />
               </div>
-            </div>
-
-            {/* Transport Details */}
-            <div className="p-4 bg-indigo-50/20 rounded border border-indigo-100/50 space-y-4">
-              <div className="flex items-center gap-2 text-indigo-700">
-                <Truck size={16} />
-                <h3 className="text-xs font-bold uppercase tracking-wider">Transport & Logistics</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-gray-500">Transporter Name</label>
-                  <input
-                    type="text"
-                    className="w-full p-2 bg-white border border-indigo-100 rounded text-sm focus:border-indigo-500 outline-none"
-                    placeholder="e.g. Blue Dart"
-                    value={formData.transporter_name}
-                    onChange={(e) => setFormData({...formData, transporter_name: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-gray-500">Vehicle Number</label>
-                  <input
-                    type="text"
-                    className="w-full p-2 bg-white border border-indigo-100 rounded text-sm focus:border-indigo-500 outline-none"
-                    placeholder="GJ-01-XX-0000"
-                    value={formData.vehicle_number}
-                    onChange={(e) => setFormData({...formData, vehicle_number: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-gray-500">E-Way Bill No.</label>
-                  <input
-                    type="text"
-                    className="w-full p-2 bg-white border border-indigo-100 rounded text-sm focus:border-indigo-500 outline-none"
-                    placeholder="12-digit number"
-                    value={formData.eway_bill_no}
-                    onChange={(e) => setFormData({...formData, eway_bill_no: e.target.value})}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-700">Dispatch Notes</label>
-              <textarea
-                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none h-20"
-                placeholder="Any specific instructions for the vendor..."
-                value={formData.notes}
-                onChange={(e) => setFormData({...formData, notes: e.target.value})}
-              />
-            </div>
           </div>
 
-          {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 sticky bottom-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2  text-sm  text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex items-center gap-2 p-2  bg-indigo-600 text-white rounded  text-sm  hover:bg-indigo-700 transition-all  shadow-indigo-100 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
-            >
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded  animate-spin" />
-              ) : (
-                <CheckCircle2 size={16} />
-              )}
-              Create Outward Challan
-            </button>
+          {/* Right Sidebar - Info & Validations */}
+          <div className="w-[340px] bg-slate-50 border-l border-slate-200 p-2 space-y-2 overflow-y-auto overflow-x-hidden shadow-inner">
+             
+             {/* Validations Checklist */}
+             <div className="bg-white p-2 rounded border border-slate-200 shadow-sm space-y-2">
+                <div className="flex items-center gap-2 text-slate-800 border-b border-slate-100 pb-3">
+                   <ShieldCheck size={18} className="text-blue-600" />
+                   <h4 className="text-xs   ">Validations</h4>
+                </div>
+                <div className="space-y-2">
+                   {Object.entries(validations).map(([key, v]) => (
+                     <div key={key} className="flex flex-col gap-2">
+                        <div className="flex items-start gap-2 group">
+                           <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
+                              v.status === 'success' ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-100' : 
+                              v.status === 'error' ? 'bg-red-500 border-red-500 text-white shadow-sm shadow-red-100' : 
+                              'bg-white border-slate-200 text-slate-200'
+                           }`}>
+                              {v.status === 'success' ? <CheckCircle2 size={12} strokeWidth={4} /> : 
+                               v.status === 'error' ? <X size={12} strokeWidth={4} /> : 
+                               <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />}
+                           </div>
+                           <span className={`text-xs  leading-tight   ${
+                             v.status === 'success' ? 'text-emerald-700' : 
+                             v.status === 'error' ? 'text-red-600' : 
+                             'text-slate-400'
+                           }`}>{v.label}</span>
+                        </div>
+                        {v.errors && v.status === 'error' && (
+                          <div className="ml-8 space-y-1.5 border-l-2 border-red-100 pl-3 py-1">
+                             {v.errors.map((err, i) => (
+                               <p key={i} className="text-xs  text-red-500 flex items-start gap-1.5">
+                                  <AlertCircle size={10} className="mt-0.5 flex-shrink-0" />
+                                  <span>{err}</span>
+                               </p>
+                             ))}
+                          </div>
+                        )}
+                     </div>
+                   ))}
+                </div>
+             </div>
+
+             {/* Summary Section */}
+             <div className="space-y-2 bg-blue-600 p-2 rounded border border-blue-500 shadow-lg shadow-blue-100">
+                <div className="flex items-center gap-2 text-white border-b border-blue-400/50 pb-3">
+                   <Package size={18} />
+                   <h4 className="text-xs  text-white ">Summary</h4>
+                </div>
+                <div className="space-y-2">
+                   <div className="flex justify-between items-center text-xs  text-blue-100">
+                      <span className="  opacity-70 text-xs">Total Items</span>
+                      <span className="bg-white/20 px-2 py-0.5 rounded text-white">{releaseItems.length}</span>
+                   </div>
+                   <div className="flex justify-between items-center text-xs  text-blue-100">
+                      <span className="  opacity-70 text-xs">Total Dispatch Qty</span>
+                      <span className="text-lg text-white">{totalDispatchQty} <span className="text-xs opacity-70">Nos</span></span>
+                   </div>
+                   <div className="flex justify-between items-center text-xs  text-blue-100">
+                      <span className="  opacity-70 text-xs">Total Cost</span>
+                      <span className="text-lg text-white">₹ {formData.total_cost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                   </div>
+                   <div className="pt-4 border-t border-blue-400/50 space-y-3">
+                      <div className="flex flex-col gap-1">
+                         <span className="text-xs text-blue-200   ">Source Warehouse</span>
+                         <span className="text-xs  text-white truncate">{formData.source_warehouse_id}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                         <span className="text-xs text-blue-200   ">Vendor</span>
+                         <span className="text-xs  text-white truncate">{formData.vendor_name}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                         <span className="text-xs text-blue-200   ">Expected Return</span>
+                         <span className="text-xs  text-white">{formData.expected_return_date ? new Date(formData.expected_return_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not set'}</span>
+                      </div>
+                   </div>
+                </div>
+             </div>
+
+             {/* Business Rules Section */}
+             <div className="space-y-2 bg-amber-50 p-2 rounded border border-amber-100 shadow-sm">
+                <div className="flex items-center gap-2 text-amber-800 border-b border-amber-200/50 pb-3">
+                   <Info size={18} />
+                   <h4 className="text-xs   ">Business Rules</h4>
+                </div>
+                <ul className="space-y-3">
+                   {[
+                     "Dispatch quantity must be less than or equal to available quantity.",
+                     "At least one item is required.",
+                     "Dispatch type is mandatory.",
+                     "Expected return date must be today or a future date."
+                   ].map((rule, idx) => (
+                     <li key={idx} className="flex gap-2.5">
+                       <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
+                       <span className="text-xs  text-amber-800/80 leading-normal  ">{rule}</span>
+                     </li>
+                   ))}
+                </ul>
+             </div>
           </div>
-        </form>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-2 bg-white border-t border-slate-200 flex justify-end items-center gap-2">
+           <span className="mr-auto text-xs text-slate-400 ">
+             <span className="text-red-500 ">*</span> Mandatory Fields
+           </span>
+           <button onClick={onClose} className="p-2 text-slate-600  hover:bg-slate-100 rounded transition-all text-xs">
+             Cancel
+           </button>
+           <button type="button" onClick={() => toast.addToast('Draft saved successfully', 'info')} className="flex items-center gap-2 p-2 bg-white text-blue-600 border border-blue-600 rounded  hover:bg-blue-50 transition-all text-xs group">
+              <Save size={15} className="group-hover:scale-110 transition-transform" />
+              Save as Draft
+           </button>
+           <button onClick={handleSubmit} className="flex items-center gap-2 p-2 bg-blue-600 text-white rounded  hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-200 transition-all text-xs disabled:opacity-50 group" disabled={loading}>
+              <Send size={15} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              Submit Challan
+           </button>
+        </div>
       </div>
     </div>
   )

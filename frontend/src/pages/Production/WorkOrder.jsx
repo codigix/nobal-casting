@@ -3,7 +3,7 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import {
   ChevronRight, ChevronDown, AlertCircle, Layers, ClipboardList,
   CheckCircle2, Factory, Clock, Package, Plus, Edit2, Trash2, Eye, Trash, Search, Filter, Calendar, Activity,
-  Truck, Download, Printer
+  Truck, Download, Printer, TrendingUp
 } from 'lucide-react'
 import * as productionService from '../../services/productionService'
 import api from '../../services/api'
@@ -79,21 +79,20 @@ const sortWorkOrders = (ordersData) => {
 
 const StatusBadge = ({ status }) => {
   const config = {
-    draft: { color: 'text-slate-600 bg-slate-50 border-slate-100', icon: Clock, label: 'Draft' },
-    ready: { color: 'text-blue-600 bg-blue-50 border-blue-100', icon: CheckCircle2, label: 'Ready' },
-    planned: { color: 'text-indigo-600 bg-indigo-50 border-indigo-100', icon: Calendar, label: 'Planned' },
-    'in-progress': { color: 'text-amber-600', icon: Activity, label: 'In-Progress' },
-    in_progress: { color: 'text-amber-600', icon: Activity, label: 'In-Progress' },
-    completed: { color: 'text-emerald-600 ', icon: CheckCircle2, label: 'Completed' },
-    cancelled: { color: 'text-rose-600 bg-rose-50 border-rose-100', icon: AlertCircle, label: 'Cancelled' }
+    draft: { color: 'text-slate-600 bg-slate-50 border-slate-100', icon: Clock, label: 'DRAFT' },
+    ready: { color: 'text-blue-600 bg-blue-50 border-blue-100', icon: CheckCircle2, label: 'READY' },
+    planned: { color: 'text-indigo-600 bg-indigo-50 border-indigo-100', icon: Calendar, label: 'PLANNED' },
+    'in-progress': { color: 'text-amber-600 bg-amber-50 border-amber-100', icon: Activity, label: 'IN PROGRESS' },
+    in_progress: { color: 'text-amber-600 bg-amber-50 border-amber-100', icon: Activity, label: 'IN PROGRESS' },
+    completed: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: CheckCircle2, label: 'COMPLETED' },
+    cancelled: { color: 'text-rose-600 bg-rose-50 border-rose-100', icon: AlertCircle, label: 'CANCELLED' }
   }
   const s = (status || 'draft').toLowerCase().replace('_', '-')
   const statusKey = (status || 'draft').toLowerCase()
   const { color, icon: Icon, label } = config[statusKey] || config[s] || config.draft
 
   return (
-    <span className={` text-xs  ${color}`}>
-      {/* <Icon size={10} className="stroke-[2.5]" /> */}
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[9px]  tracking-wider ${color}`}>
       {label || status}
     </span>
   )
@@ -101,36 +100,95 @@ const StatusBadge = ({ status }) => {
 
 const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
   const colorMap = {
-    blue: 'text-blue-600 bg-blue-50 border-blue-100',
-    emerald: 'text-emerald-600 ',
-    amber: 'text-amber-600',
-    rose: 'text-rose-600 bg-rose-50 border-rose-100',
-    indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
-    violet: 'text-violet-600 bg-violet-50 border-violet-100'
+    blue: 'text-blue-600 bg-blue-50/50 border-blue-100',
+    emerald: 'text-emerald-600 bg-emerald-50/50 border-emerald-100',
+    amber: 'text-amber-600 bg-amber-50/50 border-amber-100',
+    rose: 'text-rose-600 bg-rose-50/50 border-rose-100',
+    indigo: 'text-indigo-600 bg-indigo-50/50 border-indigo-100',
+    violet: 'text-violet-600 bg-violet-50/50 border-violet-100'
+  }
+
+  const iconColorMap = {
+    blue: 'bg-blue-500 text-white',
+    emerald: 'bg-emerald-500 text-white',
+    amber: 'bg-amber-500 text-white',
+    rose: 'bg-rose-500 text-white',
+    indigo: 'bg-indigo-500 text-white',
+    violet: 'bg-violet-500 text-white'
   }
 
   return (
-    <div className="bg-white p-2 rounded border border-gray-100   hover: transition-all group overflow-hidden relative">
-      <div className="absolute -right-4 -top-4 w-24 h-24 bg-gray-50 rounded  opacity-50 group-hover:scale-110 transition-transform" />
+    <div className="bg-white p-4 rounded border border-gray-100 hover:shadow-lg hover:shadow-gray-100 transition-all group overflow-hidden relative">
+      <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-5 group-hover:scale-110 transition-transform ${iconColorMap[color] || iconColorMap.blue}`} />
       
       <div className="relative flex justify-between items-start">
-        <div className="">
-          <p className="text-xs   text-gray-400 ">{label}</p>
+        <div className="space-y-1">
+          <p className="text-[10px]  text-gray-400 uppercase tracking-wider">{label}</p>
           <div className="flex items-baseline gap-2">
-            <h3 className="text-xl  text-gray-900 ">{value}</h3>
-            {trend && (
-              <span className={`text-xs   ${trend > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                {trend > 0 ? '+' : ''}{trend}%
+            <h3 className="text-2xl  text-gray-900 tracking-tight">{value}</h3>
+            {trend !== undefined && (
+              <span className={`text-[10px]  px-1.5 py-0.5 rounded ${trend > 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'}`}>
+                {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}%
               </span>
             )}
           </div>
           {subtitle && (
-            <p className="text-xs   text-gray-500 ">{subtitle}</p>
+            <p className="text-[10px] font-medium text-gray-500 italic">{subtitle}</p>
           )}
         </div>
-        <div className={`p-2 roundedl ${colorMap[color] || colorMap.blue}   group-hover:scale-110 transition-transform`}>
-          <Icon size={24} />
+        <div className={`p-3 rounded-xl shadow-sm transition-all duration-500 group-hover:rotate-12 ${iconColorMap[color] || iconColorMap.blue}`}>
+          <Icon size={20} strokeWidth={2.5} />
         </div>
+      </div>
+    </div>
+  )
+}
+
+const ManufacturingProgress = ({ produced, total, scrap, rejected, status }) => {
+  const p = parseFloat(produced || 0)
+  const q = parseFloat(total || 1)
+  const s = parseFloat(scrap || 0)
+  const r = parseFloat(rejected || 0)
+  const loss = s + r
+  const completionRate = (p / q) * 100
+  
+  return (
+    <div className="flex flex-col gap-1.5 py-1">
+      <div className="flex justify-between items-center mb-0.5">
+        <span className="text-[10px]  text-slate-700">
+          {Math.round(completionRate)}% COMPLETE
+        </span>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px]  text-indigo-600">{p.toLocaleString()}</span>
+          <span className="text-[9px] text-slate-400 font-medium">/ {q.toLocaleString()}</span>
+        </div>
+      </div>
+      
+      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden flex shadow-inner">
+        <div 
+          className={`h-full transition-all duration-1000 ${completionRate >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+          style={{ width: `${Math.min(100, completionRate)}%` }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between mt-0.5">
+         <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-0.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+              <span className="text-[9px] text-slate-500 font-medium">P: {p.toLocaleString()}</span>
+            </div>
+            {loss > 0 && (
+              <div className="flex items-center gap-0.5">
+                <div className="w-1.5 h-1 rounded-full bg-rose-400" />
+                <span className="text-[9px] text-rose-500 font-medium">L: {Math.round(loss)}</span>
+              </div>
+            )}
+         </div>
+         {completionRate > 0 && completionRate < 100 && (
+           <span className="text-[9px] text-slate-400 italic font-medium">
+             {Math.floor(q - p)} units left
+           </span>
+         )}
       </div>
     </div>
   )
@@ -151,89 +209,81 @@ const WorkOrderRow = React.memo(({
   if (layout === 'flat') {
     return (
       <div className="group/row">
-        <div className="flex items-center gap-4 p-4 hover:bg-indigo-50/30 transition-all border-b border-gray-50">
-          
-
-          <div className="flex-1">
-            <p className="text-xs font-medium text-gray-900">{order.item_name}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">
-              {order.project_name || 'No Project'}
+        <div className="flex items-center gap-6 p-4 hover:bg-indigo-50/30 transition-all border-b border-gray-50">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-1 h-4 bg-indigo-500 rounded" />
+              <p className="text-xs  text-gray-900 truncate">{order.item_name}</p>
+            </div>
+            <p className="text-[10px] text-gray-400 ml-3">
+              {order.project_name || 'Individual Order'}
             </p>
           </div>
 
-          <div className=" flex justify-center">
+          <div className="w-24 flex justify-center">
             <StatusBadge status={order.status} />
           </div>
 
-          <div className="">
-            <span className="text-xs font-semibold text-gray-900">{parseFloat(order.quantity).toFixed(2)}</span>
-            <span className="text-[10px] text-gray-400 ml-1">units</span>
+          <div className="w-20">
+            <span className="text-xs  text-gray-900">{parseFloat(order.quantity).toLocaleString()}</span>
+            <span className="text-[9px] text-gray-400 ml-1 font-medium uppercase tracking-tighter">units</span>
           </div>
 
           <div className="w-32">
             <div className="flex flex-col gap-1 text-[10px] text-gray-500">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <Calendar size={10} className="text-emerald-500" />
-                <span className="font-medium">Start: {order.planned_start_date ? new Date(order.planned_start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'N/A'}</span>
+                <span className="font-semibold text-gray-600">START: {order.planned_start_date ? new Date(order.planned_start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase() : 'N/A'}</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <Clock size={10} className="text-rose-500" />
-                <span className="font-medium">End: {order.planned_end_date ? new Date(order.planned_end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'N/A'}</span>
+                <span className="font-semibold text-gray-600">DUE: {order.planned_end_date ? new Date(order.planned_end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase() : 'N/A'}</span>
               </div>
             </div>
           </div>
 
-          <div className="w-20">
-            <div className="flex justify-between text-[10px] mb-1.5">
-              <span className="font-medium text-gray-700">{parseFloat(order.produced_qty || 0).toFixed(2)} / {parseFloat(order.quantity).toFixed(2)}</span>
-              <span className="text-indigo-600 font-semibold">{Math.round(((order.produced_qty || 0) / (order.quantity || 1)) * 100)}%</span>
-            </div>
-            <div className="w-full h-1.5 bg-gray-100 rounded  overflow-hidden shadow-inner">
-              <div 
-                className={`h-full transition-all duration-700 ${order.status === 'completed' ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                style={{ width: `${Math.min(((order.produced_qty || 0) / (order.quantity || 1)) * 100, 100)}%` }}
-              />
-            </div>
+          <div className="w-40">
+            <ManufacturingProgress 
+              produced={order.produced_qty} 
+              total={order.quantity} 
+              scrap={order.scrap_qty} 
+              rejected={order.rejected_qty}
+              status={order.status}
+            />
           </div>
 
-          <div className="w-24">
-            <span className={`text-xs font-medium ${(parseFloat(order.scrap_qty) + parseFloat(order.rejected_qty)) > 0 ? 'text-rose-500' : 'text-gray-400'}`}>
-              {(parseFloat(order.scrap_qty || 0) + parseFloat(order.rejected_qty || 0)).toFixed(2)}
-            </span>
-          </div>
-
-          <div className="">
-            <span className="text-[10px] text-indigo-600 ">
+          <div className="w-28 text-right">
+            <span className="text-[10px]  text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
               {order.wo_id}
             </span>
           </div>
 
-          <div className=" flex items-center justify-end gap-1">
+          <div className="flex items-center justify-end gap-1">
             <button
               onClick={(e) => { e.stopPropagation(); handleView(order); }}
-              className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all"
-              title="View"
+              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
+              title="View Details"
             >
-              <Eye size={12} />
+              <Eye size={14} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); navigate(`/manufacturing/job-cards?filter_work_order=${order.wo_id}`); }}
-              className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded  transition-all"
-              title="Track"
+              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
+              title="Execution Map"
             >
               <Activity size={14} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleEdit(order); }}
-              className="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded  transition-all"
-              title="Edit"
+              className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all"
+              title="Edit Parameters"
             >
               <Edit2 size={14} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleDelete(order.wo_id); }}
-              className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all"
-              title="Delete"
+              className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
+              title="Delete Order"
             >
               <Trash size={14} />
             </button>
@@ -252,71 +302,66 @@ const WorkOrderRow = React.memo(({
             setRowExpanded(prev => !prev);
           }
         }}
-        className={`p-4 hover:bg-gray-50/30 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 ${depth > 0 ? 'bg-gray-50/10' : ''} ${hasSubAssemblies ? 'cursor-pointer' : ''}`} 
-        style={{ paddingLeft: `${depth * 1.5 + 1}rem` }}
+        className={`p-4 hover:bg-gray-50/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6 ${depth > 0 ? 'bg-gray-50/20' : ''} ${hasSubAssemblies ? 'cursor-pointer' : ''}`} 
+        style={{ paddingLeft: `${depth * 2 + 1}rem` }}
       >
-        <div className="flex items-center gap-4 flex-1">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
           {hasSubAssemblies ? (
-            <div className="p-1 text-gray-500">
-              {rowExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            <div className="p-1 text-gray-500 hover:text-indigo-600 transition-colors">
+              {rowExpanded ? <ChevronDown size={14} strokeWidth={3} /> : <ChevronRight size={14} strokeWidth={3} />}
             </div>
           ) : depth > 0 ? (
             <div className="w-6" />
           ) : null}
-          <div className="w-8 h-8 rounded border border-gray-100 flex items-center justify-center text-gray-400 bg-white  ">
-            <ClipboardList size={16} />
+          
+          <div className={`w-10 h-10 rounded flex items-center justify-center transition-all ${depth > 0 ? 'bg-amber-50 text-amber-500 border border-amber-100' : 'bg-indigo-50 text-indigo-500 border border-indigo-100'}`}>
+            {depth > 0 ? <Layers size={18} /> : <ClipboardList size={18} />}
           </div>
+
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {(() => {
                 const parts = (order.wo_id || '').split('-')
                 const displayId = parts.length > 3 ? `${parts[0]}-${parts[1]}-..-${parts[parts.length-1]}` : order.wo_id
                 return (
-                  <span className="text-xs font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded" title={order.wo_id}>
+                  <span className="text-[10px]  font-mono text-indigo-600 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100/50" title={order.wo_id}>
                     {displayId}
                   </span>
                 )
               })()}
-              <span className="text-sm font-medium text-gray-900 truncate">{order.item_name}</span>
-              <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded ml-2">
-                {order.project_name || 'No Project'}
-              </span>
+              <span className="text-sm  text-gray-900 truncate">{order.item_name}</span>
               {hasSubAssemblies && (
-                <span className="text-[10px] text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded  font-medium">
-                  {order.subAssemblies.length} Sub-assemblies
+                <span className="text-[9px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100  tracking-tight">
+                  {order.subAssemblies.length} SUB-ASSEMBLIES
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-400">
-              <span className={order.priority === 'high' ? 'text-rose-500 font-medium' : ''}>
-                {order.priority.toUpperCase()} priority
+            <div className="flex items-center gap-4 mt-1.5">
+              <div className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${getPriorityInfo(order.priority).dot}`} />
+                <span className={`text-[10px]  uppercase tracking-wider ${getPriorityInfo(order.priority).color}`}>
+                  {order.priority} PRIORITY
+                </span>
+              </div>
+              <span className="w-1 h-1 bg-gray-300 rounded-full" />
+              <span className="text-[10px] text-gray-500 font-medium">BOM: {(order.bom_no || '').startsWith('BOM-') ? order.bom_no : `BOM-${order.bom_no || order.wo_id.split('-')[1] || 'STANDARD'}`}</span>
+              <span className="w-1 h-1 bg-gray-300 rounded-full" />
+              <span className="text-[10px] text-indigo-500  bg-indigo-50/50 px-1.5 py-0.5 rounded italic">
+                {order.project_name || 'NO PROJECT'}
               </span>
-              <span className="w-1 h-1 bg-gray-300 rounded " />
-              <span>BOM: {(order.bom_no || '').startsWith('BOM-') ? order.bom_no : `BOM-${order.bom_no || order.wo_id.split('-')[1] || 'STANDARD'}`}</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-8 min-w-[320px]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-10 min-w-[400px]" onClick={(e) => e.stopPropagation()}>
           <div className="flex-1">
-            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
-              <span>Progress</span>
-              <span>{Math.round((order.produced_qty / order.quantity) * 100)}%</span>
-            </div>
-            <div className=" h-1.5 bg-gray-100 rounded  overflow-hidden">
-              <div 
-                className={`h-full ${order.status === 'completed' ? 'bg-emerald-500' : 'bg-indigo-500'} transition-all duration-500`}
-                style={{ width: `${Math.min((order.produced_qty / order.quantity) * 100, 100)}%` }}
-              />
-            </div>
-            <div className="text-[10px] text-gray-400 mt-1 flex justify-between">
-              <span>{parseFloat(order.produced_qty).toFixed(2)} / {parseFloat(order.quantity).toFixed(2)} units</span>
-              {(parseFloat(order.scrap_qty) > 0 || parseFloat(order.rejected_qty) > 0) && (
-                <span className="text-rose-500 font-medium">
-                  Loss: {(parseFloat(order.scrap_qty) + parseFloat(order.rejected_qty)).toFixed(2)} units
-                </span>
-              )}
-            </div>
+            <ManufacturingProgress 
+              produced={order.produced_qty} 
+              total={order.quantity} 
+              scrap={order.scrap_qty} 
+              rejected={order.rejected_qty}
+              status={order.status}
+            />
           </div>
 
           <div className="w-24 flex justify-center">
@@ -326,38 +371,38 @@ const WorkOrderRow = React.memo(({
           <div className="flex items-center gap-1">
             <button
               onClick={() => handleView(order)}
-              className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
-              title="View"
+              className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
+              title="Visual Audit"
             >
-              <Eye size={14} />
+              <Eye size={16} />
             </button>
             <button
               onClick={() => navigate(`/manufacturing/job-cards?filter_work_order=${order.wo_id}`)}
-              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
-              title="Track"
+              className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
+              title="Track Execution"
             >
-              <Activity size={14} />
+              <Activity size={16} />
             </button>
             <button
               onClick={() => handleEdit(order)}
-              className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all"
-              title="Edit"
+              className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all"
+              title="Edit Order"
             >
-              <Edit2 size={14} />
+              <Edit2 size={16} />
             </button>
             <button
               onClick={() => handleDelete(order.wo_id)}
-              className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
-              title="Delete"
+              className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
+              title="Delete Order"
             >
-              <Trash size={14} />
+              <Trash size={16} />
             </button>
           </div>
         </div>
       </div>
       
       {rowExpanded && hasSubAssemblies && (
-        <div className="divide-y divide-gray-50 border-l-2 border-indigo-100/50 bg-gray-50/5">
+        <div className="divide-y divide-gray-50 border-l-4 border-indigo-100/30 ml-4 bg-gray-50/5">
           {order.subAssemblies.map(sub => (
             <WorkOrderRow 
               key={sub.wo_id} 
@@ -663,7 +708,7 @@ export default function WorkOrder() {
                   <td>${o.priority}</td>
                   <td>${o.quantity}</td>
                   <td>${o.produced_qty}</td>
-                  <td>${(parseFloat(o.rejected_qty) || 0) + (parseFloat(o.scrap_qty) || 0)}</td>
+                  <td>${Math.max((parseFloat(o.rejected_qty) || 0), (parseFloat(o.scrap_qty) || 0))}</td>
                   <td>${o.status}</td>
                 </tr>
               `).join('')}
@@ -673,7 +718,7 @@ export default function WorkOrder() {
             <p>Total Items: ${groupOrders.length}</p>
             <p>Total Quantity: ${groupOrders.reduce((sum, o) => sum + parseFloat(o.quantity), 0)}</p>
             <p>Total Produced: ${groupOrders.reduce((sum, o) => sum + parseFloat(o.produced_qty), 0)}</p>
-            <p>Total Rejection/Scrap: ${groupOrders.reduce((sum, o) => sum + (parseFloat(o.rejected_qty) || 0) + (parseFloat(o.scrap_qty) || 0), 0)}</p>
+            <p>Total Rejection/Scrap: ${groupOrders.reduce((sum, o) => sum + Math.max((parseFloat(o.rejected_qty) || 0), (parseFloat(o.scrap_qty) || 0)), 0)}</p>
           </div>
           <script>window.print();</script>
         </body>
@@ -723,126 +768,120 @@ export default function WorkOrder() {
   const columns = useMemo(() => [
     {
       key: 'item_name',
-      label: 'Item To Manufacture',
+      label: 'ITEM TO MANUFACTURE',
       render: (val, row) => (
-        <div className="flex flex-col">
-          <span className="text-xs font-medium text-gray-900">{val}</span>
-          <span className="text-[10px] text-gray-400 truncate">
-            {(row.bom_no || '').startsWith('BOM-') ? row.bom_no : `BOM-${row.bom_no || row.wo_id.split('-')[1] || 'STANDARD'}`}
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="w-1.5 h-8 bg-indigo-600 rounded" />
+          <div className="flex flex-col">
+            <span className="text-xs  text-gray-900">{val}</span>
+            <span className="text-[10px] text-indigo-500  bg-indigo-50 px-1.5 py-0.5 rounded w-fit mt-1">
+              {(row.bom_no || '').startsWith('BOM-') ? row.bom_no : `BOM-${row.bom_no || row.wo_id.split('-')[1] || 'STANDARD'}`}
+            </span>
+          </div>
         </div>
       )
     },
     {
       key: 'project_name',
-      label: 'Project Name',
+      label: 'PROJECT CONTEXT',
       render: (val) => (
-        <span className="text-xs font-medium text-gray-700">{val || 'N/A'}</span>
+        <div className="flex flex-col">
+          <span className="text-xs  text-gray-700">{val || 'GENERAL PRODUCTION'}</span>
+          <span className="text-[10px] text-gray-400 font-medium">Internal Inventory</span>
+        </div>
       )
     },
     {
       key: 'status',
-      label: 'Status',
+      label: 'STATUS',
       render: (val) => <StatusBadge status={val} />
     },
     {
       key: 'quantity',
-      label: 'Qty To Manufacture',
+      label: 'PLANNED QTY',
       render: (val) => (
         <div className="flex items-baseline gap-1">
-          <span className="text-xs font-semibold text-gray-900">{val}</span>
-          <span className="text-[10px] text-gray-400">units</span>
+          <span className="text-xs  text-gray-900">{parseFloat(val).toLocaleString()}</span>
+          <span className="text-[9px] text-gray-400  uppercase tracking-tighter">units</span>
         </div>
       )
     },
     {
       key: 'planned_start_date',
-      label: 'Schedule',
+      label: 'SCHEDULE',
       render: (_, row) => (
-        <div className="flex flex-col gap-0.5 text-[10px] text-gray-500">
-          <div className="flex items-center gap-1.5">
-            <Calendar size={10} className="text-emerald-500" />
-            <span className="font-medium">{row.planned_start_date ? new Date(row.planned_start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'N/A'}</span>
+        <div className="flex flex-col gap-1.5 py-1">
+          <div className="flex items-center gap-2">
+            <Calendar size={12} className="text-emerald-500" />
+            <span className="text-[11px]  text-gray-600">
+              {row.planned_start_date ? new Date(row.planned_start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase() : 'N/A'}
+            </span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Clock size={10} className="text-rose-500" />
-            <span className="font-medium">{row.planned_end_date ? new Date(row.planned_end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'N/A'}</span>
+          <div className="flex items-center gap-2">
+            <Clock size={12} className="text-rose-500" />
+            <span className="text-[11px]  text-gray-400">
+              {row.planned_end_date ? new Date(row.planned_end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase() : 'N/A'}
+            </span>
           </div>
         </div>
       )
     },
     {
       key: 'progress',
-      label: 'Manufacturing Progress',
+      label: 'MANUFACTURING PROGRESS',
       render: (_, row) => (
-        <div className="w-25">
-          <div className="flex justify-between text-[10px] mb-1.5">
-            <span className="font-medium text-gray-700">{row.produced_qty || 0} / {row.quantity}</span>
-            <span className="text-indigo-600 font-semibold">{Math.round(((row.produced_qty || 0) / (row.quantity || 1)) * 100)}%</span>
-          </div>
-          <div className="w-full h-1.5 bg-gray-100 rounded  overflow-hidden shadow-inner">
-            <div 
-              className={`h-full transition-all duration-700 ${(row.status || '').toLowerCase() === 'completed' ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-              style={{ width: `${Math.min(((row.produced_qty || 0) / (row.quantity || 1)) * 100, 100)}%` }}
-            />
-          </div>
+        <div className="w-30">
+          <ManufacturingProgress 
+            produced={row.produced_qty} 
+            total={row.quantity} 
+            scrap={row.scrap_qty} 
+            rejected={row.rejected_qty}
+            status={row.status}
+          />
         </div>
       )
     },
     {
-      key: 'scrap_qty',
-      label: 'Process Loss',
+      key: 'wo_id',
+      label: 'WORK ORDER ID',
       render: (val) => (
-        <span className={`text-xs font-medium ${parseFloat(val) > 0 ? 'text-rose-500' : 'text-gray-400'}`}>
-          {parseFloat(val || 0).toFixed(1)}
+        <span className="text-[10px]  font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+          {val}
         </span>
       )
     },
     {
-      key: 'wo_id',
-      label: 'Work Order ID',
-      render: (val) => {
-        const parts = (val || '').split('-')
-        const displayId = parts.length > 5 ? `${parts[0]}-${parts[1]}-..-${parts[parts.length-1]}` : val
-        return (
-          <span className="text-[10px]  text-indigo-600 " title={val}>
-            {displayId}
-          </span>
-        )
-      }
-    },
-    {
       key: 'actions',
-      label: 'Actions',
+      label: 'ACTIONS',
       render: (_, row) => (
-        <div className="flex items-center " onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => handleView(row)}
-            className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
-            title="View"
+            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
+            title="View Intelligence"
           >
-            <Eye size={12} />
+            <Eye size={16} />
           </button>
           <button
             onClick={() => navigate(`/manufacturing/job-cards?filter_work_order=${row.wo_id}`)}
             className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
-            title="Track"
+            title="Operational Flow"
           >
-            <Activity size={12} />
+            <Activity size={16} />
           </button>
           <button
             onClick={() => handleEdit(row)}
             className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all"
-            title="Edit"
+            title="Update Configuration"
           >
-            <Edit2 size={12} />
+            <Edit2 size={16} />
           </button>
           <button
             onClick={() => handleDelete(row.wo_id)}
             className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
-            title="Delete"
+            title="Delete Entry"
           >
-            <Trash size={12} />
+            <Trash size={16} />
           </button>
         </div>
       )
@@ -920,34 +959,37 @@ export default function WorkOrder() {
         )}
 
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2  mb-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard
             label="Total Work Orders"
             value={stats.totalOrders}
             icon={Layers}
             color="indigo"
-            subtitle="Global manufacturing volume"
+            subtitle="GLOBAL MANUFACTURING VOLUME"
+            trend={12}
           />
           <StatCard
-            label="In Progress Work Order"
+            label="Production Active"
             value={stats.inProgress}
             icon={Activity}
             color="amber"
-            subtitle="Active production lines"
+            subtitle="OPERATIONAL THROUGHPUT"
+            trend={5}
           />
           <StatCard
-            label="Completed Work Order"
+            label="Ready for Delivery"
             value={stats.completed}
             icon={CheckCircle2}
             color="emerald"
-            subtitle="Ready for delivery"
+            subtitle="QUALITY ASSURED UNITS"
+            trend={8}
           />
           <StatCard
-            label="Pending Work Order"
-            value={stats.pending}
-            icon={Clock}
+            label="Overall Progress"
+            value={`${stats.completionRate}%`}
+            icon={TrendingUp}
             color="blue"
-            subtitle="Awaiting scheduling"
+            subtitle="SYSTEM UTILIZATION"
           />
         </div>
 
@@ -1053,16 +1095,16 @@ export default function WorkOrder() {
                 return (
                   <>
                     {activeOrders.length > 0 && (
-                      <div className="bg-white rounded border border-gray-100 overflow-hidden">
-                        <div className="p-2 border-b border-gray-100 bg-gray-50/50">
+                      <div className="bg-white rounded border border-gray-100 overflow-hidden shadow-sm">
+                        <div className="p-4 border-b border-gray-100 bg-gray-50/30">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h2 className="text-sm font-semibold text-gray-900">Active Work Orders</h2>
-                              <p className="text-[10px] text-gray-500 mt-0.5">Real-time production tracking</p>
+                              <h2 className="text-sm  text-gray-900">ACTIVE PRODUCTION QUEUE</h2>
+                              <p className="text-[10px] font-medium text-gray-400 mt-0.5 tracking-tight uppercase italic">Real-time operational tracking system</p>
                             </div>
-                            <div className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded  text-[10px] font-medium flex items-center gap-1.5">
-                              <div className="w-1.5 h-1.5 rounded  bg-emerald-500 animate-pulse" />
-                              {activeOrders.length} Orders Active
+                            <div className="p-1 bg-emerald-50 text-emerald-600 rounded text-[10px]  flex items-center gap-2 border border-emerald-100">
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              {activeOrders.length} LIVE ORDERS
                             </div>
                           </div>
                         </div>
@@ -1081,7 +1123,7 @@ export default function WorkOrder() {
                       <div className="space-y-4">
                         <div className="flex items-center gap-3 px-1">
                           <div className="h-px flex-1 bg-gray-100" />
-                          <h2 className="text-[10px]  text-gray-500-400  ">Completed Production Flow</h2>
+                          <h2 className="text-[10px]  text-gray-400 uppercase tracking-widest">Completed Production Flow</h2>
                           <div className="h-px flex-1 bg-gray-100" />
                         </div>
                         
@@ -1130,14 +1172,14 @@ export default function WorkOrder() {
                                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                   <button
                                     onClick={() => handlePrintReport(group.id, group.orders)}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded text-[10px] font-medium text-gray-600 hover:bg-gray-50 transition-colors  "
+                                    className="flex items-center gap-2 p-1.5 bg-white border border-gray-200 rounded text-[10px] font-medium text-gray-600 hover:bg-gray-50 transition-colors  "
                                   >
                                     <Printer size={12} />
                                     Print
                                   </button>
                                   <button
                                     onClick={() => handleDownloadReport(group.id, group.orders)}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded text-[10px] font-medium text-gray-600 hover:bg-gray-50 transition-colors  "
+                                    className="flex items-center gap-2 p-1.5 bg-white border border-gray-200 rounded text-[10px] font-medium text-gray-600 hover:bg-gray-50 transition-colors  "
                                   >
                                     <Download size={12} />
                                     CSV
@@ -1145,7 +1187,7 @@ export default function WorkOrder() {
                                   {group.allCompleted && group.id !== 'NO_SALES_ORDER' && (
                                     <button
                                       onClick={() => handleShipment(group.id, group.orders)}
-                                      className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded text-[10px] font-medium hover:bg-indigo-700 transition-colors  shadow-indigo-100"
+                                      className="flex items-center gap-2 p-1.5 bg-indigo-600 text-white rounded text-[10px] font-medium hover:bg-indigo-700 transition-colors  shadow-indigo-100"
                                     >
                                       <Truck size={12} />
                                       Send to Shipment

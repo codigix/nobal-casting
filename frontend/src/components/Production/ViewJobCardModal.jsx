@@ -4,6 +4,7 @@ import {
   User, Calendar, Trash2, Zap, TrendingUp, Layers, ChevronRight, X
 } from 'lucide-react'
 import Modal from '../Modal'
+import DataTable from '../Table/DataTable'
 import * as productionService from '../../services/productionService'
 import { useToast } from '../ToastContainer'
 
@@ -87,25 +88,61 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
   }
 
   const statusWorkflow = {
-    'draft': ['pending', 'cancelled'],
-    'pending': ['in-progress', 'cancelled'],
-    'in-progress': ['completed', 'cancelled'],
+    'draft': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
+    'planned': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
+    'ready': ['pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
+    'sent-to-vendor': ['partially-received', 'received', 'completed', 'hold', 'cancelled'],
+    'partially-received': ['received', 'completed', 'hold', 'cancelled'],
+    'received': ['completed', 'hold', 'cancelled'],
+    'in-progress': ['completed', 'hold', 'cancelled'],
+    'hold': ['in-progress', 'completed', 'cancelled', 'sent-to-vendor', 'received'],
     'completed': ['completed'],
+    'open': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
+    'pending': ['ready', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
     'cancelled': ['cancelled']
   }
 
   const getAllowedStatuses = (currentStatus) => {
-    return statusWorkflow[(currentStatus || '').toLowerCase()] || []
+    return statusWorkflow[String(currentStatus || '').toLowerCase().replace(/\s+/g, '-').trim()] || []
   }
 
   const getNextStatus = (currentStatus) => {
     const allowed = getAllowedStatuses(currentStatus)
-    return allowed[0] || currentStatus
+    // Default next step for production flow is usually in-progress or the first allowed
+    const startable = ['in-progress', 'ready', 'pending']
+    const next = allowed.find(s => startable.includes(s)) || allowed[0]
+    return next || String(currentStatus || '').toLowerCase().trim() || 'draft'
   }
 
   const handleNextStep = async () => {
     const nextStatus = getNextStatus(jobCard?.status)
     
+    // START VALIDATION
+    if (nextStatus === 'in-progress') {
+      const executionMode = (jobCard?.execution_mode || '').toUpperCase().trim();
+      const isOutsource = executionMode === 'OUTSOURCE' || executionMode === 'SUBCONTRACT';
+
+      if (!isOutsource) {
+        if (!jobCard?.operator_id) {
+          toast.addToast('Please assign an operator before starting the job card', 'error');
+          return;
+        }
+        if (!jobCard?.machine_id) {
+          toast.addToast('Please assign a workstation before starting the job card', 'error');
+          return;
+        }
+        if (!jobCard?.scheduled_start_date) {
+          toast.addToast('Please set a scheduled start date and time before starting the job card', 'error');
+          return;
+        }
+      } else {
+        if (!jobCard?.vendor_id) {
+          toast.addToast('Please assign a vendor before starting this outsourced job card', 'error');
+          return;
+        }
+      }
+    }
+
     // Safety Check: Shortfall Warning
     if (nextStatus === 'completed') {
       const planned = Number(jobCard?.planned_quantity || 0);
@@ -201,7 +238,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
       const sQty = Number(rej.scrap_qty) || 0
       const aQty = Number(rej.accepted_qty) || 0
       
-      logsMap[key].rej_produced += (aQty + rQty + sQty)
+      logsMap[key].rej_produced += (aQty + Math.max(rQty, sQty))
       
       if (rej.status === 'Approved') {
         logsMap[key].rej_rejected += rQty
@@ -215,13 +252,19 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
     Object.keys(logsMap).forEach(key => {
       const log = logsMap[key]
       log.produced = Math.max(log.tl_produced, log.rej_produced)
-      log.rejected = Math.max(log.tl_rejected, log.rej_rejected)
-      log.scrap = Math.max(log.tl_scrap, log.rej_scrap)
+      
+      // Merge Rejected and Scrap as they are considered the same (Scrap)
+      const rejectedRaw = Math.max(log.tl_rejected, log.rej_rejected)
+      const scrapRaw = Math.max(log.tl_scrap, log.rej_scrap)
+      log.scrap = Math.max(rejectedRaw, scrapRaw)
+      log.rejected = log.scrap // Keep for backward compatibility if needed, but display will use one
       
       // Validated Yield (accepted) comes primarily from approved rejection entries (Quality Gate)
-      // FALLBACK: If no explicit quality data exists for this shift, trust the production logs 
-      // (Optimistic approach to match Backend sync logic and allow partial flows)
-      log.accepted = log.rej_produced > 0 ? log.rej_accepted : Math.max(0, log.produced - log.rejected - log.scrap)
+      // ENSURE NON-ADDITIVE LOGIC: If explicit quality data exists, we use (Produced - Max(Rej, Scrap))
+      // to autocorrect any double-deductions in the underlying records.
+      log.accepted = log.rej_produced > 0 
+        ? Math.max(0, log.rej_produced - Math.max(log.rej_rejected, log.rej_scrap)) 
+        : Math.max(0, log.produced - log.scrap)
     })
 
     // Group downtimes by day_number and shift
@@ -379,7 +422,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                   <h2 className="text-xl  text-white er leading-none">{jobCard?.operation || 'Process Phase'}</h2>
                   <p className="text-gray-400   text-xs  mt-1">Work Order: {jobCard?.work_order_id}</p>
                 </div>
-                <div className="text-right">
+                <div className="">
                   <p className="text-xs   text-gray-500  mb-1">Quality Yield</p>
                   <div className="text-xl  er text-indigo-400">
                     {metrics?.producedQty > 0 ? Math.round((metrics.acceptedQty / metrics.producedQty) * 100) : 0}%
@@ -513,12 +556,12 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                       <Layers size={16} />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800">Sub-Assembly Readiness</h4>
+                      <h4 className="text-xs  text-slate-800">Sub-Assembly Readiness</h4>
                       <p className="text-[10px] text-slate-400">Current production status of required components</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">Ready</span>
+                    <span className="text-[10px]  text-slate-500 uppercase">Ready</span>
                     <span className="text-xs font-black text-indigo-600">
                       {dependencies.filter(d => parseFloat(d.child_accepted_qty || 0) >= parseFloat(d.child_planned_qty || 0)).length} / {dependencies.length}
                     </span>
@@ -537,12 +580,12 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                       <div key={idx} className="p-2.5 bg-slate-50/50 rounded border border-slate-100 hover:border-indigo-200 transition-all group">
                         <div className="flex justify-between items-start mb-2">
                           <div className="min-w-0">
-                            <h5 className="text-[11px] font-bold text-slate-800 truncate" title={dep.child_item_name || dep.child_item_code}>
+                            <h5 className="text-[11px]  text-slate-800 truncate" title={dep.child_item_name || dep.child_item_code}>
                               {dep.child_item_name || dep.child_item_code}
                             </h5>
                             <p className="text-[9px] text-slate-400 font-mono mt-0.5">{dep.child_item_code}</p>
                           </div>
-                          <div className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-tight ${
+                          <div className={`px-1.5 py-0.5 rounded text-[9px]  uppercase tracking-tight ${
                             isDone ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
                           }`}>
                             {isDone ? 'Finished' : 'In-Progress'}
@@ -551,17 +594,17 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
 
                         <div className="grid grid-cols-2 gap-2 mb-2">
                           <div>
-                            <p className="text-[9px] text-slate-400 font-bold uppercase mb-0.5">Produced</p>
+                            <p className="text-[9px] text-slate-400  uppercase mb-0.5">Produced</p>
                             <p className="text-[11px] font-black text-slate-600">{produced.toLocaleString()}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-[9px] text-emerald-500 font-bold uppercase mb-0.5">Accepted</p>
+                          <div className="">
+                            <p className="text-[9px] text-emerald-500  uppercase mb-0.5">Accepted</p>
                             <p className="text-[11px] font-black text-emerald-600">{accepted.toLocaleString()}</p>
                           </div>
                         </div>
 
                         <div className="flex justify-between items-end mb-1">
-                          <span className="text-[9px] text-slate-400 font-bold uppercase">Overall</span>
+                          <span className="text-[9px] text-slate-400  uppercase">Overall</span>
                           <span className="text-[10px] font-black text-slate-700">{accepted.toLocaleString()} / {planned.toLocaleString()}</span>
                         </div>
 
@@ -650,44 +693,36 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
           {timeLogs.length > 0 && (
             (() => {
               const approvedRejectionsList = Array.isArray(rejections) ? rejections.filter(r => r.status === 'Approved') : []
-              const totalRejectedQty = approvedRejectionsList.reduce((sum, r) => sum + (Number(r.rejected_qty) || 0), 0)
-              const totalScrapQty = approvedRejectionsList.reduce((sum, r) => sum + (Number(r.scrap_qty) || 0), 0)
+              const totalLossQty = approvedRejectionsList.reduce((sum, r) => sum + Math.max(Number(r.rejected_qty) || 0, Number(r.scrap_qty) || 0), 0)
               const actualUptimeHours = (metrics.actualProductionMinutes / 60).toFixed(2)
               
               return (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   <div className="bg-indigo-50/50 p-2 rounded border border-indigo-100">
-                    <p className="text-xs   text-indigo-400  mb-2">Actual Uptime</p>
+                    <p className="text-xs   text-indigo-400">Actual Uptime</p>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-xl   text-indigo-900 ">{actualUptimeHours}</span>
+                      <span className="text-md   text-indigo-900 ">{actualUptimeHours}</span>
                       <span className="text-xs  text-indigo-400">Hours</span>
                     </div>
                   </div>
                   <div className="bg-amber-50/50 p-2 rounded  border border-amber-100">
                     <p className="text-xs   text-amber-400  mb-2">Downtime</p>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-xl   text-amber-900 ">{metrics.downtimeMinutes}</span>
+                      <span className="text-md   text-amber-900 ">{metrics.downtimeMinutes}</span>
                       <span className="text-xs  text-amber-400">Mins</span>
                     </div>
                   </div>
                   <div className="bg-rose-50/50 p-2 rounded  border border-rose-100">
-                    <p className="text-xs   text-rose-400  mb-2">Rejections</p>
+                    <p className="text-xs   text-rose-400  mb-2">Rejected (Scrap)</p>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-xl   text-rose-900 ">{totalRejectedQty}</span>
+                      <span className="text-md   text-rose-900 ">{totalLossQty}</span>
                       <span className="text-xs  text-rose-400">Units</span>
-                    </div>
-                  </div>
-                  <div className="bg-orange-50/50 p-2 rounded  border border-orange-100">
-                    <p className="text-xs   text-orange-400  mb-2">Scrap</p>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-xl   text-orange-900 ">{totalScrapQty}</span>
-                      <span className="text-xs  text-orange-400">Units</span>
                     </div>
                   </div>
                   <div className="bg-emerald-50/50 p-2 rounded  border border-emerald-100">
                     <p className="text-xs   text-emerald-400  mb-2">Operational Rank</p>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-xl   text-emerald-900 ">Grade A</span>
+                      <span className="text-md   text-emerald-900 ">Grade A</span>
                     </div>
                   </div>
                 </div>
@@ -696,11 +731,11 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
           )}
 
           {dailyLogs.length > 0 && (
-            <div className="bg-white rounded  border border-gray-100   overflow-hidden">
+            <div className="bg-white rounded  border border-gray-100 overflow-hidden">
               <div className="p-2 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
                 <div className="flex items-center gap-3">
-                  <div className="bg-white p-2 rounded    text-indigo-600">
-                    <Activity size={20} />
+                  <div className="bg-white p-1 rounded    text-indigo-600">
+                    <Activity size={15} />
                   </div>
                   <h4 className="text-xs  text-gray-900 ">Production Intelligence Feed</h4>
                 </div>
@@ -709,58 +744,81 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                   <span className="text-xs   text-gray-400 ">Real-time Data Sync</span>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-50/50">
-                      <th className="p-2  text-xs   text-gray-400  text-left">Timeline Sequence</th>
-                      <th className="p-2  text-xs   text-gray-400  text-center">Operational Shift</th>
-                      <th className="p-2  text-xs   text-gray-900  text-right">Gross Output</th>
-                      <th className="p-2  text-xs   text-emerald-500  text-right">Validated Yield</th>
-                      <th className="p-2  text-xs   text-rose-500  text-right">Rejection</th>
-                      <th className="p-2  text-xs   text-orange-500  text-right">Scrap</th>
-                      <th className="p-2  text-xs   text-amber-500  text-right">Downtime Index</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {dailyLogs.map((log, idx) => (
-                      <tr key={idx} className="hover:bg-indigo-50/30 transition-all duration-300 group">
-                        <td className="p-2 ">
-                          <div className="flex flex-col">
-                            <span className="text-xs  text-gray-900 ">Day {log.day_number || '-'}</span>
-                            <span className="text-xs   text-gray-400 ">{new Date(log.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
-                          </div>
-                        </td>
-                        <td className="p-2  text-center">
-                          <span className={`px-4 py-1.5 rounded  text-xs    border transition-colors ${
-                            log.shift === 'A' ? 'bg-blue-50 text-blue-600 border-blue-100 group-hover:bg-blue-100' : 
-                            log.shift === 'B' ? 'bg-purple-50 text-purple-600 border-purple-100 group-hover:bg-purple-100' : 
-                            'bg-gray-50 text-gray-600 border-gray-100 group-hover:bg-gray-100'
-                          }`}>
-                            Shift {log.shift}
-                          </span>
-                        </td>
-                        <td className="p-2  text-right  text-gray-900 text-sm ">{log.produced}</td>
-                        <td className="p-2  text-right">
-                          <span className="p-2  py-1 bg-emerald-50 text-emerald-600 rounded  text-sm ">{log.accepted}</span>
-                        </td>
-                        <td className="p-2  text-right  text-rose-500 text-sm ">{log.rejected}</td>
-                        <td className="p-2  text-right  text-orange-500 text-sm ">{log.scrap}</td>
-                        <td className="p-2  text-right  text-amber-500 text-sm ">{log.downtime}m</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="bg-gray-900 text-white">
-                    <tr>
-                      <td colSpan="2" className="p-2  text-xs    text-gray-500">Aggregate Yield Matrix</td>
-                      <td className="p-2  text-right  text-white text-base er">{dailyLogs.reduce((sum, l) => sum + l.produced, 0)}</td>
-                      <td className="p-2  text-right  text-emerald-400 text-base er">{dailyLogs.reduce((sum, l) => sum + l.accepted, 0)}</td>
-                      <td className="p-2  text-right  text-rose-400 text-base er">{dailyLogs.reduce((sum, l) => sum + l.rejected, 0)}</td>
-                      <td className="p-2  text-right  text-orange-400 text-base er">{dailyLogs.reduce((sum, l) => sum + l.scrap, 0)}</td>
-                      <td className="p-2  text-right  text-amber-400 text-base er">{dailyLogs.reduce((sum, l) => sum + l.downtime, 0)}m</td>
-                    </tr>
-                  </tfoot>
-                </table>
+              <DataTable 
+                disablePagination={true}
+                columns={[
+                  { 
+                    key: 'day_number', 
+                    label: 'Timeline Sequence',
+                    render: (_, log) => (
+                      <div className="flex flex-col">
+                        <span className="text-xs  text-gray-900 ">Day {log.day_number || '-'}</span>
+                        <span className="text-xs   text-gray-400 ">{new Date(log.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+                      </div>
+                    )
+                  },
+                  { 
+                    key: 'shift', 
+                    label: 'Operational Shift',
+                    render: (shift) => (
+                      <div className="">
+                        <span className={`p-2 rounded  text-xs    border transition-colors ${
+                          shift === 'A' ? 'bg-blue-50 text-blue-600 border-blue-100' : 
+                          shift === 'B' ? 'bg-purple-50 text-purple-600 border-purple-100' : 
+                          'bg-gray-50 text-gray-600 border-gray-100'
+                        }`}>
+                          Shift {shift}
+                        </span>
+                      </div>
+                    )
+                  },
+                  { 
+                    key: 'produced', 
+                    label: 'Gross Output',
+                    render: (val) => <div className=" text-gray-900 text-xs">{val}</div>
+                  },
+                  { 
+                    key: 'accepted', 
+                    label: 'Validated Yield',
+                    render: (val) => (
+                      <div className="">
+                        <span className="p-2 py-1 bg-emerald-50 text-emerald-600 rounded text-sm">{val}</span>
+                      </div>
+                    )
+                  },
+                  { 
+                    key: 'scrap', 
+                    label: 'Rejected (Scrap)',
+                    render: (val) => <div className=" text-rose-500 text-sm">{val}</div>
+                  },
+                  { 
+                    key: 'downtime', 
+                    label: 'Downtime Index',
+                    render: (val) => <div className=" text-amber-500 text-xs">{val}m</div>
+                  }
+                ]}
+                data={dailyLogs}
+              />
+              <div className="bg-gray-900 text-white p-2 flex justify-between items-center text-xs ">
+                <span className="text-xs text-gray-500">Aggregate Yield Matrix</span>
+                <div className="flex gap-8">
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] text-gray-500 uppercase">Gross</span>
+                    <span className="text-white">{dailyLogs.reduce((sum, l) => sum + l.produced, 0)}</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] text-emerald-500 uppercase">Yield</span>
+                    <span className="text-emerald-400">{dailyLogs.reduce((sum, l) => sum + l.accepted, 0)}</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] text-rose-500 uppercase">Rejected</span>
+                    <span className="text-rose-400">{dailyLogs.reduce((sum, l) => sum + l.scrap, 0)}</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] text-amber-500 uppercase">Downtime</span>
+                    <span className="text-amber-400">{dailyLogs.reduce((sum, l) => sum + l.downtime, 0)}m</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -770,41 +828,65 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
               <div className="p-2 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
                 <div className="flex items-center gap-3">
                   <div className="bg-white p-2 rounded    text-indigo-600">
-                    <Clock size={20} />
+                    <Clock size={15} />
                   </div>
                   <h4 className="text-xs  text-gray-900 ">Temporal Intelligence Logs</h4>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-50/50">
-                      <th className="p-2  text-xs   text-gray-400  text-left">Phase Day</th>
-                      <th className="p-2  text-xs   text-gray-400  text-left">Duration Window</th>
-                      <th className="p-2  text-xs   text-gray-400  text-center">Shift</th>
-                      <th className="p-2  text-xs   text-gray-900  text-right">Yield</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {timeLogs.map((log, idx) => (
-                      <tr key={idx} className="hover:bg-indigo-50/30 transition-colors">
-                        <td className="p-2  text-sm  text-gray-900">D{log.day_number || '-'}</td>
-                        <td className="p-2 ">
-                          <div className="flex items-center gap-2 text-xs  text-gray-500">
-                            <span>{format12h(log.from_time) || '-'}</span>
-                            <ChevronRight size={10} className="text-gray-300" />
-                            <span>{format12h(log.to_time) || '-'}</span>
-                          </div>
-                        </td>
-                        <td className="p-2  text-center">
-                          <span className="p-2  py-1 bg-gray-100 text-gray-600 rounded text-xs   ">{log.shift}</span>
-                        </td>
-                        <td className="p-2  text-right  text-gray-900 text-sm ">{log.completed_qty}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable 
+                disablePagination={true}
+                columns={[
+                  { 
+                    key: 'day_number', 
+                    label: 'Phase Day',
+                    render: (val) => <div className="text-sm text-gray-900">D{val || '-'}</div>
+                  },
+                  { 
+                    key: 'from_time', 
+                    label: 'Duration Window',
+                    render: (_, log) => (
+                      <div className="flex items-center gap-2 text-xs  text-gray-500">
+                        <span>{format12h(log.from_time) || '-'}</span>
+                        <ChevronRight size={10} className="text-gray-300" />
+                        <span>{format12h(log.to_time) || '-'}</span>
+                      </div>
+                    )
+                  },
+                  { 
+                    key: 'shift', 
+                    label: 'Shift',
+                    render: (shift) => (
+                      <div className="">
+                        <span className="p-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">{shift}</span>
+                      </div>
+                    )
+                  },
+                  { 
+                    key: 'completed_qty', 
+                    label: 'Gross',
+                    render: (val) => <div className=" text-gray-600 text-xs">{val}</div>
+                  },
+                  { 
+                    key: 'rejected_qty', 
+                    label: 'Rejected',
+                    render: (_, log) => (
+                      <div className=" text-rose-400 text-xs">
+                        {Math.max(Number(log.rejected_qty || 0), Number(log.scrap_qty || 0))}
+                      </div>
+                    )
+                  },
+                  { 
+                    key: 'net_yield', 
+                    label: 'Net Yield',
+                    render: (_, log) => (
+                      <div className=" text-emerald-600 text-sm">
+                        {Number(log.completed_qty || 0) - Math.max(Number(log.rejected_qty || 0), Number(log.scrap_qty || 0))}
+                      </div>
+                    )
+                  }
+                ]}
+                data={timeLogs}
+              />
             </div>
           )}
 
@@ -818,32 +900,35 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                   <h4 className="text-xs  text-gray-900  text-rose-900">Quality Deficiency Report</h4>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-rose-50/30">
-                      <th className="p-2  text-xs   text-rose-400  text-left">Incident</th>
-                      <th className="p-2  text-xs   text-rose-400  text-left">Defect Reason</th>
-                      <th className="p-2  text-xs   text-rose-600  text-right">Rejection</th>
-                      <th className="p-2  text-xs   text-orange-600  text-right">Scrap</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-rose-50">
-                    {rejections.map((rej, idx) => (
-                      <tr key={idx} className="hover:bg-rose-50/50 transition-colors">
-                        <td className="p-2 ">
-                          <div className="flex flex-col">
-                            <span className="text-xs text-rose-900">Day {rej.day_number || '-'}({rej.shift || 'A'})</span>
-                          </div>
-                        </td>
-                        <td className="p-2  text-xs  text-gray-600 ">"{rej.rejection_reason || rej.reason || '-'}"</td>
-                        <td className="p-2  text-right  text-rose-600 text-xs ">{rej.rejected_qty}</td>
-                        <td className="p-2  text-right  text-orange-600 text-xs ">{rej.scrap_qty || 0}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable 
+                disablePagination={true}
+                columns={[
+                  { 
+                    key: 'day_number', 
+                    label: 'Incident',
+                    render: (_, rej) => (
+                      <div className="flex flex-col">
+                        <span className="text-xs text-rose-900">Day {rej.day_number || '-'}({rej.shift || 'A'})</span>
+                      </div>
+                    )
+                  },
+                  { 
+                    key: 'rejection_reason', 
+                    label: 'Defect Reason',
+                    render: (val, rej) => <div className="text-xs text-gray-600 italic">"{val || rej.reason || '-'}"</div>
+                  },
+                  { 
+                    key: 'rejected_qty', 
+                    label: 'Rejected (Scrap)',
+                    render: (_, rej) => (
+                      <div className=" text-rose-600 text-xs ">
+                        {Math.max(Number(rej.rejected_qty || 0), Number(rej.scrap_qty || 0))}
+                      </div>
+                    )
+                  }
+                ]}
+                data={rejections}
+              />
             </div>
           )}
 
@@ -861,13 +946,13 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                 <button
                   onClick={handleNextStep}
                   disabled={updatingStatus}
-                  className="flex items-center gap-4 px-12 py-2  bg-gray-900 text-white rounded hover:bg-gray-800 transition-all  shadow-gray-200 active:scale-95 group"
+                  className="flex items-center gap-4 p-2  bg-gray-900 text-white rounded hover:bg-gray-800 transition-all  shadow-gray-200 active:scale-95 group"
                 >
-                  <div className="bg-indigo-500 p-1.5 rounded group-hover:rotate-12 transition-transform">
-                    <Zap size={18} className="fill-current text-white" />
+                  <div className="bg-indigo-500 p-1 rounded group-hover:rotate-12 transition-transform">
+                    <Zap size={15} className="fill-current text-white" />
                   </div>
                   <span className="text-xs  ">
-                    {updatingStatus ? 'Syncing...' : `Transition to ${getNextStatus(jobCard?.status).replace('-', ' ')}`}
+                    {updatingStatus ? 'Syncing...' : `Transition to ${String(getNextStatus(jobCard?.status) || '').replace('-', ' ')}`}
                   </span>
                 </button>
               )}

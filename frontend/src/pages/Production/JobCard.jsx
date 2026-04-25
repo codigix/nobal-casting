@@ -257,9 +257,30 @@ export default function JobCard() {
     const currentCard = jobCards.find(c => c.job_card_id === jobCardId)
     if (!currentCard) return { canStart: false, reason: 'Job card not found' }
 
-    const currentStatus = (currentCard.status || '').toLowerCase()
-    if (!['draft', 'ready', 'pending', 'open'].includes(currentStatus)) {
-      return { canStart: false, reason: 'Only draft, ready, pending or open job cards can be started' }
+    // Use 'draft' as fallback to match StatusBadge behavior
+    const currentStatus = (currentCard.status || 'draft').toLowerCase().trim()
+    if (!['draft', 'ready', 'pending', 'open', 'planned'].includes(currentStatus)) {
+      return { canStart: false, reason: 'Only draft, planned, ready, pending or open job cards can be started' }
+    }
+
+    // Validation for In-house operations
+    const isOutsource = (currentCard.execution_mode || '').toUpperCase().trim() === 'OUTSOURCE' || (currentCard.execution_mode || '').toUpperCase().trim() === 'SUBCONTRACT';
+    
+    if (!isOutsource) {
+      if (!currentCard.operator_id) {
+        return { canStart: false, reason: 'Please assign an operator before starting the job card' }
+      }
+      if (!currentCard.machine_id) {
+        return { canStart: false, reason: 'Please assign a workstation before starting the job card' }
+      }
+      if (!currentCard.scheduled_start_date) {
+        return { canStart: false, reason: 'Please set a scheduled start date and time before starting the job card' }
+      }
+    } else {
+      // Validation for Outsource operations
+      if (!currentCard.vendor_id) {
+        return { canStart: false, reason: 'Please assign a vendor before starting this outsourced job card' }
+      }
     }
 
     return { canStart: true }
@@ -273,17 +294,29 @@ export default function JobCard() {
         return
       }
 
-      const { canStart, reason } = canStartJobCard(jobCardId)
+      const { canStart: uiCanStart, reason: uiReason } = canStartJobCard(jobCardId)
 
-      if (!canStart) {
-        toast.addToast(reason, 'error')
+      if (!uiCanStart) {
+        toast.addToast(uiReason, 'error')
         return
       }
 
       setLoading(true)
-
       const api = (await import('../../services/api')).default
 
+      toast.addToast('⏳ Validating start conditions...', 'info')
+      
+      // 1. Backend validation (MR, Sequence, and now Assignment)
+      const validateRes = await api.post(`/production/job-cards/${jobCardId}/validate-start`, { auto_create_mr: true })
+      const validation = validateRes.data?.data || validateRes.data
+
+      if (validation && !validation.can_start) {
+        toast.addToast(validation.message || 'Validation failed. Check material request and assignments.', 'error')
+        setLoading(false)
+        return
+      }
+
+      // 2. Check dependencies (sub-assemblies)
       toast.addToast('⏳ Checking sub-assembly readiness...', 'info')
       const depRes = await api.get(`/production/work-orders/${currentCard.work_order_id}/dependencies`)
       const dependencies = depRes.data?.data || depRes.data || []
@@ -296,22 +329,14 @@ export default function JobCard() {
 
       if (missingDeps.length > 0) {
         const depNames = missingDeps.map(d => d.child_item_name || d.child_item_code).join(', ')
-        toast.addToast(`⚠️ Sub-assemblies not finished: ${depNames}. Proceeding anyway...`, 'warning')
+        const confirmProceed = window.confirm(`⚠️ Sub-assemblies not finished: ${depNames}. \n\nStarting this operation might lead to material shortages. Proceed anyway?`)
+        if (!confirmProceed) {
+          setLoading(false)
+          return
+        }
       }
 
-      toast.addToast('⏳ Checking material status...', 'info')
-      const materialStatusRes = await api.get(`/production/job-cards/${jobCardId}/material-request-status`)
-      const materialStatus = materialStatusRes.data?.data
-
-      if (materialStatus?.has_material_request && materialStatus?.mr_status !== 'received' && materialStatus?.mr_status !== 'completed') {
-        toast.addToast(
-          `ℹ️ Material request status: ${String(materialStatus.mr_status || 'UNKNOWN').toUpperCase()}. Proceeding anyway...`,
-          'info'
-        )
-      } else if (!materialStatus?.has_material_request) {
-        toast.addToast('ℹ️ No material request found. Proceeding anyway...', 'info')
-      }
-
+      // 3. Finalize start
       toast.addToast('✅ Starting job card...', 'success')
       await productionService.updateJobCard(jobCardId, { status: 'in-progress' })
 
@@ -471,6 +496,28 @@ export default function JobCard() {
   }, [jobCards])
 
   // 6. UI Components
+  const SubcontractBadge = ({ status }) => {
+    const configs = {
+      DRAFT: { color: 'bg-slate-100 text-slate-600', label: 'Draft' },
+      READY: { color: 'bg-blue-100 text-blue-600', label: 'Ready' },
+      'SENT_TO_VENDOR': { color: 'bg-indigo-100 text-indigo-600', label: 'Sent' },
+      SENT: { color: 'bg-indigo-100 text-indigo-600', label: 'Sent' },
+      'PARTIALLY_SENT': { color: 'bg-amber-100 text-amber-600', label: 'Partially Sent' },
+      'PARTIALLY SENT': { color: 'bg-amber-100 text-amber-600', label: 'Partially Sent' },
+      'PARTIALLY_RECEIVED': { color: 'bg-emerald-100 text-emerald-600', label: 'Partially Received' },
+      'PARTIALLY RECEIVED': { color: 'bg-emerald-100 text-emerald-600', label: 'Partially Received' },
+      RECEIVED: { color: 'bg-emerald-500 text-white', label: 'Received' },
+      COMPLETED: { color: 'bg-green-600 text-white', label: 'Completed' }
+    }
+    const config = configs[status] || configs[status?.toUpperCase()] || { color: 'bg-slate-50 text-slate-400', label: status || 'N/A' }
+
+    return (
+      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${config.color}`}>
+        {config.label}
+      </span>
+    )
+  }
+
   const StatusBadge = ({ status }) => {
     const configs = {
       draft: { color: 'text-slate-600 ', icon: FileText, label: 'Draft' },
@@ -907,8 +954,32 @@ export default function JobCard() {
 
   // 7. Table Configuration
   const renderActions = useCallback((card) => {
+    const status = (card.status || 'draft').toLowerCase().trim();
+    const isOutsource = (card.execution_mode || '').toUpperCase().trim() === 'OUTSOURCE' || (card.execution_mode || '').toUpperCase().trim() === 'SUBCONTRACT';
+
     return (
       <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+        {/* Production Entry / Start Zap Icon - Moved to front for visibility */}
+        {!isOutsource && !['completed', 'cancelled'].includes(status) && (
+          <button
+            onClick={() => {
+              if (['in-progress', 'in_progress'].includes(status)) {
+                navigate(`/manufacturing/job-cards/${card.job_card_id}/production-entry`);
+              } else {
+                handleStartJobCard(card.job_card_id);
+              }
+            }}
+            className={`p-1 rounded transition-all ${
+              ['in-progress', 'in_progress'].includes(status) 
+                ? 'text-indigo-600 hover:bg-indigo-50' 
+                : 'text-emerald-600 hover:bg-emerald-50'
+            }`}
+            title={['in-progress', 'in_progress'].includes(status) ? "Production Entry" : "Start Operation"}
+          >
+            <Zap size={14} className="fill-current" />
+          </button>
+        )}
+
         <button
           onClick={() => handleViewJobCard(card.job_card_id)}
           className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
@@ -917,16 +988,16 @@ export default function JobCard() {
           <Eye size={14} />
         </button>
 
-        {(card.execution_mode || '').toUpperCase() === 'OUTSOURCE' && (
+        {isOutsource && (
           <button
             onClick={() => handleDispatch(card)}
             disabled={
-              card.status === 'completed' || 
+              status === 'completed' || 
               (parseFloat(card.planned_quantity || 0) > 0 && parseFloat(card.total_dispatched || 0) >= parseFloat(card.planned_quantity || 0)) ||
               parseFloat(card.max_allowed_quantity || 0) <= 0
             }
             className={`p-1 rounded transition-all ${
-              card.status === 'completed' || 
+              status === 'completed' || 
               (parseFloat(card.planned_quantity || 0) > 0 && parseFloat(card.total_dispatched || 0) >= parseFloat(card.planned_quantity || 0)) ||
               parseFloat(card.max_allowed_quantity || 0) <= 0
                 ? 'text-gray-300 cursor-not-allowed bg-transparent opacity-50' 
@@ -938,24 +1009,6 @@ export default function JobCard() {
           </button>
         )}
 
-        {['ready', 'draft', 'pending', 'open'].includes((card.status || '').toLowerCase()) && card.execution_mode !== 'OUTSOURCE' && (
-          <button
-            onClick={() => handleStartJobCard(card.job_card_id)}
-            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-all"
-            title="Start Operation"
-          >
-            <Zap size={14} className="fill-current" />
-          </button>
-        )}
-        {['in-progress', 'in_progress'].includes((card.status || '').toLowerCase()) && card.execution_mode !== 'OUTSOURCE' && (
-          <button
-            onClick={() => navigate(`/manufacturing/job-cards/${card.job_card_id}/production-entry`)}
-            className="p-1 text-indigo-600 hover:bg-indigo-50 rounded transition-all"
-            title="Production Entry"
-          >
-            <Zap size={14} className="fill-current" />
-          </button>
-        )}
         <button
           onClick={() => handleEditJobCard(card)}
           className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
@@ -1010,7 +1063,7 @@ export default function JobCard() {
         return (
           <div className="flex flex-col gap-1.5 cursor-pointer group/op" onClick={() => handleViewJobCard(row.job_card_id)}>
             <div className="flex flex-col">
-              <span className="text-xs  text-gray-900 group-hover/op:text-indigo-600 transition-colors tracking-tight">{val}</span>
+              <span className="text-xs  text-gray-900 group-hover/op:text-indigo-600 transition-colors ">{val}</span>
             </div>
             <div className="flex  flex-col">
               <StatusBadge 
@@ -1120,18 +1173,80 @@ export default function JobCard() {
     },
     {
       key: 'quantities',
-      label: 'accepted/planned',
+      label: 'Production Progress',
       render: (_, row) => {
         const planned = parseFloat(row.planned_quantity || 0)
         const produced = parseFloat(row.produced_quantity || 0)
+        
+        // Rejections and Scrap are non-additive (they represent the same loss)
+        const rejected = parseFloat(row.rejected_quantity || 0)
+        const scrap = parseFloat(row.scrap_quantity || 0)
+        const consolidatedLoss = Math.max(rejected, scrap)
+        
+        // Accepted should ideally be (produced - consolidatedLoss), 
+        // but we respect the backend accepted_quantity if it's explicitly set
+        // However, for the progress bar, we calculate completion based on valid output
         const accepted = parseFloat(row.accepted_quantity || 0)
+
+        // Readiness logic for ghost bar
+        const hasSubDeps = parseInt(row.total_dependencies || 0) > (row.prev_op_transferred_qty !== null ? 1 : 0)
+        const hasPrevOp = row.prev_op_transferred_qty !== null
+        const producibleFromSub = row.producible_quantity !== null ? parseFloat(row.producible_quantity) : (hasSubDeps ? 0 : planned)
+        const producibleFromPrev = row.prev_op_transferred_qty !== null ? parseFloat(row.prev_op_transferred_qty) : (hasPrevOp ? 0 : planned)
+        const readyUnits = Math.min(planned, producibleFromSub, producibleFromPrev)
+        
+        const completionRate = planned > 0 ? (accepted / planned) * 100 : 0
+        const readyRate = planned > 0 ? (readyUnits / planned) * 100 : 0
         
         return (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between gap-4 border-y border-gray-50 py-0.5">
-              <span className="text-xs font-medium">
-                <span className="text-emerald-600">{accepted.toLocaleString()}</span> / <span className="text-gray-900">{planned.toLocaleString()}</span>
+          <div className="flex flex-col gap-1.5 py-1">
+            <div className="flex justify-between items-center mb-0.5">
+              <span className="text-[10px]  text-slate-700">
+                {Math.round(completionRate)}% Complete
               </span>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-black text-emerald-600">{accepted.toLocaleString()}</span>
+                {readyUnits > accepted && (
+                  <>
+                    <span className="text-[9px] text-slate-300">/</span>
+                    <span className="text-[10px] font-medium text-amber-500" title="Ready to process">{Math.floor(readyUnits).toLocaleString()}</span>
+                  </>
+                )}
+                <span className="text-[9px] text-slate-400">/ {planned.toLocaleString()}</span>
+              </div>
+            </div>
+            
+            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden relative shadow-inner">
+              {/* Ready units bar (amber shadow) */}
+              <div 
+                className="absolute left-0 top-0 h-full bg-amber-200 transition-all duration-1000"
+                style={{ width: `${Math.min(100, readyRate)}%` }}
+              />
+              {/* Accepted units bar (emerald/indigo) */}
+              <div 
+                className={`absolute left-0 top-0 h-full transition-all duration-1000 z-10 ${completionRate >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                style={{ width: `${Math.min(100, completionRate)}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between mt-0.5">
+               <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-0.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                    <span className="text-[9px] text-slate-500">P: {produced.toLocaleString()}</span>
+                  </div>
+                  {(rejected > 0 || scrap > 0) && (
+                    <div className="flex items-center gap-0.5">
+                      <div className="w-1.5 h-1 rounded-full bg-rose-400" />
+                      <span className="text-[9px] text-rose-500">R: {Math.round(consolidatedLoss)}</span>
+                    </div>
+                  )}
+               </div>
+               {completionRate > 0 && completionRate < 100 && (
+                 <span className="text-[9px] text-slate-400 italic">
+                   {Math.floor(planned - accepted)} left
+                 </span>
+               )}
             </div>
           </div>
         )
@@ -1139,35 +1254,64 @@ export default function JobCard() {
     },
     {
       key: 'dependency_status',
-      label: 'Dependency',
+      label: 'Readiness',
       render: (_, row) => {
         const total = parseInt(row.total_dependencies || 0)
         const completed = parseInt(row.completed_dependencies || 0)
         
-        if (total === 0) return <span className="text-xs text-gray-400 ">No Dependencies</span>
+        // Producible quantity logic
+        const planned = parseFloat(row.planned_quantity || 0)
+        const accepted = parseFloat(row.accepted_quantity || 0)
+        
+        // Use 0 as default if we have dependencies but no quantity recorded yet
+        const hasSubDeps = parseInt(row.total_dependencies || 0) > (row.prev_op_transferred_qty !== null ? 1 : 0)
+        const hasPrevOp = row.prev_op_transferred_qty !== null
 
-        const progress = (completed / total) * 100
-        const isReady = completed >= total
+        const producibleFromSub = row.producible_quantity !== null ? parseFloat(row.producible_quantity) : (hasSubDeps ? 0 : planned)
+        const producibleFromPrev = row.prev_op_transferred_qty !== null ? parseFloat(row.prev_op_transferred_qty) : (hasPrevOp ? 0 : planned)
+        
+        // Actual ready quantity is the minimum of all constraints
+        const readyUnits = Math.min(planned, producibleFromSub, producibleFromPrev)
+        
+        // Readiness status logic: Purely quantity-driven for "Ready" labels
+        const isReady = readyUnits >= planned && planned > 0
+        const isPartiallyReady = readyUnits > accepted && readyUnits < planned
+        const isWaiting = readyUnits <= accepted && readyUnits < planned
 
         return (
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between items-center">
-              <span className={`text-[10px]    ${isReady ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {isReady ? 'Ready to Start' : 'Pending Dependencies'}
+          <div className="flex flex-col gap-1.5 py-1">
+            <div className="flex justify-between items-center mb-0.5">
+              <span className={`text-[9px] font-bold   ${
+                isReady ? 'text-emerald-600' : (isPartiallyReady ? 'text-amber-600' : 'text-slate-400')
+              }`}>
+                {isReady ? 'FULLY READY' : (isPartiallyReady ? 'PARTIALLY READY' : (isWaiting ? 'WAITING' : 'AWAITING INPUT'))}
               </span>
-              <span className="text-xs  text-gray-500">{completed}/{total}</span>
+              <div className="flex items-center gap-1">
+                 <span className={`text-[10px] font-black ${isPartiallyReady ? 'text-amber-600' : 'text-slate-700'}`}>{Math.floor(readyUnits).toLocaleString()}</span>
+                 <span className="text-[9px] text-slate-400">/ {planned.toLocaleString()}</span>
+              </div>
             </div>
-            <div className="w-full bg-gray-100 h-1  overflow-hidden border border-gray-200/50">
+            
+            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden flex shadow-inner">
               <div 
-                className={`h-full transition-all duration-500 ${isReady ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-amber-500'}`}
-                style={{ width: `${progress}%` }}
+                className={`h-full transition-all duration-500 ${
+                  isReady ? 'bg-emerald-500' : (isPartiallyReady ? 'bg-amber-500' : 'bg-slate-300')
+                }`}
+                style={{ width: `${Math.min(100, (readyUnits / (planned || 1)) * 100)}%` }}
               />
             </div>
-            {!isReady && (
-              <span className="text-[9px] text-gray-400 ">
-                Waiting for {total - completed} task{total - completed > 1 ? 's' : ''}
-              </span>
-            )}
+
+            <div className="flex items-center justify-between mt-0.5">
+               <div className="flex items-center gap-1">
+                  <Layers size={10} className={completed >= total ? 'text-emerald-500' : 'text-slate-300'} />
+                  <span className="text-[9px] text-slate-500">{completed}/{total} Deps</span>
+               </div>
+               {row.prev_op_transferred_qty !== null && (
+                 <span className="text-[9px] text-indigo-500 font-medium">
+                   From Prev: {Math.floor(row.prev_op_transferred_qty).toLocaleString()}
+                 </span>
+               )}
+            </div>
           </div>
         )
       }
@@ -1326,6 +1470,20 @@ export default function JobCard() {
         </div>
 
         {/* Tabs Switcher */}
+        <div className="flex items-center gap-1 bg-white p-1 rounded border border-gray-100 w-fit ml-auto my-2">
+          <button
+            onClick={() => setActiveTab('list')}
+            className={`px-4 py-1.5 text-xs rounded transition-all ${activeTab === 'list' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+          >
+            List View
+          </button>
+          <button
+            onClick={() => setActiveTab('scheduling')}
+            className={`px-4 py-1.5 text-xs rounded transition-all ${activeTab === 'scheduling' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+          >
+            Scheduling View
+          </button>
+        </div>
         
 
         {activeTab === 'list' ? (
@@ -1367,20 +1525,6 @@ export default function JobCard() {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-1 bg-white p-1 rounded border border-gray-100  w-fit ml-auto">
-          <button
-            onClick={() => setActiveTab('list')}
-            className={`px-4 py-1.5 text-xs    rounded transition-all ${activeTab === 'list' ? 'bg-gray-900 text-white ' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
-          >
-            List View
-          </button>
-          <button
-            onClick={() => setActiveTab('scheduling')}
-            className={`px-4 py-1.5 text-xs    rounded transition-all ${activeTab === 'scheduling' ? 'bg-gray-900 text-white ' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
-          >
-            Scheduling View
-          </button>
-        </div>
             </div>
 
             {/* Data Table */}
@@ -1399,6 +1543,7 @@ export default function JobCard() {
         ) : (
           <div className="flex-1 overflow-y-auto">
             <SchedulingGanttView
+              filters={filters}
               onJobClick={(id) => {
                 setViewingJobCardId(id)
                 setShowViewModal(true)

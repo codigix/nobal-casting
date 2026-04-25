@@ -55,15 +55,23 @@ export class ProductionPlanningController {
       }
 
       if (sub_assemblies && Array.isArray(sub_assemblies)) {
-        // Validate dependencies before inserting
+        // Auto-arrange by dependency levels before validation/insertion
+        let arrangedSubAsms = sub_assemblies
         try {
-          await this.service.validatePlanDependencies(sub_assemblies)
+          arrangedSubAsms = await this.service.autoArrangeSubAssembliesByDependency(sub_assemblies)
+        } catch (sortErr) {
+          console.warn('Warning: Could not auto-arrange sub-assemblies:', sortErr.message)
+        }
+
+        // Validate dependencies 
+        try {
+          await this.service.validatePlanDependencies(arrangedSubAsms)
         } catch (valErr) {
           await connection.rollback()
           return res.status(400).json({ success: false, error: valErr.message })
         }
 
-        for (const item of sub_assemblies) {
+        for (const item of arrangedSubAsms) {
           const scheduleDate = item.scheduled_date || item.schedule_date || null
           const requiredQty = item.required_qty || item.qty || item.quantity || 0
           const plannedQty = item.planned_qty || requiredQty
@@ -185,15 +193,23 @@ export class ProductionPlanningController {
       }
 
       if (sub_assemblies && Array.isArray(sub_assemblies)) {
-        // Validate dependencies before inserting
+        // Auto-arrange by dependency levels before validation/insertion
+        let arrangedSubAsms = sub_assemblies
         try {
-          await this.service.validatePlanDependencies(sub_assemblies)
+          arrangedSubAsms = await this.service.autoArrangeSubAssembliesByDependency(sub_assemblies)
+        } catch (sortErr) {
+          console.warn('Warning: Could not auto-arrange sub-assemblies:', sortErr.message)
+        }
+
+        // Validate dependencies 
+        try {
+          await this.service.validatePlanDependencies(arrangedSubAsms)
         } catch (valErr) {
           await connection.rollback()
           return res.status(400).json({ success: false, error: valErr.message })
         }
 
-        for (const item of sub_assemblies) {
+        for (const item of arrangedSubAsms) {
           const scheduleDate = item.scheduled_date || item.schedule_date || null
           const requiredQty = item.required_qty || item.qty || item.quantity || 0
           const plannedQty = item.planned_qty || requiredQty

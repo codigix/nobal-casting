@@ -17,7 +17,14 @@ class ProductionController {
       });
     }
 
-    res.status(500).json({
+    const isValidationError = 
+      error.message.includes('Validation Error') || 
+      error.message.includes('Cannot start') || 
+      error.message.includes('No workstation assigned') ||
+      error.message.includes('Operation Sequence Error') ||
+      error.message.includes('Constraint Error');
+
+    res.status(isValidationError ? 400 : 500).json({
       success: false,
       message: defaultMessage,
       error: error.message
@@ -1343,7 +1350,7 @@ class ProductionController {
       } = req.body
 
       if (status) {
-        await this.productionModel.validateJobCardStatusTransition(job_card_id, status)
+        await this.productionModel.validateJobCardStatusTransition(job_card_id, status, null, req.body)
       }
 
       const success = await this.productionModel.updateJobCard(job_card_id, {
@@ -1429,7 +1436,7 @@ class ProductionController {
         })
       }
 
-      const result = await this.productionModel.updateJobCardStatus(job_card_id, status)
+      const result = await this.productionModel.updateJobCardStatus(job_card_id, status, null, req.body)
 
       res.status(200).json({
         success: true,
@@ -2253,7 +2260,7 @@ class ProductionController {
 
   async createInwardChallan(req, res) {
     try {
-      const { job_card_id, outward_challan_id, vendor_id, vendor_name, quantity_received, quantity_accepted, quantity_rejected, notes } = req.body
+      const { job_card_id } = req.body
 
       if (!job_card_id) {
         return res.status(400).json({
@@ -2263,14 +2270,7 @@ class ProductionController {
       }
 
       const challan = await this.productionModel.createInwardChallan({
-        job_card_id,
-        outward_challan_id,
-        vendor_id,
-        vendor_name,
-        quantity_received,
-        quantity_accepted,
-        quantity_rejected,
-        notes,
+        ...req.body,
         created_by: req.user?.user_id || 'system'
       })
 
@@ -2395,6 +2395,40 @@ class ProductionController {
     }
   }
 
+  async deleteOutwardChallan(req, res) {
+    try {
+      const { id } = req.params
+      await this.productionModel.deleteOutwardChallan(id)
+      res.status(200).json({
+        success: true,
+        message: 'Outward challan deleted successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error deleting outward challan',
+        error: error.message
+      })
+    }
+  }
+
+  async deleteInwardChallan(req, res) {
+    try {
+      const { id } = req.params
+      await this.productionModel.deleteInwardChallan(id)
+      res.status(200).json({
+        success: true,
+        message: 'Inward challan deleted successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error deleting inward challan',
+        error: error.message
+      })
+    }
+  }
+
   async updateInwardChallan(req, res) {
     try {
       const { id } = req.params
@@ -2418,6 +2452,23 @@ class ProductionController {
         message: 'Error updating inward challan',
         error: error.message
       })
+    }
+  }
+
+  async getInwardChallanItems(req, res) {
+    try {
+      const { challan_id } = req.params;
+      const items = await this.productionModel.getInwardChallanItems(challan_id);
+      res.status(200).json({
+        success: true,
+        data: items
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching inward challan items',
+        error: error.message
+      });
     }
   }
 
@@ -2572,12 +2623,19 @@ class ProductionController {
 
       const card = jobCard[0];
       const mrStatus = card.mr_status || 'pending';
+      
+      // Get sub-assembly dependency details if it's the first operation
+      const maxAllowedDetails = await this.productionModel._getMaxAllowedQuantity(job_card_id, null, true);
+      
       const materialStatus = {
         has_material_request: !!card.mr_id,
         mr_id: card.mr_id,
         mr_status: mrStatus,
         material_received: card.material_status === 'received' || mrStatus === 'received' || mrStatus === 'completed',
-        can_start: true
+        can_start: true,
+        dependencies: maxAllowedDetails.dependencies || [],
+        bottleneck: maxAllowedDetails.bottleneck,
+        max_producible: maxAllowedDetails.quantity
       };
 
       res.status(200).json({
@@ -2722,6 +2780,7 @@ class ProductionController {
 
       const card = jobCard[0];
 
+      // 1. Check for Material Request
       if (!card.mr_id && auto_create_mr) {
         await this.createJobCardMaterialRequest({
           params: { job_card_id },
@@ -2729,6 +2788,31 @@ class ProductionController {
           body: {}
         }, res);
         return;
+      }
+
+      if (card.mr_id) {
+        const mrStatus = (card.mr_status || '').toLowerCase().trim();
+        if (mrStatus !== 'received' && mrStatus !== 'completed' && mrStatus !== 'approved' && mrStatus !== 'partial') {
+           // We allow it if it's approved or partial too, but ideally 'received'
+           // Let's stick to 'received' or 'completed' for strict flow if needed, 
+           // but the frontend handleStartJobCard allows proceeding anyway with a warning.
+           // However, THIS endpoint is for strict validation.
+        }
+      }
+
+      // 2. Comprehensive Status & Assignment Validation
+      try {
+        await this.productionModel.validateJobCardStatusTransition(job_card_id, 'in-progress');
+      } catch (valErr) {
+        return res.status(200).json({
+          success: true,
+          message: valErr.message,
+          data: {
+            job_card_id,
+            can_start: false,
+            reason: valErr.message
+          }
+        });
       }
 
       res.status(200).json({

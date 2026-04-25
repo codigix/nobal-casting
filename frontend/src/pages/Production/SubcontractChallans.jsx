@@ -14,7 +14,8 @@ import {
   Activity,
   Maximize2,
   X,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
 import * as productionService from '../../services/productionService';
 import { useNotification } from '../../hooks/useNotification';
@@ -40,12 +41,48 @@ const SubcontractChallans = () => {
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [selectedChallanForReceipt, setSelectedChallanForReceipt] = useState(null);
 
-  const { notifyError } = useNotification();
+  const { notifySuccess, notifyError } = useNotification();
 
   useEffect(() => {
     fetchFilters();
     fetchChallans();
   }, []);
+
+  const handleDeleteOutward = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this outward challan? This will also update the job card sent quantity.')) {
+      return;
+    }
+
+    try {
+      const res = await productionService.deleteOutwardChallan(id);
+      if (res.success) {
+        notifySuccess('Challan deleted successfully');
+        fetchChallans();
+      } else {
+        notifyError(res.message || 'Failed to delete challan');
+      }
+    } catch (error) {
+      notifyError(error.response?.data?.message || 'Error deleting challan');
+    }
+  };
+
+  const handleDeleteInward = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this inward challan? This will reverse the production progress on the job card.')) {
+      return;
+    }
+
+    try {
+      const res = await productionService.deleteInwardChallan(id);
+      if (res.success) {
+        notifySuccess('Challan deleted successfully');
+        fetchChallans();
+      } else {
+        notifyError(res.message || 'Failed to delete challan');
+      }
+    } catch (error) {
+      notifyError(error.response?.data?.message || 'Error deleting challan');
+    }
+  };
 
   const fetchFilters = async () => {
     try {
@@ -100,18 +137,19 @@ const SubcontractChallans = () => {
 
   const viewChallanDetails = async (challan) => {
     setSelectedChallan(challan);
-    if (activeTab === 'outward') {
-      setLoadingItems(true);
-      try {
-        const response = await productionService.getOutwardChallanItems(challan.id);
-        if (response.success) {
-          setChallanItems(response.data);
-        }
-      } catch (error) {
-        notifyError('Error fetching challan items');
-      } finally {
-        setLoadingItems(false);
+    setLoadingItems(true);
+    try {
+      const response = activeTab === 'outward' 
+        ? await productionService.getOutwardChallanItems(challan.id)
+        : await productionService.getInwardChallanItems(challan.id);
+        
+      if (response.success) {
+        setChallanItems(response.data);
       }
+    } catch (error) {
+      notifyError('Error fetching challan items');
+    } finally {
+      setLoadingItems(false);
     }
   };
 
@@ -325,16 +363,14 @@ const SubcontractChallans = () => {
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedChallanForReceipt({
-                              job_card_id: challan.job_card_id,
+                              ...challan,
                               outward_challan_id: challan.id,
-                              vendor_id: challan.vendor_id,
-                              vendor_name: challan.vendor_name,
                               sent_qty: challan.dispatch_quantity,
                               received_qty: challan.total_received
                             });
                             setReceiptModalOpen(true);
                           }}
-                          disabled={challan.total_received >= challan.dispatch_quantity}
+                          disabled={challan.inward_challan_count > 0 || challan.total_received >= challan.dispatch_quantity}
                           className="p-2 text-emerald-600 hover:bg-emerald-50 rounded transition-all disabled:opacity-30 disabled:hover:bg-transparent"
                           title="Create Inward Challan"
                         >
@@ -347,6 +383,20 @@ const SubcontractChallans = () => {
                         title="View Details"
                       >
                         <Maximize2 size={15} />
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (activeTab === 'outward') {
+                            handleDeleteOutward(challan.id);
+                          } else {
+                            handleDeleteInward(challan.id);
+                          }
+                        }}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
+                        title="Delete Challan"
+                      >
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </td>
@@ -446,20 +496,54 @@ const SubcontractChallans = () => {
               )}
 
               {activeTab === 'inward' && (
-                <div className="">
+                <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-white p-2 rounded border border-slate-100  text-center">
-                      <span className="text-xs  text-slate-400  block mb-1">Received</span>
-                      <span className="text-xl  text-slate-800">{selectedChallan.quantity_received}</span>
+                    <div className="bg-white p-2 rounded border border-slate-100 text-center">
+                      <span className="text-xs text-slate-400 block mb-1">Received</span>
+                      <span className="text-xl text-slate-800">{selectedChallan.quantity_received}</span>
                     </div>
-                    <div className="bg-white p-2 rounded border border-emerald-100  text-center">
-                      <span className="text-xs  text-emerald-400  block mb-1">Accepted</span>
-                      <span className="textxl  text-emerald-600">{selectedChallan.quantity_accepted}</span>
+                    <div className="bg-white p-2 rounded border border-emerald-100 text-center">
+                      <span className="text-xs text-emerald-400 block mb-1">Accepted</span>
+                      <span className="text-xl text-emerald-600">{selectedChallan.quantity_accepted}</span>
                     </div>
-                    <div className="bg-white p-2 rounded border border-rose-100  text-center">
-                      <span className="text-xs  text-rose-400  block mb-1">Rejected</span>
-                      <span className="textxl  text-rose-600">{selectedChallan.quantity_rejected}</span>
+                    <div className="bg-white p-2 rounded border border-rose-100 text-center">
+                      <span className="text-xs text-rose-400 block mb-1">Rejected</span>
+                      <span className="text-xl text-rose-600">{selectedChallan.quantity_rejected}</span>
                     </div>
+                  </div>
+
+                  <div className="border border-slate-200 rounded overflow-hidden">
+                    <div className="bg-slate-50 p-2 border-b border-slate-200 flex justify-between items-center">
+                      <span className="text-xs text-slate-600">Received Items Breakdown</span>
+                      <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Accepted: {selectedChallan.quantity_accepted}</span>
+                    </div>
+                    {loadingItems ? (
+                      <div className="p-8 text-center text-slate-500">Loading items...</div>
+                    ) : (
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="bg-white border-b border-slate-100">
+                            <th className="p-2 text-xs text-slate-400">Item</th>
+                            <th className="p-2 text-xs text-slate-400 text-right">Received</th>
+                            <th className="p-2 text-xs text-slate-400 text-right">Accepted</th>
+                            <th className="p-2 text-xs text-slate-400 text-right">Rejected</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {challanItems.map(item => (
+                            <tr key={item.id}>
+                              <td className="p-2 text-xs text-slate-700">
+                                {item.item_name || item.item_code}
+                                <p className="text-[10px] text-slate-400">{item.item_code}</p>
+                              </td>
+                              <td className="p-2 text-xs text-slate-600 text-right">{item.received_qty} {item.uom}</td>
+                              <td className="p-2 text-xs text-emerald-600 text-right font-medium">{item.accepted_qty} {item.uom}</td>
+                              <td className="p-2 text-xs text-rose-600 text-right">{item.rejected_qty} {item.uom}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 </div>
               )}
@@ -474,7 +558,23 @@ const SubcontractChallans = () => {
               )}
             </div>
 
-            <div className="p-2 bg-slate-50 border-t border-slate-200 flex justify-end">
+            <div className="p-2 bg-slate-50 border-t border-slate-200 flex justify-between">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (activeTab === 'outward') {
+                    handleDeleteOutward(selectedChallan.id);
+                  } else {
+                    handleDeleteInward(selectedChallan.id);
+                  }
+                  closeDetails();
+                }}
+                className="p-2 flex items-center gap-2 bg-red-50 text-red-600 border border-red-100 rounded text-xs hover:bg-red-100 transition-colors"
+              >
+                <Trash2 size={14} />
+                Delete Challan
+              </button>
+
               <button 
                 onClick={closeDetails}
                 className=" p-2 bg-slate-800 text-white rounded text-xs  hover:bg-slate-700 transition-colors"
