@@ -734,7 +734,7 @@ export default function SalesQuotationForm() {
                                     onClick={() => handleRemoveItem(idx)}
                                     className="p-2 text-rose-500 hover:bg-rose-50 rounded transition-all "
                                   >
-                                    <Trash2 size={16} strokeWidth={2.5} />
+                                    <Trash2 size={15} strokeWidth={2.5} />
                                   </button>
                                 </td>
                               </tr>
@@ -870,7 +870,7 @@ export default function SalesQuotationForm() {
                                   }}
                                   className="p-2 text-rose-500 hover:bg-rose-50 rounded transition-all "
                                 >
-                                  <Trash2 size={16} />
+                                  <Trash2 size={15} />
                                 </button>
                               </td>
                             </tr>

@@ -28,8 +28,8 @@ const newContent = content
                   <td style={{ fontSize: '0.9rem', color: '#666' }}>{bom.updated_at ? new Date(bom.updated_at).toLocaleDateString('en-IN') : 'N/A'}</td>
                   <td style={{ width: '50px' }}>
                     <div className="entry-actions" style={{ gap: '4px' }}>
-                      <button className="btn-edit" onClick={() => handleEdit(bom)} title="Edit"><Edit2 size={16} /></button>
-                      <button className="btn-delete" onClick={() => handleDelete(bom.bom_id)} title="Delete"><Trash2 size={16} /></button>
+                      <button className="btn-edit" onClick={() => handleEdit(bom)} title="Edit"><Edit2 size={15} /></button>
+                      <button className="btn-delete" onClick={() => handleDelete(bom.bom_id)} title="Delete"><Trash2 size={15} /></button>
                     </div>
                   </td>`
   );

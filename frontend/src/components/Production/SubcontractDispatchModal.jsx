@@ -82,13 +82,25 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
 
   const fetchItems = async () => {
     try {
-      const res = await productionService.getItems()
-      if (res.success) {
-        const itemOptions = (res.data || []).map(i => ({
+      const [itemsRes, stockRes] = await Promise.all([
+        productionService.getItems(),
+        productionService.getStockBalance()
+      ])
+      
+      if (itemsRes.success) {
+        const stockMap = {};
+        if (stockRes.success && Array.isArray(stockRes.data)) {
+          stockRes.data.forEach(s => {
+            stockMap[s.item_code] = parseFloat(s.current_qty) || 0;
+          });
+        }
+
+        const itemOptions = (itemsRes.data || []).map(i => ({
           value: i.item_code,
           label: `${i.item_code} - ${i.name || ''}`,
           uom: i.uom,
-          name: i.name
+          name: i.name,
+          available_qty: stockMap[i.item_code] || 0
         }))
         setItems(itemOptions)
       }
@@ -100,35 +112,46 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
   const fetchWorkOrderDetails = async (woId) => {
     try {
       setLoading(true)
-      const res = await productionService.getWorkOrder(woId)
-      if (res.success) {
-        setWorkOrder(res.data)
+      const [woRes, stockRes] = await Promise.all([
+        productionService.getWorkOrder(woId),
+        productionService.getStockBalance()
+      ])
+      
+      if (woRes.success) {
+        setWorkOrder(woRes.data)
         
+        const stockMap = {};
+        if (stockRes.success && Array.isArray(stockRes.data)) {
+          stockRes.data.forEach(s => {
+            stockMap[s.item_code] = parseFloat(s.current_qty) || 0;
+          });
+        }
+
         const plannedQty = jobCard.max_allowed_quantity !== undefined ? parseFloat(jobCard.max_allowed_quantity) : (jobCard.planned_quantity || 0)
         const remainingToDispatch = Math.max(0, plannedQty - (jobCard.total_dispatched || 0))
 
         // Initial items from Work Order
-        let opItems = (res.data.items || []).filter(item => 
+        let opItems = (woRes.data.items || []).filter(item => 
           !item.operation || item.operation === jobCard.operation
         ).map(item => ({
           ...item,
           id: Math.random().toString(36).substr(2, 9),
           item_name: item.item_name || item.name,
           batch_no: 'BATCH-001',
-          available_qty: 100, // Mock available qty
-          release_qty: ((parseFloat(item.required_qty) / parseFloat(res.data.quantity)) * remainingToDispatch)
+          available_qty: stockMap[item.item_code] || 0,
+          release_qty: ((parseFloat(item.required_qty) / parseFloat(woRes.data.quantity)) * remainingToDispatch)
         }))
 
         if (opItems.length === 0) {
            opItems = [{
               id: Math.random().toString(36).substr(2, 9),
-              item_code: res.data.item_code,
-              item_name: res.data.item_name || res.data.item_code,
+              item_code: woRes.data.item_code,
+              item_name: woRes.data.item_name || woRes.data.item_code,
               batch_no: 'BATCH-001',
-              available_qty: 100,
-              required_qty: res.data.quantity,
+              available_qty: stockMap[woRes.data.item_code] || 0,
+              required_qty: woRes.data.quantity,
               release_qty: remainingToDispatch,
-              uom: res.data.uom || 'pcs'
+              uom: woRes.data.uom || 'pcs'
             }]
         }
         
@@ -182,6 +205,7 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
           if (selectedItem) {
             updatedItem.uom = selectedItem.uom
             updatedItem.item_name = selectedItem.name
+            updatedItem.available_qty = selectedItem.available_qty || 0
           }
         }
         return updatedItem
@@ -238,9 +262,11 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
     {
       key: 'available_qty',
       label: 'Available Qty (Nos)',
-      className: 'text-center w-36',
+      className: 'text-center w-32',
       render: (value) => (
-        <div className="bg-slate-100 p-2 rounded text-xs text-slate-600 border border-slate-200">{value}</div>
+        <span className={`text-xs  ${value <= 0 ? 'text-rose-500' : 'text-slate-500'}`}>
+          {value}
+        </span>
       )
     },
     {
@@ -256,11 +282,7 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
         />
       )
     },
-    {
-      key: 'uom',
-      label: 'UOM',
-      className: 'text-xs text-slate-500 w-20'
-    },
+ 
     {
       key: 'actions',
       label: 'Actions',
@@ -271,7 +293,7 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
 
   const renderDispatchActions = (row) => (
     <button onClick={() => handleDeleteItem(row.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-all">
-      <Trash2 size={16} />
+      <Trash2 size={15} />
     </button>
   );
 
@@ -303,10 +325,10 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
     e.preventDefault()
     
     const validations = getValidations()
-    const allValid = Object.values(validations).every(v => v.status === 'success')
+    const hasErrors = Object.values(validations).some(v => v.status === 'error')
     
-    if (!allValid) {
-      toast.addToast('Please fix validation errors before submitting', 'error')
+    if (hasErrors) {
+      toast.addToast('Please fix required validation errors before submitting', 'error')
       return
     }
 
@@ -331,8 +353,7 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
   }
 
   const getValidations = () => {
-    const itemsValid = releaseItems.length > 0 && releaseItems.every(i => i.item_code && i.release_qty > 0)
-    const qtyCheck = releaseItems.every(i => i.release_qty <= i.available_qty)
+    const stockCheck = releaseItems.every(i => (parseFloat(i.release_qty) || 0) <= (parseFloat(i.available_qty) || 0))
     
     return {
       vendor: { label: 'Vendor is selected', status: formData.vendor_id ? 'success' : 'pending' },
@@ -341,10 +362,11 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
       warehouse: { label: 'Source Warehouse is selected', status: formData.source_warehouse_id ? 'success' : 'pending' },
       items: { label: 'At least one item is added', status: releaseItems.length > 0 ? 'success' : 'pending' },
       qtyPositive: { label: 'Dispatch quantity is greater than 0', status: formData.release_quantity > 0 ? 'success' : 'pending' },
-      qtyAvailable: { 
-        label: 'Dispatch quantity cannot exceed available quantity', 
-        status: qtyCheck ? 'success' : 'error',
-        errors: releaseItems.filter(i => i.release_qty > i.available_qty).map((i, idx) => `Item ${idx+1}: Max available is ${i.available_qty} ${i.uom}`)
+      stockAvailable: { 
+        label: 'Dispatch quantity matches available quantity', 
+        status: stockCheck ? 'success' : 'warning',
+        errors: releaseItems.filter(i => (parseFloat(i.release_qty) || 0) > (parseFloat(i.available_qty) || 0))
+                           .map(i => `${i.item_code}: Shortage of ${((parseFloat(i.release_qty) || 0) - (parseFloat(i.available_qty) || 0)).toFixed(0)} Nos`)
       }
     }
   }
@@ -390,8 +412,8 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
             {/* Section 1: Challan Details */}
             <div className="">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">1</div>
-                <h3 className="text-base font-semibold text-slate-800">Challan Details</h3>
+                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs ">1</div>
+                <h3 className="text-base  text-slate-800">Challan Details</h3>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
@@ -474,10 +496,10 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
             <div className="">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">2</div>
-                  <h3 className="text-base font-semibold text-slate-800">Items to Dispatch</h3>
+                  <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs ">2</div>
+                  <h3 className="text-base  text-slate-800">Items to Dispatch</h3>
                 </div>
-                <button type="button" onClick={handleAddItem} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-all text-xs  border border-blue-100  tracking-wide">
+                <button type="button" onClick={handleAddItem} className="flex items-center gap-2 p-1 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-all text-xs  border border-blue-100  tracking-wide">
                   <Plus size={14} />
                   Add Item
                 </button>
@@ -494,11 +516,16 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
               </div>
               
               <div className="flex items-center justify-between p-2 bg-emerald-50/50 border border-emerald-100 rounded">
-                 <div className="flex items-center gap-2.5 text-emerald-700  text-xs  tracking-wide">
-                    <CheckCircle2 size={16} className="text-emerald-500" />
-                    <span>Total Dispatch Qty: {totalDispatchQty} Nos</span>
+                 <div className="flex items-center gap-6 text-emerald-700  text-xs  tracking-wide">
+                    <div className="flex items-center gap-2.5">
+                       <CheckCircle2 size={15} className="text-emerald-500" />
+                       <span>Total Dispatch Qty: {totalDispatchQty} Nos</span>
+                    </div>
+                    <div className={`flex items-center gap-2.5 ${totalAvailableQty < totalDispatchQty ? 'text-rose-600' : 'text-emerald-700'}`}>
+                       <Package size={15} className={totalAvailableQty < totalDispatchQty ? 'text-rose-500' : 'text-emerald-500'} />
+                       <span>Total Available Qty: {totalAvailableQty} Nos</span>
+                    </div>
                  </div>
-                 <span className="text-xs  text-emerald-600/70  ">Total Available Qty: {totalAvailableQty} Nos</span>
               </div>
             </div>
 
@@ -506,8 +533,8 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
                {/* Section 3: Cost Details */}
                <div className="bg-white p-2 rounded border border-slate-200 shadow-sm space-y-2">
                   <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">3</div>
-                    <h3 className="text-base font-semibold text-slate-800">Cost Details</h3>
+                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs ">3</div>
+                    <h3 className="text-base  text-slate-800">Cost Details</h3>
                   </div>
                   
                   <div className="grid grid-cols-3 gap-2">
@@ -542,8 +569,8 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
                {/* Section 4: Logistics Details */}
                <div className="bg-white p-2 rounded border border-slate-200 shadow-sm space-y-2">
                   <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">4</div>
-                    <h3 className="text-base font-semibold text-slate-800">Logistics Details</h3>
+                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs ">4</div>
+                    <h3 className="text-base  text-slate-800">Logistics Details</h3>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2">
@@ -602,22 +629,25 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
                            <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
                               v.status === 'success' ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-100' : 
                               v.status === 'error' ? 'bg-red-500 border-red-500 text-white shadow-sm shadow-red-100' : 
+                              v.status === 'warning' ? 'bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-100' :
                               'bg-white border-slate-200 text-slate-200'
                            }`}>
                               {v.status === 'success' ? <CheckCircle2 size={12} strokeWidth={4} /> : 
                                v.status === 'error' ? <X size={12} strokeWidth={4} /> : 
+                               v.status === 'warning' ? <AlertCircle size={12} strokeWidth={4} /> :
                                <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />}
                            </div>
                            <span className={`text-xs  leading-tight   ${
                              v.status === 'success' ? 'text-emerald-700' : 
                              v.status === 'error' ? 'text-red-600' : 
+                             v.status === 'warning' ? 'text-amber-700' :
                              'text-slate-400'
                            }`}>{v.label}</span>
                         </div>
-                        {v.errors && v.status === 'error' && (
-                          <div className="ml-8 space-y-1.5 border-l-2 border-red-100 pl-3 py-1">
+                        {v.errors && (v.status === 'error' || v.status === 'warning') && (
+                          <div className={`ml-8 space-y-1.5 border-l-2 pl-3 py-1 ${v.status === 'warning' ? 'border-amber-100' : 'border-red-100'}`}>
                              {v.errors.map((err, i) => (
-                               <p key={i} className="text-xs  text-red-500 flex items-start gap-1.5">
+                               <p key={i} className={`text-xs flex items-start gap-1.5 ${v.status === 'warning' ? 'text-amber-600' : 'text-red-500'}`}>
                                   <AlertCircle size={10} className="mt-0.5 flex-shrink-0" />
                                   <span>{err}</span>
                                </p>
@@ -673,8 +703,7 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
                 </div>
                 <ul className="space-y-3">
                    {[
-                     "Dispatch quantity must be less than or equal to available quantity.",
-                     "At least one item is required.",
+                      "At least one item is required.",
                      "Dispatch type is mandatory.",
                      "Expected return date must be today or a future date."
                    ].map((rule, idx) => (

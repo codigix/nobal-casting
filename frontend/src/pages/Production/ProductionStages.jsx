@@ -155,7 +155,7 @@ export default function ProductionStages() {
               onClick={() => handleOpenModal()}
               className="btn-primary flex items-center gap-2 bg-gradient-to-br from-blue-400 to-blue-600"
             >
-              <Plus size={16} /> New Stage
+              <Plus size={15} /> New Stage
             </button>
           </div>
         </div>
@@ -210,14 +210,14 @@ export default function ProductionStages() {
                       className="p-2 text-gray-600 hover:bg-gray-100 rounded-xs transition"
                       title="Edit stage"
                     >
-                      <Edit2 size={16} />
+                      <Edit2 size={15} />
                     </button>
                     <button 
                       onClick={() => handleDelete(stage.id)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-xs transition"
                       title="Delete stage"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </div>

@@ -1099,7 +1099,7 @@ export default function SalesOrderForm() {
       return (
         <div className="bg-slate-50/50 border border-slate-100 rounded p-3 text-center ">
           <div className="w-8 h-8 bg-white rounded flex items-center justify-center mx-auto mb-4   border border-slate-100">
-            <Database size={16} className="text-slate-300" />
+            <Database size={15} className="text-slate-300" />
           </div>
           <h3 className="text-slate-900  text-lg mb-2 ">No Engineering Data</h3>
           <p className="text-slate-500 text-xs max-w-md mx-auto leading-relaxed  opacity-70">
@@ -1158,7 +1158,7 @@ export default function SalesOrderForm() {
                         </td>
                         <td className="p-2 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <span className="text-xs   text-slate-700 bg-slate-50/50 px-3 py-1.5 border border-slate-100 rounded min-w-[6rem] inline-block text-right">
+                            <span className="text-xs   text-slate-700 bg-slate-50/50 p-1 border border-slate-100 rounded min-w-[6rem] inline-block text-right">
                               {multipliedQty}
                             </span>
                           </div>
@@ -1174,7 +1174,7 @@ export default function SalesOrderForm() {
                                 step="0.01"
                                 value={item.rate || 0}
                                 onChange={(e) => handleBomFinishedGoodEdit(idx, 'rate', e.target.value)}
-                                className="w-24 px-3 py-1.5 text-xs   text-right border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                className="w-24 p-1 text-xs   text-right border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                               />
                             </div>
                           )}
@@ -1420,7 +1420,7 @@ export default function SalesOrderForm() {
                                 step="0.01"
                                 value={op.hourly_rate || 0}
                                 onChange={(e) => handleBomOperationEdit(idx, 'hourly_rate', e.target.value)}
-                                className="w-24 px-3 py-1.5 text-xs   text-right border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                className="w-24 p-1 text-xs   text-right border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                               />
                             </div>
                           )}
@@ -1557,7 +1557,7 @@ export default function SalesOrderForm() {
     return (
       <div className="min-h-screen bg-slate-50 p-2/50 flex flex-col items-center justify-center p-8">
         <div className="w-8 h-8 bg-white rounded shadow  flex items-center justify-center mb-4 animate-bounce">
-          <Database size={16} className="text-blue-600" />
+          <Database size={15} className="text-blue-600" />
         </div>
         <div className="text-xs  text-slate-400 animate-pulse">
           Initializing Intelligence Protocol...
@@ -1606,14 +1606,14 @@ export default function SalesOrderForm() {
                     onClick={() => window.print()}
                     className="flex items-center gap-2 px-5 py-2  rounded  bg-white border border-slate-200 text-slate-600 text-xs   hover:bg-slate-50 transition-all  "
                   >
-                    <FileText size={16} />
+                    <FileText size={15} />
                     Print
                   </button>
                   <button
                     onClick={() => navigate(`/manufacturing/sales-orders/${id}`)}
                     className="flex items-center gap-2 p-2 rounded  bg-slate-900 text-white text-xs   hover:bg-slate-800 transition-all shadow  hover:shadow-slate-200 hover:-translate-y-0.5 active:translate-y-0"
                   >
-                    <Settings size={16} />
+                    <Settings size={15} />
                     Edit Order
                   </button>
                 </>
@@ -1631,9 +1631,9 @@ export default function SalesOrderForm() {
                     className="flex items-center gap-2 p-2  rounded bg-blue-600 text-white text-xs   hover:bg-blue-700 disabled:bg-slate-300 transition-all  shadow-blue-100 hover:shadow-blue-200 hover:-translate-y-0.5 active:translate-y-0"
                   >
                     {loading ? (
-                      <RotateCcw size={16} className="animate-spin" />
+                      <RotateCcw size={15} className="animate-spin" />
                     ) : (
-                      <Save size={16} />
+                      <Save size={15} />
                     )}
                     {loading ? 'Processing...' : 'Save Protocol'}
                   </button>

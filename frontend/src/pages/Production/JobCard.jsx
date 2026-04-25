@@ -8,9 +8,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as productionService from '../../services/productionService'
 import CreateJobCardModal from '../../components/Production/CreateJobCardModal'
 import EditJobCardModal from '../../components/Production/EditJobCardModal'
+import ShipmentJobCardModal from '../../components/Production/ShipmentJobCardModal'
 import ViewJobCardModal from '../../components/Production/ViewJobCardModal'
 import SubcontractDispatchModal from '../../components/Production/SubcontractDispatchModal'
 import SchedulingGanttView from '../../components/Production/SchedulingGanttView'
+import ResourceEngagementModal from '../../components/Production/ResourceEngagementModal'
 import { useToast } from '../../components/ToastContainer'
 import DataTable from '../../components/Table/DataTable'
 import SearchableSelect from '../../components/SearchableSelect'
@@ -89,13 +91,13 @@ const formatScheduleTime = (dateStr) => {
   // Format: DD/MM HH:MM AM/PM
   const day = String(d.getDate()).padStart(2, '0')
   const month = String(d.getMonth() + 1).padStart(2, '0')
-  
+
   let hours = d.getHours()
   const minutes = String(d.getMinutes()).padStart(2, '0')
   const ampm = hours >= 12 ? 'PM' : 'AM'
-  
+
   hours = hours % 12
-  hours = hours ? hours : 12 
+  hours = hours ? hours : 12
   const strHours = String(hours).padStart(2, '0')
 
   return `${day}/${month} ${strHours}:${minutes}${ampm}`
@@ -136,6 +138,7 @@ export default function JobCard() {
   // Modal and editing state
   const [showModal, setShowModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showShipmentModal, setShowShipmentModal] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [preSelectedWorkOrderId, setPreSelectedWorkOrderId] = useState(null)
   const [viewingJobCardId, setViewingJobCardId] = useState(null)
@@ -155,6 +158,16 @@ export default function JobCard() {
   const [showDispatchModal, setShowDispatchModal] = useState(false)
   const [dispatchingJobCard, setDispatchingJobCard] = useState(null)
   const [activeTab, setActiveTab] = useState('list') // 'list' or 'scheduling'
+
+  // Switch tab based on URL search param
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'scheduling') {
+      setActiveTab('scheduling')
+    } else if (tab === 'list') {
+      setActiveTab('list')
+    }
+  }, [searchParams])
 
   const [conflictModalData, setConflictModalData] = useState(null)
   const [showConflictModal, setShowConflictModal] = useState(false)
@@ -183,7 +196,7 @@ export default function JobCard() {
       setLoading(true)
       const response = await productionService.getJobCards(filters)
       let cards = response.data || []
-      
+
       // We rely on the backend sort: Plan ID (DESC), Operation Type (SA before FG), Operation Sequence (ASC)
       // This ensures manufacturing flow for recent projects appears correctly.
       setJobCards(cards)
@@ -249,7 +262,11 @@ export default function JobCard() {
 
   const handleEditJobCard = useCallback((card) => {
     setEditingId(card.job_card_id)
-    setShowEditModal(true)
+    if ((card.operation || '').toLowerCase().includes('shipment') || (card.operation || '').toLowerCase().includes('dispatch')) {
+      setShowShipmentModal(true)
+    } else {
+      setShowEditModal(true)
+    }
   }, [])
 
   // 4. Operation Handlers
@@ -265,12 +282,16 @@ export default function JobCard() {
 
     // Validation for In-house operations
     const isOutsource = (currentCard.execution_mode || '').toUpperCase().trim() === 'OUTSOURCE' || (currentCard.execution_mode || '').toUpperCase().trim() === 'SUBCONTRACT';
-    
+    const isShipment = (currentCard.operation || '').toLowerCase().includes('shipment') || 
+                      (currentCard.operation || '').toLowerCase().includes('dispatch') ||
+                      (currentCard.operation || '').toLowerCase().includes('delivery') ||
+                      currentCard.is_shipment;
+
     if (!isOutsource) {
       if (!currentCard.operator_id) {
         return { canStart: false, reason: 'Please assign an operator before starting the job card' }
       }
-      if (!currentCard.machine_id) {
+      if (!currentCard.machine_id && !isShipment) {
         return { canStart: false, reason: 'Please assign a workstation before starting the job card' }
       }
       if (!currentCard.scheduled_start_date) {
@@ -305,13 +326,19 @@ export default function JobCard() {
       const api = (await import('../../services/api')).default
 
       toast.addToast('⏳ Validating start conditions...', 'info')
-      
+
       // 1. Backend validation (MR, Sequence, and now Assignment)
       const validateRes = await api.post(`/production/job-cards/${jobCardId}/validate-start`, { auto_create_mr: true })
       const validation = validateRes.data?.data || validateRes.data
 
       if (validation && !validation.can_start) {
-        toast.addToast(validation.message || 'Validation failed. Check material request and assignments.', 'error')
+        if (validation.requirements && validation.requirements.length > 0) {
+          validation.requirements.forEach(req => {
+            toast.addToast(`${req.title}: ${req.message}`, 'error')
+          })
+        } else {
+          toast.addToast(validation.reason || validation.message || "We couldn't start this job card. Please make sure materials are received and a machine/operator is assigned.", 'error')
+        }
         setLoading(false)
         return
       }
@@ -320,7 +347,7 @@ export default function JobCard() {
       toast.addToast('⏳ Checking sub-assembly readiness...', 'info')
       const depRes = await api.get(`/production/work-orders/${currentCard.work_order_id}/dependencies`)
       const dependencies = depRes.data?.data || depRes.data || []
-      
+
       const missingDeps = dependencies.filter(dep => {
         const finished = parseFloat(dep.child_accepted_qty || 0)
         const planned = parseFloat(dep.child_planned_qty || 0)
@@ -344,7 +371,21 @@ export default function JobCard() {
         navigate(`/manufacturing/job-cards/${jobCardId}/production-entry`)
       }, 500)
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message || 'Failed to start job card'
+      const errorData = err.response?.data
+      const errorMsg = errorData?.message || err.message || 'Failed to start job card'
+
+      // Handle Conflict (409) or validation failure with conflict info
+      if (err.response?.status === 409 && errorData?.conflict) {
+        setConflictModalData({
+          ...errorData.details,
+          message: errorData.message,
+          jobCardId: jobCardId
+        });
+        setShowConflictModal(true);
+        setLoading(false);
+        return;
+      }
+
       toast.addToast(errorMsg, 'error')
       setLoading(false)
     }
@@ -354,13 +395,13 @@ export default function JobCard() {
     try {
       const filterWorkOrder = filters.search || searchParams.get('filter_work_order');
       const filterPlan = filters.production_plan_id || searchParams.get('filter_plan') || searchParams.get('filter_production_plan');
-      
+
       if (!filterPlan && !filterWorkOrder) {
         toast.addToast('Please filter by Work Order or Production Plan to bulk start operations', 'warning');
         return;
       }
 
-      const confirmMsg = filterPlan 
+      const confirmMsg = filterPlan
         ? `This will set ALL job cards for Production Plan ${filterPlan} to "in-progress". Proceed?`
         : `This will set ALL job cards for Work Order ${filterWorkOrder} to "in-progress". Proceed?`;
 
@@ -373,7 +414,7 @@ export default function JobCard() {
       } else {
         res = await productionService.bulkStartJobCards(filterWorkOrder);
       }
-      
+
       if (res.success) {
         toast.addToast(res.message, 'success');
         fetchJobCards();
@@ -398,6 +439,66 @@ export default function JobCard() {
   const handleDispatchSuccess = useCallback(() => {
     fetchJobCards()
   }, [fetchJobCards])
+
+  // Conflict Resolution Handlers
+  const handleApplyNextAvailable = async (slot) => {
+    try {
+      const jobCardId = conflictModalData?.jobCardId;
+      if (!jobCardId || !slot) return;
+
+      setLoading(true);
+      await productionService.updateJobCard(jobCardId, {
+        scheduled_start_date: slot.start,
+        scheduled_end_date: slot.end
+      });
+
+      toast.addToast(`Rescheduled to ${new Date(slot.start).toLocaleString()}`, 'success');
+      setShowConflictModal(false);
+      setConflictModalData(null);
+      fetchJobCards();
+    } catch (err) {
+      toast.addToast(err.message || 'Failed to reschedule', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApplyAlternative = async (resource) => {
+    try {
+      const jobCardId = conflictModalData?.jobCardId;
+      if (!jobCardId || !resource) return;
+
+      setLoading(true);
+      const updateData = {};
+      if (conflictModalData.resource_type === 'machine') {
+        updateData.machine_id = resource.name;
+      } else {
+        updateData.operator_id = resource.name;
+      }
+
+      await productionService.updateJobCard(jobCardId, updateData);
+
+      toast.addToast(`Switched to ${resource.workstation_name || resource.name}`, 'success');
+      setShowConflictModal(false);
+      setConflictModalData(null);
+      fetchJobCards();
+    } catch (err) {
+      toast.addToast(err.message || 'Failed to switch resource', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNotifyWhenAvailable = async (resourceId) => {
+    try {
+      setNotifyingResourceId(resourceId);
+      // Simulate API call for availability alert
+      await new Promise(resolve => setTimeout(resolve, 800));
+      toast.addToast(`We'll notify you as soon as ${resourceId} is free.`, 'info');
+    } catch (err) {
+      toast.addToast('Failed to set alert', 'error');
+    }
+  };
 
   // 5. Helper Functions
   const getOperatorName = (operatorId, row = null) => {
@@ -525,6 +626,8 @@ export default function JobCard() {
       planned: { color: 'text-indigo-600  ', icon: Calendar, label: 'Planned' },
       'in-progress': { color: 'text-amber-600 ', icon: Activity, label: 'In-Progress' },
       in_progress: { color: 'text-amber-600 ', icon: Activity, label: 'In-Progress' },
+      shipped: { color: 'text-indigo-600 ', icon: Truck, label: 'Shipped' },
+      delivered: { color: 'text-emerald-700 ', icon: CheckCircle, label: 'Delivered' },
       completed: { color: 'text-emerald-600 ', icon: CheckCircle2, label: 'Completed' },
       cancelled: { color: 'text-rose-600 ', icon: X, label: 'Cancelled' }
     }
@@ -577,380 +680,7 @@ export default function JobCard() {
     )
   }
 
-  const renderConflictModal = () => {
-    if (!conflictModalData) return null
 
-    const handleApplySuggested = async () => {
-      if (!conflictModalData.next_available_slot || !conflictModalData.jobCardId) return;
-
-      try {
-        setLoading(true);
-        await productionService.updateJobCard(conflictModalData.jobCardId, {
-          scheduled_start_date: formatToUTC(parseUTCDate(conflictModalData.next_available_slot.start)),
-          scheduled_end_date: formatToUTC(parseUTCDate(conflictModalData.next_available_slot.end))
-        });
-        toast.addToast('Job card rescheduled successfully', 'success');
-        setShowConflictModal(false);
-        setShowEditModal(false);
-        setConflictModalData(null);
-        fetchJobCards();
-      } catch (err) {
-        toast.addToast(err.message || 'Failed to reschedule job card', 'error');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    const handleApplyAlternative = async (resourceName) => {
-      if (!conflictModalData.jobCardId) return;
-
-      try {
-        setLoading(true);
-        const updateData = {};
-        if (conflictModalData.resource_type === 'machine') {
-          updateData.machine_id = resourceName;
-        } else {
-          updateData.operator_id = resourceName;
-        }
-
-        await productionService.updateJobCard(conflictModalData.jobCardId, updateData);
-        toast.addToast(`${conflictModalData.resource_type === 'machine' ? 'Machine' : 'Operator'} switched successfully`, 'success');
-        setShowConflictModal(false);
-        setShowEditModal(false);
-        setConflictModalData(null);
-        fetchJobCards();
-      } catch (err) {
-        toast.addToast(err.message || 'Failed to switch resource', 'error');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    const handleApplyNextAvailable = async () => {
-      if (!conflictModalData.next_available_slot || !conflictModalData.jobCardId) return;
-
-      try {
-        setLoading(true);
-        await productionService.updateJobCard(conflictModalData.jobCardId, {
-          scheduled_start_date: formatToUTC(parseUTCDate(conflictModalData.next_available_slot.start)),
-          scheduled_end_date: formatToUTC(parseUTCDate(conflictModalData.next_available_slot.end))
-        });
-        toast.addToast('Job card updated to next available slot', 'success');
-        setShowConflictModal(false);
-        setShowEditModal(false);
-        setConflictModalData(null);
-        fetchJobCards();
-      } catch (err) {
-        toast.addToast(err.message || 'Failed to update job card', 'error');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    const handleNotifyWhenAvailable = async () => {
-      try {
-        await productionService.requestResourceNotification({
-          resource_type: conflictModalData.resource_type,
-          resource_id: conflictModalData.resource_id
-        })
-        setNotifyingResourceId(conflictModalData.resource_id)
-        toast.addToast(`Notification request sent. We'll notify you once ${conflictModalData.resource_id} is available.`, 'success')
-      } catch (err) {
-        toast.addToast('Failed to request notification', 'error')
-      }
-    }
-
-    const getWaitTimeText = (endTime) => {
-      if (!endTime) return null;
-      const end = parseUTCDate(endTime);
-      const now = new Date();
-      const diffMs = end - now;
-      if (diffMs <= 0) return "Becoming free now";
-
-      const diffMins = Math.ceil(diffMs / 60000);
-      if (diffMins < 60) return `${diffMins} mins`;
-
-      const diffHours = Math.floor(diffMins / 60);
-      const remainingMins = diffMins % 60;
-      return `${diffHours}h ${remainingMins}m`;
-    };
-
-    return (
-      <Modal
-        isOpen={showConflictModal}
-        onClose={() => { setShowConflictModal(false); setConflictModalData(null) }}
-        title={conflictModalData.conflict_with ? "Resource Engagement Info" : "Scheduling Alert"}
-        size="lg"
-      >
-        <div className="p-2 space-y-2">
-          {/* Header Engagement Section */}
-          <div className='flex gap-2'>
-            <div className={`flex flex-col items-start gap-2 p-2 ${conflictModalData.conflict_with ? 'bg-indigo-50/40 border-indigo-100' : 'bg-amber-50 border-amber-100'} border rounded  overflow-hidden relative`}>
-              {/* Background Accent */}
-              <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded  ${conflictModalData.conflict_with ? 'bg-indigo-500/5' : 'bg-amber-500/5'}`} />
-
-             <div className='flex gap-2 items-center'>
-               <div className={`flex-shrink-0 p-2 rounded ${conflictModalData.conflict_with ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-amber-100 text-amber-600'} `}>
-                {conflictModalData.resource_type === 'machine' ? <Cpu size={15} strokeWidth={2.5} /> : (conflictModalData.resource_type === 'operator' ? <Users size={15} strokeWidth={2.5} /> : <AlertTriangle size={15} strokeWidth={2.5} />)}
-              </div>
-
-              <div className="flex-1 ">
-                <div>
-                  <h3 className={`${conflictModalData.conflict_with ? 'text-indigo-900' : 'text-amber-900'}  text-sm  leading-none`}>
-                    {conflictModalData.conflict_with
-                      ? `${conflictModalData.resource_type === 'machine' ? 'Machine' : 'Operator'} is Already Engaged`
-                      : "Scheduling Sequence Alert"
-                    }
-                  </h3>
-                  <p className={`${conflictModalData.conflict_with ? 'text-indigo-600/80' : 'text-amber-700'} text-xs  leading-relaxed `}>
-                    {conflictModalData.conflict_with
-                      ? `Conflict with ${conflictModalData.conflict_with} (${conflictModalData.conflict_operation || 'Operation'}) from ${formatToLocalDisplay(conflictModalData.start)} to ${formatToLocalDisplay(conflictModalData.end)}`
-                      : conflictModalData.message
-                    }
-                  </p>
-                </div>
-
-
-              </div>
-             </div>
-
-            </div>
-            {conflictModalData.conflict_with && (
-              <div className=" flex gap-2">
-                <div className="bg-white/90 p-2 rounded border border-indigo-100 flex items-center gap-3  group hover:border-indigo-200 transition-colors">
-                  <div className="p-1.5 bg-indigo-50 rounded text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                    <Clock size={15} />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs    text-indigo-400">Next available in:</span>
-                    <span className="text-xs  text-indigo-600">{getWaitTimeText(conflictModalData.end)}</span>
-                  </div>
-                </div>
-
-                <div className="bg-indigo-600 p-2 .5 rounded flex items-center gap-3 shadow-md shadow-indigo-100 group hover:bg-indigo-700 transition-colors active:scale-95 cursor-pointer">
-                  <div className="p-1.5 bg-white/20 rounded text-white">
-                    <ClipboardList size={15} />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs    text-indigo-200">Engaged with:</span>
-                    <span className="text-xs  text-white">{conflictModalData.conflict_with}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Active Job Details Section - Only show if there's a specific conflicting job */}
-          {conflictModalData.conflict_with && (
-            <div className="bg-white border border-slate-100 rounded  overflow-hidden">
-              <div className="bg-slate-50/50 p-2 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-1 bg-white rounded border border-slate-100  text-slate-400">
-                    <ClipboardList size={15} />
-                  </div>
-                  <h4 className="text-xs  text-slate-500  ">Currently Engaged Job Details</h4>
-                </div>
-              </div>
-
-              <div className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                <div className="space-y-1">
-                  <span className="text-xs text-slate-400    block">Work Order</span>
-                  <p className="text-xs  text-slate-700 break-all leading-tight">
-                    {conflictModalData.conflict_work_order || 'N/A'}
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <span className="text-xs text-slate-400    block">Operation</span>
-                  <div className="flex items-center gap-2">
-                    <Activity size={14} className="text-indigo-500" />
-                    <span className="text-sm  text-indigo-600">
-                      {conflictModalData.conflict_operation || 'N/A'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <span className="text-xs text-slate-400    block">Item</span>
-                  <p className="text-sm  text-slate-800 line-clamp-2" title={conflictModalData.conflict_item}>
-                    {conflictModalData.conflict_item || 'N/A'}
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <span className="text-xs text-slate-400    block">Planned Qty</span>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-sm  text-slate-900  ">
-                      {conflictModalData.conflict_planned_qty ? parseFloat(conflictModalData.conflict_planned_qty).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '0'}
-                    </span>
-                    <span className="text-xs text-slate-400  ">Units</span>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <span className="text-xs text-slate-400    block">Current Status</span>
-                  <div className="inline-flex mt-0.5">
-                    <StatusBadge status={conflictModalData.conflict_status} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {conflictModalData.conflict_with && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {/* Suggested Solution Section */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 px-1">
-                  <Zap size={15} className="text-amber-500" />
-                  <h4 className="text-sm  text-slate-800  ">Easiest Fix</h4>
-                </div>
-
-                <div className="bg-white border border-grey-200 rounded overflow-hidden  hover: transition-all group">
-                  <div className="bg-indigo-600 p-2 border-b border-indigo-100 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Zap size={15} className="text-amber-400 fill-amber-400" />
-                      <span className="text-xs  text-white  er">Automatic Reschedule</span>
-                    </div>
-                    <span className="text-xs bg-white text-indigo-600 px-2 py-0.5 rounded-md   ">Recommended</span>
-                  </div>
-                  <div className="p-2 space-y-2">
-                    {conflictModalData.next_available_slot ? (
-                      <>
-                        <div className="flex items-center justify-between bg-indigo-50/50 p-2 rounded border border-indigo-100 group-hover:border-indigo-300 transition-colors relative overflow-hidden">
-                          <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-500" />
-                          <div className="text-center flex-1">
-                            <p className="text-xs text-indigo-400   ">Start Time</p>
-                            <p className="text-xs  text-indigo-900 ">{formatToLocalDisplay(conflictModalData.next_available_slot.start)}</p>
-                          </div>
-                          <div className="px-5 text-indigo-200">
-                            <ArrowRight size={15} strokeWidth={3} />
-                          </div>
-                          <div className="text-center flex-1">
-                            <p className="text-xs text-indigo-400   ">End Time</p>
-                            <p className="text-xs  text-indigo-900 ">{formatToLocalDisplay(conflictModalData.next_available_slot.end)}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={handleApplyNextAvailable}
-                          className="w-full p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs  shadow-lg shadow-indigo-100 active:scale-[0.98] flex items-center justify-center gap-3 group/btn"
-                        >
-                          <CheckCircle size={15} className="group-hover/btn:scale-110 transition-transform" />
-                          Update to This Slot
-                        </button>
-                      </>
-                    ) : (
-                      <div className="text-center py-10 text-slate-400 text-xs   bg-slate-50 rounded border border-dashed border-slate-200">
-                        No free slots found for today.
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Notification Section */}
-                <div className="bg-gradient-to-br from-indigo-900 to-indigo-800 border border-indigo-700 rounded p-2 flex items-center justify-between  shadow-indigo-100">
-                  <div className="flex items-center gap-1">
-                    <div className="p-2 bg-white/10 rounded text-indigo-100 backdrop-blur-sm">
-                      <Bell size={15} strokeWidth={2.5} />
-                    </div>
-                    <div>
-                      <h5 className="text-xs  text-white leading-tight ">Don't want to wait?</h5>
-                      <p className="text-xs text-indigo-200 ">We'll alert you when it's free.</p>
-                    </div>
-                  </div>
-                  <button
-                    disabled={notifyingResourceId === conflictModalData.resource_id}
-                    onClick={handleNotifyWhenAvailable}
-                    className={`p-2 rounded text-xs  transition-all ${notifyingResourceId === conflictModalData.resource_id
-                        ? 'bg-indigo-700/50 text-indigo-300 cursor-not-allowed flex items-center gap-2'
-                        : 'bg-white text-indigo-900 hover:bg-indigo-50 active:scale-95'
-                      }`}
-                  >
-                    {notifyingResourceId === conflictModalData.resource_id ? (
-                      <><CheckCircle size={14} /> Alert Set</>
-                    ) : 'Set Alert'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Alternatives Section */}
-              <div className="space-y-5">
-                <div className="flex items-center gap-2 px-1">
-                  <Layers size={15} className="text-slate-500" />
-                  <h4 className="text-sm  text-slate-800  ">Try Another {conflictModalData.resource_type === 'machine' ? 'Machine' : 'Operator'}</h4>
-                </div>
-
-                <div className="bg-slate-50 border border-slate-200 rounded p-2 flex flex-col">
-                  {conflictModalData.alternatives && conflictModalData.alternatives.length > 0 ? (
-                    <div className="space-y-4 flex-1">
-                      <p className="text-xs  text-slate-400   mb-3 px-1">
-                        Free {conflictModalData.resource_type === 'machine' ? 'machines of same type' : 'operators in same dept'}
-                      </p>
-                      {conflictModalData.alternatives.map(alt => (
-                        <div key={alt.name} className="flex items-center justify-between bg-white p-5 rounded border border-slate-100 hover:border-indigo-300 hover: transition-all group">
-                          <div className="flex items-center gap-4">
-                            <div className="p-3 bg-slate-50 rounded text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                              {conflictModalData.resource_type === 'machine' ? <Cpu size={22} /> : <Users size={22} />}
-                            </div>
-                            <div>
-                              <p className="text-sm  text-slate-800 group-hover:text-indigo-900 ">{alt.workstation_name || alt.name}</p>
-                              <p className="text-xs text-slate-400    mt-0.5">{alt.name}</p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleApplyAlternative(alt.name)}
-                            className="px-5 py-2.5 text-xs  text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded transition-all border border-indigo-100 active:scale-95"
-                          >
-                            Switch
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center flex-1 text-center space-y-2 opacity-70 p-2">
-                      <div className="p-2 bg-white rounded shadow-inner border border-slate-100">
-                        <Layers size={15} className="text-slate-200" />
-                      </div>
-                      <p className="text-xs  text-slate-500 leading-relaxed">
-                        No other similar {conflictModalData.resource_type === 'machine' ? 'machines' : 'operators'} are available right now.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="mt-2 space-y-2">
-                    <button
-                      onClick={() => setActiveTab('scheduling')}
-                      className="flex items-center justify-center gap-3 w-full p-2 bg-slate-900 text-white rounded hover:bg-slate-800 transition-all text-xs   shadow-slate-200 active:scale-[0.98]"
-                    >
-                      <CalendarIcon size={15} />
-                      View All Schedules
-                    </button>
-                    <button
-                      onClick={() => { setShowConflictModal(false); setConflictModalData(null) }}
-                      className="w-full p-2 text-slate-500 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-all text-xs "
-                    >
-                      Close & Choose Time Manually
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {!conflictModalData.conflict_with && (
-            <div className="flex justify-end">
-              <button
-                onClick={() => { setShowConflictModal(false); setConflictModalData(null) }}
-                className="px-6 py-2 bg-gray-900 text-white rounded hover:bg-gray-800 transition-all text-sm "
-              >
-                Understood
-              </button>
-            </div>
-          )}
-        </div>
-      </Modal>
-    )
-  }
 
   // 7. Table Configuration
   const renderActions = useCallback((card) => {
@@ -969,11 +699,10 @@ export default function JobCard() {
                 handleStartJobCard(card.job_card_id);
               }
             }}
-            className={`p-1 rounded transition-all ${
-              ['in-progress', 'in_progress'].includes(status) 
-                ? 'text-indigo-600 hover:bg-indigo-50' 
-                : 'text-emerald-600 hover:bg-emerald-50'
-            }`}
+            className={`p-1 rounded transition-all ${['in-progress', 'in_progress'].includes(status)
+              ? 'text-indigo-600 hover:bg-indigo-50'
+              : 'text-emerald-600 hover:bg-emerald-50'
+              }`}
             title={['in-progress', 'in_progress'].includes(status) ? "Production Entry" : "Start Operation"}
           >
             <Zap size={14} className="fill-current" />
@@ -992,17 +721,16 @@ export default function JobCard() {
           <button
             onClick={() => handleDispatch(card)}
             disabled={
-              status === 'completed' || 
+              status === 'completed' ||
               (parseFloat(card.planned_quantity || 0) > 0 && parseFloat(card.total_dispatched || 0) >= parseFloat(card.planned_quantity || 0)) ||
               parseFloat(card.max_allowed_quantity || 0) <= 0
             }
-            className={`p-1 rounded transition-all ${
-              status === 'completed' || 
+            className={`p-1 rounded transition-all ${status === 'completed' ||
               (parseFloat(card.planned_quantity || 0) > 0 && parseFloat(card.total_dispatched || 0) >= parseFloat(card.planned_quantity || 0)) ||
               parseFloat(card.max_allowed_quantity || 0) <= 0
-                ? 'text-gray-300 cursor-not-allowed bg-transparent opacity-50' 
-                : 'text-blue-600 hover:bg-blue-50 bg-blue-50/50'
-            }`}
+              ? 'text-gray-300 cursor-not-allowed bg-transparent opacity-50'
+              : 'text-blue-600 hover:bg-blue-50 bg-blue-50/50'
+              }`}
             title={parseFloat(card.max_allowed_quantity || 0) <= 0 ? "Waiting for units from previous operation" : "Vendor Dispatch"}
           >
             <Truck size={14} />
@@ -1066,17 +794,17 @@ export default function JobCard() {
               <span className="text-xs  text-gray-900 group-hover/op:text-indigo-600 transition-colors ">{val}</span>
             </div>
             <div className="flex  flex-col">
-              <StatusBadge 
+              <StatusBadge
                 status={
                   (['in-progress', 'ready'].includes(row.status) && parseFloat(row.max_allowed_quantity || 0) <= 0 && parseFloat(row.produced_quantity || 0) <= 0 && parseFloat(row.sent_qty || 0) <= 0)
                     ? 'Waiting'
                     : row.status
-                } 
+                }
               />
               <span className="text-xs text-indigo-400  group-hover/op:opacity-100 transition-opacity" title={`Job Card: ${row.job_card_id}`}>
                 {displayId}
               </span>
-             
+
             </div>
           </div>
         )
@@ -1088,11 +816,11 @@ export default function JobCard() {
       render: (val, row) => {
         const isSubAsm = (row.item_group || '').toLowerCase().includes('sub-assembly') || (row.work_order_id || '').includes('-SA-')
         const isFG = (row.item_group || '').toLowerCase().includes('finished good') || (row.work_order_id || '').includes('-FG-')
-        
+
         return (
           <div className="flex flex-col gap-1.5">
             <div className="flex flex-col gap-2">
-              
+
               <span className="text-xs  text-gray-900 leading-tight" title={val}>{val || 'N/A'}</span>
             </div>
             <div className="flex  flex-col gap-2">
@@ -1110,8 +838,8 @@ export default function JobCard() {
         const isSubcontract = (val || '').toLowerCase() === 'outsource' || (val || '').toLowerCase() === 'subcontract'
         return (
           <span className={`text-xs  ${isSubcontract
-              ? ' text-amber-600 '
-              : ' text-blue-600 '
+            ? ' text-amber-600 '
+            : ' text-blue-600 '
             }`}>
             {isSubcontract ? 'Subcontract' : 'In-house'}
           </span>
@@ -1123,7 +851,7 @@ export default function JobCard() {
       label: 'Assignment',
       render: (_, row) => {
         const isSubcontract = (row.execution_mode || '').toLowerCase() === 'outsource' || (row.execution_mode || '').toLowerCase() === 'subcontract'
-        
+
         // Assignee part
         let assignee;
         if (isSubcontract) {
@@ -1164,7 +892,7 @@ export default function JobCard() {
               {wsStatus}
             </div>
             <div className="flex items-center gap-1.5 text-indigo-600">
-              
+
               <span className="text-[11px] font-medium">{assignee}</span>
             </div>
           </div>
@@ -1177,12 +905,12 @@ export default function JobCard() {
       render: (_, row) => {
         const planned = parseFloat(row.planned_quantity || 0)
         const produced = parseFloat(row.produced_quantity || 0)
-        
+
         // Rejections and Scrap are non-additive (they represent the same loss)
         const rejected = parseFloat(row.rejected_quantity || 0)
         const scrap = parseFloat(row.scrap_quantity || 0)
         const consolidatedLoss = Math.max(rejected, scrap)
-        
+
         // Accepted should ideally be (produced - consolidatedLoss), 
         // but we respect the backend accepted_quantity if it's explicitly set
         // However, for the progress bar, we calculate completion based on valid output
@@ -1194,10 +922,10 @@ export default function JobCard() {
         const producibleFromSub = row.producible_quantity !== null ? parseFloat(row.producible_quantity) : (hasSubDeps ? 0 : planned)
         const producibleFromPrev = row.prev_op_transferred_qty !== null ? parseFloat(row.prev_op_transferred_qty) : (hasPrevOp ? 0 : planned)
         const readyUnits = Math.min(planned, producibleFromSub, producibleFromPrev)
-        
+
         const completionRate = planned > 0 ? (accepted / planned) * 100 : 0
         const readyRate = planned > 0 ? (readyUnits / planned) * 100 : 0
-        
+
         return (
           <div className="flex flex-col gap-1.5 py-1">
             <div className="flex justify-between items-center mb-0.5">
@@ -1215,38 +943,38 @@ export default function JobCard() {
                 <span className="text-[9px] text-slate-400">/ {planned.toLocaleString()}</span>
               </div>
             </div>
-            
-            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden relative shadow-inner">
+
+            <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden relative shadow-inner">
               {/* Ready units bar (amber shadow) */}
-              <div 
+              <div
                 className="absolute left-0 top-0 h-full bg-amber-200 transition-all duration-1000"
                 style={{ width: `${Math.min(100, readyRate)}%` }}
               />
               {/* Accepted units bar (emerald/indigo) */}
-              <div 
+              <div
                 className={`absolute left-0 top-0 h-full transition-all duration-1000 z-10 ${completionRate >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
                 style={{ width: `${Math.min(100, completionRate)}%` }}
               />
             </div>
 
             <div className="flex items-center justify-between mt-0.5">
-               <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-0.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                  <span className="text-[9px] text-slate-500">P: {produced.toLocaleString()}</span>
+                </div>
+                {(rejected > 0 || scrap > 0) && (
                   <div className="flex items-center gap-0.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                    <span className="text-[9px] text-slate-500">P: {produced.toLocaleString()}</span>
+                    <div className="w-1.5 h-1 rounded-full bg-rose-400" />
+                    <span className="text-[9px] text-rose-500">R: {Math.round(consolidatedLoss)}</span>
                   </div>
-                  {(rejected > 0 || scrap > 0) && (
-                    <div className="flex items-center gap-0.5">
-                      <div className="w-1.5 h-1 rounded-full bg-rose-400" />
-                      <span className="text-[9px] text-rose-500">R: {Math.round(consolidatedLoss)}</span>
-                    </div>
-                  )}
-               </div>
-               {completionRate > 0 && completionRate < 100 && (
-                 <span className="text-[9px] text-slate-400 italic">
-                   {Math.floor(planned - accepted)} left
-                 </span>
-               )}
+                )}
+              </div>
+              {completionRate > 0 && completionRate < 100 && (
+                <span className="text-[9px] text-slate-400 italic">
+                  {Math.floor(planned - accepted)} left
+                </span>
+              )}
             </div>
           </div>
         )
@@ -1258,21 +986,21 @@ export default function JobCard() {
       render: (_, row) => {
         const total = parseInt(row.total_dependencies || 0)
         const completed = parseInt(row.completed_dependencies || 0)
-        
+
         // Producible quantity logic
         const planned = parseFloat(row.planned_quantity || 0)
         const accepted = parseFloat(row.accepted_quantity || 0)
-        
+
         // Use 0 as default if we have dependencies but no quantity recorded yet
         const hasSubDeps = parseInt(row.total_dependencies || 0) > (row.prev_op_transferred_qty !== null ? 1 : 0)
         const hasPrevOp = row.prev_op_transferred_qty !== null
 
         const producibleFromSub = row.producible_quantity !== null ? parseFloat(row.producible_quantity) : (hasSubDeps ? 0 : planned)
         const producibleFromPrev = row.prev_op_transferred_qty !== null ? parseFloat(row.prev_op_transferred_qty) : (hasPrevOp ? 0 : planned)
-        
+
         // Actual ready quantity is the minimum of all constraints
         const readyUnits = Math.min(planned, producibleFromSub, producibleFromPrev)
-        
+
         // Readiness status logic: Purely quantity-driven for "Ready" labels
         const isReady = readyUnits >= planned && planned > 0
         const isPartiallyReady = readyUnits > accepted && readyUnits < planned
@@ -1281,36 +1009,34 @@ export default function JobCard() {
         return (
           <div className="flex flex-col gap-1.5 py-1">
             <div className="flex justify-between items-center mb-0.5">
-              <span className={`text-[9px] font-bold   ${
-                isReady ? 'text-emerald-600' : (isPartiallyReady ? 'text-amber-600' : 'text-slate-400')
-              }`}>
+              <span className={`text-[9px] font-bold   ${isReady ? 'text-emerald-600' : (isPartiallyReady ? 'text-amber-600' : 'text-slate-400')
+                }`}>
                 {isReady ? 'FULLY READY' : (isPartiallyReady ? 'PARTIALLY READY' : (isWaiting ? 'WAITING' : 'AWAITING INPUT'))}
               </span>
               <div className="flex items-center gap-1">
-                 <span className={`text-[10px] font-black ${isPartiallyReady ? 'text-amber-600' : 'text-slate-700'}`}>{Math.floor(readyUnits).toLocaleString()}</span>
-                 <span className="text-[9px] text-slate-400">/ {planned.toLocaleString()}</span>
+                <span className={`text-[10px] font-black ${isPartiallyReady ? 'text-amber-600' : 'text-slate-700'}`}>{Math.floor(readyUnits).toLocaleString()}</span>
+                <span className="text-[9px] text-slate-400">/ {planned.toLocaleString()}</span>
               </div>
             </div>
-            
+
             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden flex shadow-inner">
-              <div 
-                className={`h-full transition-all duration-500 ${
-                  isReady ? 'bg-emerald-500' : (isPartiallyReady ? 'bg-amber-500' : 'bg-slate-300')
-                }`}
+              <div
+                className={`transition-all duration-500 ${isReady ? 'bg-emerald-500' : (isPartiallyReady ? 'bg-amber-500' : 'bg-slate-300')
+                  }`}
                 style={{ width: `${Math.min(100, (readyUnits / (planned || 1)) * 100)}%` }}
               />
             </div>
 
             <div className="flex items-center justify-between mt-0.5">
-               <div className="flex items-center gap-1">
-                  <Layers size={10} className={completed >= total ? 'text-emerald-500' : 'text-slate-300'} />
-                  <span className="text-[9px] text-slate-500">{completed}/{total} Deps</span>
-               </div>
-               {row.prev_op_transferred_qty !== null && (
-                 <span className="text-[9px] text-indigo-500 font-medium">
-                   From Prev: {Math.floor(row.prev_op_transferred_qty).toLocaleString()}
-                 </span>
-               )}
+              <div className="flex items-center gap-1">
+                <Layers size={10} className={completed >= total ? 'text-emerald-500' : 'text-slate-300'} />
+                <span className="text-[9px] text-slate-500">{completed}/{total} Deps</span>
+              </div>
+              {row.prev_op_transferred_qty !== null && (
+                <span className="text-[9px] text-indigo-500 font-medium">
+                  From Prev: {Math.floor(row.prev_op_transferred_qty).toLocaleString()}
+                </span>
+              )}
             </div>
           </div>
         )
@@ -1360,7 +1086,7 @@ export default function JobCard() {
   useEffect(() => {
     const filterWorkOrder = searchParams.get('filter_work_order')
     const filterPlan = searchParams.get('filter_plan') || searchParams.get('filter_production_plan')
-    
+
     if (filterWorkOrder) {
       setFilters(prev => ({ ...prev, search: filterWorkOrder }))
     } else if (filterPlan) {
@@ -1379,8 +1105,8 @@ export default function JobCard() {
             <div>
               <div className="flex items-center gap-1 mb-1">
                 <h1 className="text-xl text-gray-900">
-                  {filters.production_plan_id ? `Job Cards for Plan: ${filters.production_plan_id}` : 
-                   filters.search ? `Job Cards for WO: ${filters.search}` : 'Job Cards'}
+                  {filters.production_plan_id ? `Job Cards for Plan: ${filters.production_plan_id}` :
+                    filters.search ? `Job Cards for WO: ${filters.search}` : 'Job Cards'}
                 </h1>
               </div>
               <div className="flex items-center gap-2">
@@ -1484,7 +1210,7 @@ export default function JobCard() {
             Scheduling View
           </button>
         </div>
-        
+
 
         {activeTab === 'list' ? (
           <>
@@ -1492,7 +1218,7 @@ export default function JobCard() {
             <div className="my-3 flex flex-col md:flex-row items-center gap-6 flex-shrink-0">
               <div className="flex-1 relative w-full group">
                 <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
-                  <Search className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
+                  <Search className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={15} />
                 </div>
                 <input
                   type="text"
@@ -1529,7 +1255,7 @@ export default function JobCard() {
 
             {/* Data Table */}
             <div className="flex-1 overflow-hidden bg-white rounded border border-gray-100 shadow-sm mt-4">
-              <DataTable 
+              <DataTable
                 columns={columns}
                 data={jobCards}
                 loading={loading}
@@ -1621,6 +1347,20 @@ export default function JobCard() {
         }}
       />
 
+      <ShipmentJobCardModal
+        isOpen={showShipmentModal}
+        onClose={() => {
+          setShowShipmentModal(false)
+          setEditingId(null)
+        }}
+        onSuccess={() => {
+          fetchJobCards()
+          setShowShipmentModal(false)
+          setEditingId(null)
+        }}
+        jobCardId={editingId}
+      />
+
       <ViewJobCardModal
         isOpen={showViewModal}
         onClose={() => setShowViewModal(false)}
@@ -1634,7 +1374,16 @@ export default function JobCard() {
         onDispatchSuccess={handleDispatchSuccess}
       />
 
-      {renderConflictModal()}
+      <ResourceEngagementModal
+        isOpen={showConflictModal}
+        onClose={() => { setShowConflictModal(false); setConflictModalData(null) }}
+        conflictData={conflictModalData}
+        onApplyNextAvailable={handleApplyNextAvailable}
+        onApplyAlternative={handleApplyAlternative}
+        onNotifyWhenAvailable={handleNotifyWhenAvailable}
+        onViewAllSchedules={() => setActiveTab('scheduling')}
+        notifyingResourceId={notifyingResourceId}
+      />
     </div>
   )
 }

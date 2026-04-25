@@ -183,7 +183,7 @@ export default function CreatePaymentModal({ isOpen, onClose, onSuccess, initial
               disabled={loading}
               className="flex items-center gap-2"
             >
-              {loading ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+              {loading ? <RefreshCw size={15} className="animate-spin" /> : <CheckCircle size={15} />}
               Save Payment
             </Button>
           </div>
@@ -338,7 +338,7 @@ export default function CreatePaymentModal({ isOpen, onClose, onSuccess, initial
         <section className="bg-neutral-50 rounded  border border-neutral-200 p-4">
           <div className="flex items-start gap-3">
             <div className={`p-2 rounded  text-white ${paymentType === 'customer' ? 'bg-indigo-500' : 'bg-rose-500'}`}>
-              <ArrowLeftRight size={16} />
+              <ArrowLeftRight size={15} />
             </div>
             <div>
               <h4 className="text-xs  text-neutral-800  tracking-wider">Accounting Impact</h4>

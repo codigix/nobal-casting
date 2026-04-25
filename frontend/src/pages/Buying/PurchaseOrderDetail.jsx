@@ -103,12 +103,12 @@ export default function PurchaseOrderDetail() {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'draft': return <Clock size={16} />
-      case 'submitted': return <Send size={16} />
-      case 'to_receive': return <Truck size={16} />
-      case 'partially_received': return <Info size={16} />
-      case 'completed': return <CheckCircle size={16} />
-      case 'cancelled': return <XCircle size={16} />
+      case 'draft': return <Clock size={15} />
+      case 'submitted': return <Send size={15} />
+      case 'to_receive': return <Truck size={15} />
+      case 'partially_received': return <Info size={15} />
+      case 'completed': return <CheckCircle size={15} />
+      case 'cancelled': return <XCircle size={15} />
       default: return null
     }
   }
@@ -515,7 +515,7 @@ export default function PurchaseOrderDetail() {
              <Card className="p-0 overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 ">
                 <div className="bg-neutral-50 dark:bg-neutral-800/50 p-2 border-b border-neutral-200 dark:border-neutral-800">
                   <h3 className="text-[10px]  text-neutral-900 dark:text-white flex items-center gap-2 ">
-                    <MapPin size={16} className="text-indigo-600 dark:text-indigo-400" /> Shipping Details
+                    <MapPin size={15} className="text-indigo-600 dark:text-indigo-400" /> Shipping Details
                   </h3>
                 </div>
                 <div className="p-2 space-y-2">
@@ -545,7 +545,7 @@ export default function PurchaseOrderDetail() {
               <Card className="p-0 overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 ">
                 <div className="bg-neutral-50 dark:bg-neutral-800/50 p-2 border-b border-neutral-200 dark:border-neutral-800">
                   <h3 className="text-[10px]  text-neutral-900 dark:text-white flex items-center gap-2 ">
-                    <CreditCard size={16} className="text-indigo-600 dark:text-indigo-400" /> Payment & Others
+                    <CreditCard size={15} className="text-indigo-600 dark:text-indigo-400" /> Payment & Others
                   </h3>
                 </div>
                 <div className="p-2 space-y-2">
@@ -607,7 +607,7 @@ export default function PurchaseOrderDetail() {
                   <User size={18} className="text-neutral-400 group-hover:text-indigo-500" />
                   <span className="text-xs  ">Supplier Profile</span>
                 </div>
-                <ChevronRight size={16} className="text-neutral-300 dark:text-neutral-700" />
+                <ChevronRight size={15} className="text-neutral-300 dark:text-neutral-700" />
               </Button>
               <Button 
                 variant="outline" 
@@ -618,7 +618,7 @@ export default function PurchaseOrderDetail() {
                   <FileCheck size={18} className="text-neutral-400 group-hover:text-indigo-500" />
                   <span className="text-xs  ">Related GRNs</span>
                 </div>
-                <ChevronRight size={16} className="text-neutral-300 dark:text-neutral-700" />
+                <ChevronRight size={15} className="text-neutral-300 dark:text-neutral-700" />
               </Button>
               <Button 
                 variant="outline" 
@@ -629,7 +629,7 @@ export default function PurchaseOrderDetail() {
                   <CreditCard size={18} className="text-neutral-400 group-hover:text-indigo-500" />
                   <span className="text-xs  ">Purchase Invoices</span>
                 </div>
-                <ChevronRight size={16} className="text-neutral-300 dark:text-neutral-700" />
+                <ChevronRight size={15} className="text-neutral-300 dark:text-neutral-700" />
               </Button>
             </div>
           </div>

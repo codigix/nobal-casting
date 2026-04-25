@@ -319,7 +319,7 @@ export default function MaterialRequests() {
             className="p-1.5 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xs transition-colors"
             title={['material_issue', 'material_transfer'].includes(row.purpose?.toLowerCase()) && ['pending', 'approved', 'partial', 'completed'].includes(row.status) ? "View & Release Materials" : "View Details"}
           >
-            <Eye size={16} />
+            <Eye size={15} />
           </button>
           {row.status === 'draft' && (
             <button
@@ -327,7 +327,7 @@ export default function MaterialRequests() {
               className="p-1.5 text-neutral-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xs transition-colors"
               title="Submit for Approval"
             >
-              <ArrowRight size={16} />
+              <ArrowRight size={15} />
             </button>
           )}
           {(row.status === 'draft' || row.status === 'pending') && (
@@ -336,7 +336,7 @@ export default function MaterialRequests() {
               className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xs transition-colors"
               title="Delete Request"
             >
-              <Trash2 size={16} />
+              <Trash2 size={15} />
             </button>
           )}
         </div>
@@ -375,14 +375,14 @@ export default function MaterialRequests() {
                   className={`p-1.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400  ' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
                   title="Table View"
                 >
-                  <List size={16} />
+                  <List size={15} />
                 </button>
                 <button
                   onClick={() => setViewMode('kanban')}
                   className={`p-1.5 rounded-xs transition-all ${viewMode === 'kanban' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400  ' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
                   title="Kanban View"
                 >
-                  <LayoutGrid size={16} />
+                  <LayoutGrid size={15} />
                 </button>
               </div>
             
@@ -398,7 +398,7 @@ export default function MaterialRequests() {
               onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white p-2  rounded-xs text-xs   shadow-indigo-200 dark:shadow-none transition-all active:scale-95"
             >
-              <Plus size={16} />
+              <Plus size={15} />
               New Request
             </button>
           </div>
@@ -422,7 +422,7 @@ export default function MaterialRequests() {
               className={`bg-white dark:bg-neutral-900 rounded-xs p-3 border flex flex-col gap-2 transition-all group   text-left ${activeFilter === stat.id ? 'border-indigo-500 ring-1 ring-indigo-500/20 ' : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'}`}
             >
               <div className={`w-8 h-8 rounded-xs ${stat.bg} ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110  `}>
-                <stat.icon size={16} />
+                <stat.icon size={15} />
               </div>
               <div>
                 <p className="text-[10px]  text-neutral-400  tracking-wider leading-none mb-1">{stat.label}</p>
@@ -437,7 +437,7 @@ export default function MaterialRequests() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between p-2 gap-3">
             <div className="flex flex-1 items-center gap-2">
               <div className="relative flex-1 max-w-md group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" size={15} />
                 <input
                   type="text"
                   placeholder="Search by ID, requester or department..."
@@ -481,13 +481,13 @@ export default function MaterialRequests() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowColumnMenu(!showColumnMenu)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xs border text-[11px] font-medium transition-all ${showColumnMenu ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}
+                className={`flex items-center gap-2 p-1 rounded-xs border text-[11px] font-medium transition-all ${showColumnMenu ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}
               >
                 <Settings2 size={14} />
                 Columns
               </button>
               
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs text-[11px] font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all  ">
+              <button className="flex items-center gap-2 p-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs text-[11px] font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all  ">
                 <Download size={14} />
                 Export
               </button>

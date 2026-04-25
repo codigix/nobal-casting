@@ -115,7 +115,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                   Customer Name *
                 </label>
                 <div className="relative">
-                  <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                   <input
                     type="text"
                     name="customer_name"
@@ -184,7 +184,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                   Email Address *
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                   <input
                     type="email"
                     name="email"
@@ -202,7 +202,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                   Phone Number *
                 </label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                   <input
                     type="tel"
                     name="phone"
@@ -220,7 +220,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                   GST Number
                 </label>
                 <div className="relative">
-                  <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                   <input
                     type="text"
                     name="gst_no"

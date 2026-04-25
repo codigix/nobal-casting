@@ -384,7 +384,7 @@ export default function StockLedger() {
                   className="p-2 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
                   title="Clear filters"
                 >
-                  <RotateCcw size={16} />
+                  <RotateCcw size={15} />
                 </button>
               )}
 
@@ -424,7 +424,7 @@ export default function StockLedger() {
                         Visible Columns
                       </div>
                       {columns.map(col => (
-                        <label key={col.key} className="flex items-center px-3 py-1.5 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors">
+                        <label key={col.key} className="flex items-center p-1 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors">
                           <input
                             type="checkbox"
                             checked={visibleColumns.has(col.key)}
@@ -490,7 +490,7 @@ export default function StockLedger() {
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <div className={`p-2 rounded-xs ${Number(entry.qty_in) > 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-600' : 'bg-red-50 dark:bg-red-900/20 text-red-600'}`}>
-                            {Number(entry.qty_in) > 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                            {Number(entry.qty_in) > 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
                           </div>
                           <div>
                             <h3 className="text-sm  text-neutral-900 dark:text-white group-hover:text-blue-600 transition-colors">

@@ -279,7 +279,7 @@ export default function PurchaseInvoices() {
       render: (val) => {
         const config = getStatusConfig(val)
         return (
-          <Badge className={`${config.badge}    rounded  px-3 py-1.5`}>
+          <Badge className={`${config.badge}    rounded  p-1`}>
             {config.label}
           </Badge>
         )
@@ -429,7 +429,7 @@ export default function PurchaseInvoices() {
                 onClick={() => setShowCreateModal(true)}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white p-2  rounded   flex items-center gap-2 transition-all border-none text-[10px]   "
               >
-                <Plus size={16} strokeWidth={3} />
+                <Plus size={15} strokeWidth={3} />
                 <span>New Invoice</span>
               </Button>
             </div>
@@ -486,7 +486,7 @@ export default function PurchaseInvoices() {
         {/* Search & Filter Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="relative flex-1 group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" size={16} strokeWidth={3} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" size={15} strokeWidth={3} />
             <input
               type="text"
               placeholder="SEARCH BY INVOICE, SUPPLIER OR PO..."

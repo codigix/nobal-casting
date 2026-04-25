@@ -255,7 +255,7 @@ export default function WorkstationForm() {
                   <div className="space-y-2">
                     <label className="text-xs  text-slate-500  ml-1">Building / Area</label>
                     <div className="relative">
-                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                       <input 
                         type="text"
                         name="location"

@@ -785,7 +785,7 @@ export default function PurchaseReceipts() {
                 : 'text-neutral-500 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
-            <ClipboardCheck size={16} />
+            <ClipboardCheck size={15} />
             GRN Request
           </button>
           <button
@@ -799,7 +799,7 @@ export default function PurchaseReceipts() {
                 : 'text-neutral-500 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
-            <Boxes size={16} />
+            <Boxes size={15} />
             Available Stocks
           </button>
         </div>
@@ -1077,7 +1077,7 @@ export default function PurchaseReceipts() {
                   handleReject(selectedGRN.id)
                 }}
               >
-                <XCircle size={16} className="mr-2" />
+                <XCircle size={15} className="mr-2" />
                 Reject GRN
               </Button>
             )}
@@ -1087,7 +1087,7 @@ export default function PurchaseReceipts() {
                 className="px-6 flex items-center gap-2"
                 onClick={() => window.print()}
               >
-                <Printer size={16} />
+                <Printer size={15} />
                 Print GRN
               </Button>
             )}
@@ -1128,14 +1128,14 @@ export default function PurchaseReceipts() {
               <div className="bg-white p-2 rounded  border border-slate-100  ">
                 <p className="text-xs  text-slate-400  leading-none mb-2">PO Reference</p>
                 <p className="text-base  text-slate-900 flex items-center gap-2">
-                  <Truck size={16} className="text-indigo-500" />
+                  <Truck size={15} className="text-indigo-500" />
                   {selectedGRN.po_no}
                 </p>
               </div>
               <div className="bg-white p-2 rounded  border border-slate-100  ">
                 <p className="text-xs  text-slate-400  leading-none mb-2">Supplier</p>
                 <p className="text-base  text-slate-900 flex items-center gap-2">
-                  <Building2 size={16} className="text-indigo-500" />
+                  <Building2 size={15} className="text-indigo-500" />
                   {selectedGRN.supplier_name}
                 </p>
               </div>
@@ -1245,7 +1245,7 @@ export default function PurchaseReceipts() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  {selectedGRN?.status === 'inspecting' ? <ShieldCheck size={16} /> : <Save size={16} />}
+                  {selectedGRN?.status === 'inspecting' ? <ShieldCheck size={15} /> : <Save size={15} />}
                   {selectedGRN?.status === 'inspecting' ? 'Complete QC & Submit' : 'Approve & Store'}
                 </div>
               )}

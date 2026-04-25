@@ -3255,7 +3255,7 @@ export default function ProductionEntry() {
                     if (shiftDowntime === 0) return null;
 
                     return (
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded  text-amber-700 animate-in fade-in slide-in-from-right-4 duration-500">
+                      <div className="flex items-center gap-2 p-1 bg-amber-50 border border-amber-100 rounded  text-amber-700 animate-in fade-in slide-in-from-right-4 duration-500">
                         <AlertTriangle size={14} className="animate-pulse" />
                         <span className="text-xs   tracking-tight">Shift Downtime:</span>
                         <span className="text-xs font-black">{shiftDowntime} mins</span>

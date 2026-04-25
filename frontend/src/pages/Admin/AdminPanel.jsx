@@ -1248,7 +1248,7 @@ export default function AdminPanel() {
                   onClick={() => navigate('/manufacturing/machines')}
                   className="w-full flex items-center justify-center gap-2"
                 >
-                  <Edit2 size={16} />
+                  <Edit2 size={15} />
                   Manage Machines
                 </Button>
               </Card>
@@ -1268,7 +1268,7 @@ export default function AdminPanel() {
                   onClick={() => navigate('/manufacturing/operators')}
                   className="w-full flex items-center justify-center gap-2"
                 >
-                  <Edit2 size={16} />
+                  <Edit2 size={15} />
                   Manage Operators
                 </Button>
               </Card>
@@ -1288,7 +1288,7 @@ export default function AdminPanel() {
                   onClick={() => navigate('/toolroom')}
                   className="w-full flex items-center justify-center gap-2"
                 >
-                  <Edit2 size={16} />
+                  <Edit2 size={15} />
                   Manage Tools
                 </Button>
               </Card>
@@ -1308,7 +1308,7 @@ export default function AdminPanel() {
                   onClick={() => navigate('/qc/checklists')}
                   className="w-full flex items-center justify-center gap-2"
                 >
-                  <Edit2 size={16} />
+                  <Edit2 size={15} />
                   Manage Checklists
                 </Button>
               </Card>
@@ -1328,7 +1328,7 @@ export default function AdminPanel() {
                   onClick={() => navigate('/admin/item-groups')}
                   className="w-full flex items-center justify-center gap-2"
                 >
-                  <Edit2 size={16} />
+                  <Edit2 size={15} />
                   Manage Groups
                 </Button>
               </Card>
@@ -1348,7 +1348,7 @@ export default function AdminPanel() {
                   onClick={() => navigate('/admin/uom')}
                   className="w-full flex items-center justify-center gap-2"
                 >
-                  <Edit2 size={16} />
+                  <Edit2 size={15} />
                   Manage UOM
                 </Button>
               </Card>

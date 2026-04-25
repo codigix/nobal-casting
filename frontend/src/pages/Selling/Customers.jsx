@@ -132,21 +132,21 @@ export default function Customers() {
             className="flex items-center justify-center p-2 text-primary-600 hover:bg-primary-100 rounded transition-colors duration-200"
             title="View"
           >
-            <Eye size={16} />
+            <Eye size={15} />
           </button>
           <button 
             onClick={() => navigate(`/selling/customers/${row.id}/edit`)}
             className="flex items-center justify-center p-2 text-green-600 hover:bg-green-50 rounded transition-colors duration-200"
             title="Edit"
           >
-            <Edit2 size={16} />
+            <Edit2 size={15} />
           </button>
           <button 
             onClick={() => handleDeleteCustomer(row.id)}
             className="flex items-center justify-center p-2 text-red-600 hover:bg-red-50 rounded transition-colors duration-200"
             title="Delete"
           >
-            <Trash2 size={16} />
+            <Trash2 size={15} />
           </button>
         </div>
       )

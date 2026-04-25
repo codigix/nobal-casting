@@ -218,7 +218,7 @@ export default function AccountDashboard() {
                 onClick={() => { setLoading(true); fetchAccountData() }}
                 className="flex items-center gap-2 p-2  rounded  border-neutral-200 text-[10px]   transition-all"
               >
-                <RefreshCw size={16} strokeWidth={3} className={loading ? 'animate-spin' : ''} />
+                <RefreshCw size={15} strokeWidth={3} className={loading ? 'animate-spin' : ''} />
                 SYNC DATA
               </Button>
               
@@ -229,7 +229,7 @@ export default function AccountDashboard() {
                 onClick={() => navigate('/accounts/payments')}
                 className="flex items-center gap-2 p-2  rounded  bg-neutral-900 text-white hover:bg-neutral-800 text-[10px]   transition-all"
               >
-                <Plus size={16} strokeWidth={3} />
+                <Plus size={15} strokeWidth={3} />
                 RECORD TRANSACTION
               </Button>
             </div>
@@ -326,7 +326,7 @@ export default function AccountDashboard() {
               <div className="bg-white p-6 border border-neutral-200">
                 <div className="flex items-center justify-between mb-8">
                   <h3 className="text-[11px]    text-neutral-900 flex items-center gap-2">
-                    <TrendingUp size={16} className="text-indigo-600" /> Revenue vs Expenses
+                    <TrendingUp size={15} className="text-indigo-600" /> Revenue vs Expenses
                   </h3>
                   <Badge className="bg-neutral-100 text-neutral-600 border-neutral-200   rounded ">LAST 6 MONTHS</Badge>
                 </div>
@@ -397,7 +397,7 @@ export default function AccountDashboard() {
             <div className="bg-white p-6 border border-neutral-200">
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-[11px]    text-neutral-900 flex items-center gap-2">
-                  <Activity size={16} className="text-indigo-600" /> Daily Cash Flow Trend
+                  <Activity size={15} className="text-indigo-600" /> Daily Cash Flow Trend
                 </h3>
                 <Badge className="bg-neutral-100 text-neutral-600 border-neutral-200   rounded ">LAST 30 DAYS</Badge>
               </div>

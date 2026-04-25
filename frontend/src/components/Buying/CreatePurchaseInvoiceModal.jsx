@@ -191,7 +191,7 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess,
               disabled={loading || !formData.grn_no}
               className="flex items-center gap-2"
             >
-              {loading ? <RefreshCw size={16} className="animate-spin" /> : <Clock size={16} />}
+              {loading ? <RefreshCw size={15} className="animate-spin" /> : <Clock size={15} />}
               Save as Draft
             </Button>
             <Button
@@ -200,7 +200,7 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess,
               disabled={loading || !formData.grn_no}
               className="flex items-center gap-2"
             >
-              {loading ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+              {loading ? <RefreshCw size={15} className="animate-spin" /> : <CheckCircle size={15} />}
               Submit Invoice
             </Button>
           </div>
@@ -322,7 +322,7 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess,
               <div className="px-5 py-4 border-b border-neutral-100 bg-neutral-50/30 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-blue-100 text-blue-600 rounded ">
-                    <ShieldCheck size={16} />
+                    <ShieldCheck size={15} />
                   </div>
                   <h3 className="text-sm  text-neutral-800">Verification Table</h3>
                 </div>

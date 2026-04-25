@@ -267,7 +267,7 @@ export default function Suppliers() {
         onClick={() => handleEditClick(row)}
         className="text-primary-600 hover:bg-primary-50"
       >
-        <Edit2 size={16} />
+        <Edit2 size={15} />
       </Button>
       <Button
         size="sm"
@@ -275,7 +275,7 @@ export default function Suppliers() {
         onClick={() => handleDelete(row.supplier_id)}
         className="text-rose-600 hover:bg-rose-50"
       >
-        <Trash2 size={16} />
+        <Trash2 size={15} />
       </Button>
     </div>
   )
@@ -431,7 +431,7 @@ export default function Suppliers() {
                   type="submit"
                   className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-xs transition-all text-xs   flex items-center gap-1"
                 >
-                  <Check size={16} />
+                  <Check size={15} />
                   {editingId ? 'Update Supplier' : 'Create Supplier'}
                 </button>
               </div>
@@ -511,7 +511,7 @@ export default function Suppliers() {
                   </div>
                   <div className="max-h-60 overflow-y-auto">
                     {columns.map(col => (
-                      <label key={col.key} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 cursor-pointer">
+                      <label key={col.key} className="flex items-center gap-2 p-1 hover:bg-slate-50 cursor-pointer">
                         <input
                           type="checkbox"
                           className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3 h-3"
@@ -539,14 +539,14 @@ export default function Suppliers() {
                 className={`p-1.5 rounded transition-all ${viewMode === 'table' ? 'bg-white text-indigo-600  ' : 'text-slate-500 hover:text-indigo-600'}`}
                 title="Table view"
               >
-                <List size={16} />
+                <List size={15} />
               </button>
               <button
                 onClick={() => setViewMode('card')}
                 className={`p-1.5 rounded transition-all ${viewMode === 'card' ? 'bg-white text-indigo-600  ' : 'text-slate-500 hover:text-indigo-600'}`}
                 title="Card view"
               >
-                <Grid3x3 size={16} />
+                <Grid3x3 size={15} />
               </button>
             </div>
           </div>
@@ -563,7 +563,7 @@ export default function Suppliers() {
               onClick={handleAddClick}
               className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white p-2 rounded-xs  text-xs transition-all"
             >
-              <Plus size={16} />
+              <Plus size={15} />
               Create First Supplier
             </button>
           </div>

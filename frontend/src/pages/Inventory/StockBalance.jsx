@@ -299,7 +299,7 @@ export default function StockBalance() {
                   className="p-2 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
                   title="Clear filters"
                 >
-                  <RotateCcw size={16} />
+                  <RotateCcw size={15} />
                 </button>
               )}
 
@@ -339,7 +339,7 @@ export default function StockBalance() {
                         Visible Columns
                       </div>
                       {columns.map(col => (
-                        <label key={col.key} className="flex items-center px-3 py-1.5 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors">
+                        <label key={col.key} className="flex items-center p-1 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors">
                           <input
                             type="checkbox"
                             checked={visibleColumns.has(col.key)}
@@ -404,7 +404,7 @@ export default function StockBalance() {
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <div className="p-2 bg-neutral-50 dark:bg-neutral-800 rounded-xs text-neutral-500">
-                              <Package size={16} />
+                              <Package size={15} />
                             </div>
                             <div>
                               <h3 className="text-sm  text-neutral-900 dark:text-white group-hover:text-amber-600 transition-colors">

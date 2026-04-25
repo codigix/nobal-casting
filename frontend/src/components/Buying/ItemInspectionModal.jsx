@@ -124,7 +124,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
           loading={loading}
           className="flex items-center gap-2"
         >
-          <History size={16} />
+          <History size={15} />
           Partially Accept
         </Button>
       )}
@@ -137,7 +137,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
           disabled={!allChecksPassed}
           className="flex items-center gap-2"
         >
-          <CheckCircle2 size={16} />
+          <CheckCircle2 size={15} />
           Accept All
         </Button>
       )}
@@ -149,7 +149,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
           loading={loading}
           className="flex items-center gap-2"
         >
-          <Trash2 size={16} />
+          <Trash2 size={15} />
           Reject Item
         </Button>
       )}
@@ -171,7 +171,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-blue-50 p-3 rounded  border border-blue-100">
             <div className="flex items-center gap-2 text-blue-600 mb-1">
-              <Package size={16} />
+              <Package size={15} />
               <span className="text-xs font-semibold  tracking-wider">PO Qty</span>
             </div>
             <div className="text-xl  text-blue-700">{item.po_qty}</div>
@@ -179,7 +179,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
           
           <div className="bg-orange-50 p-3 rounded  border border-orange-100">
             <div className="flex items-center gap-2 text-orange-600 mb-1">
-              <ClipboardCheck size={16} />
+              <ClipboardCheck size={15} />
               <span className="text-xs font-semibold  tracking-wider">Received</span>
             </div>
             <div className="text-xl  text-orange-700">{item.received_qty}</div>
@@ -187,7 +187,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
 
           <div className="bg-green-50 p-3 rounded  border border-green-100">
             <div className="flex items-center gap-2 text-green-600 mb-1">
-              <CheckCircle size={16} />
+              <CheckCircle size={15} />
               <span className="text-xs font-semibold  tracking-wider">Accepted</span>
             </div>
             <div className="text-xl  text-green-700">{acceptedQty}</div>
@@ -195,7 +195,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
 
           <div className="bg-red-50 p-3 rounded  border border-red-100">
             <div className="flex items-center gap-2 text-red-600 mb-1">
-              <AlertCircle size={16} />
+              <AlertCircle size={15} />
               <span className="text-xs font-semibold  tracking-wider">Rejected</span>
             </div>
             <div className="text-xl  text-red-700">{rejectedQty}</div>
@@ -207,7 +207,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
           <div className="space-y-2">
             <section className="bg-neutral-50 p-4 rounded  border border-neutral-200">
               <h4 className="text-sm  text-neutral-800 mb-4 flex items-center gap-2">
-                <Info size={16} className="text-neutral-500" />
+                <Info size={15} className="text-neutral-500" />
                 Item Information
               </h4>
               <div className="space-y-3">
@@ -238,7 +238,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
             <section className="bg-white p-4 rounded  border border-neutral-200">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="text-sm  text-neutral-800 flex items-center gap-2">
-                  <ShieldCheck size={16} className="text-blue-500" />
+                  <ShieldCheck size={15} className="text-blue-500" />
                   Quality Assurance
                 </h4>
                 <Badge variant={allChecksPassed ? 'success' : 'warning'}>
@@ -277,7 +277,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
           <div className="space-y-2">
             <section className="bg-white p-4 rounded  border border-neutral-200">
               <h4 className="text-sm  text-neutral-800 mb-4 flex items-center gap-2">
-                <FileText size={16} className="text-neutral-500" />
+                <FileText size={15} className="text-neutral-500" />
                 Quantity Breakdown
               </h4>
               <div className="space-y-4">

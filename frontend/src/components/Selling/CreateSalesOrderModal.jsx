@@ -250,7 +250,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                     Customer
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <select
                       name="customer_id"
                       value={formData.customer_id}
@@ -271,7 +271,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                     Delivery Date
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <input
                       type="date"
                       name="delivery_date"
@@ -288,7 +288,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                     Quotation ID (Optional)
                   </label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <input
                       type="text"
                       name="quotation_id"
@@ -385,7 +385,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                       name="item_code"
                       value={newItem.item_code}
                       onChange={handleNewItemChange}
-                      className="w-full px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
+                      className="w-full p-1 text-sm bg-white border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
                     >
                       <option value="">Select an Item</option>
                       {items.map(i => (
@@ -401,7 +401,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                       value={newItem.qty}
                       onChange={handleNewItemChange}
                       min="1"
-                      className="w-full px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
+                      className="w-full p-1 text-sm bg-white border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
                     />
                   </div>
                   <div>
@@ -411,7 +411,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                       name="rate"
                       value={newItem.rate}
                       onChange={handleNewItemChange}
-                      className="w-full px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
+                      className="w-full p-1 text-sm bg-white border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none"
                     />
                   </div>
                   

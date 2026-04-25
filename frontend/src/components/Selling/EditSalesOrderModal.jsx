@@ -255,7 +255,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                     Customer
                   </label>
                   <div className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded  text-slate-600">
-                    <User size={16} className="text-slate-400" />
+                    <User size={15} className="text-slate-400" />
                     <span className="text-sm font-medium">{formData.customer_name}</span>
                   </div>
                 </div>
@@ -265,7 +265,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                     Delivery Date
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <input
                       type="date"
                       name="delivery_date"
@@ -369,7 +369,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                       name="item_code"
                       value={newItem.item_code}
                       onChange={handleNewItemChange}
-                      className="w-full px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-md outline-none"
+                      className="w-full p-1 text-sm bg-white border border-slate-200 rounded-md outline-none"
                     >
                       <option value="">Select an Item</option>
                       {items.map(i => (
@@ -383,7 +383,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                     placeholder="Qty"
                     value={newItem.qty}
                     onChange={handleNewItemChange}
-                    className="px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-md outline-none"
+                    className="p-1 text-sm bg-white border border-slate-200 rounded-md outline-none"
                   />
                   <Button
                     type="button"

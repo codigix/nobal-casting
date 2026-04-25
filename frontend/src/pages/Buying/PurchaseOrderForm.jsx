@@ -646,7 +646,7 @@ export default function PurchaseOrderForm() {
                       type="button"
                       onClick={handleAddItem}
                       variant="ghost"
-                      className="text-xs   bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded border border-emerald-100 h-auto"
+                      className="text-xs   bg-emerald-50 text-emerald-600 hover:bg-emerald-100 p-1 rounded border border-emerald-100 h-auto"
                     >
                       <Plus size={12} className="mr-1" strokeWidth={3} /> Add Item
                     </Button>
@@ -691,7 +691,7 @@ export default function PurchaseOrderForm() {
                                     newItems[index].qty = parseFloat(e.target.value) || 0
                                     setPo({ ...po, items: newItems })
                                   }}
-                                  className="w-24 px-3 py-1.5 bg-white border border-slate-200 rounded text-center text-xs  focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-400 outline-none transition-all"
+                                  className="w-24 p-1 bg-white border border-slate-200 rounded text-center text-xs  focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-400 outline-none transition-all"
                                 />
                               </div>
                             </td>
@@ -723,7 +723,7 @@ export default function PurchaseOrderForm() {
                                 onClick={() => handleRemoveItem(index)}
                                 className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all "
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={15} />
                               </button>
                             </td>
                           </tr>
@@ -760,7 +760,7 @@ export default function PurchaseOrderForm() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 mb-2">
-                          <MapPin size={16} className="text-amber-500" />
+                          <MapPin size={15} className="text-amber-500" />
                           <h4 className="text-xs font-extrabold text-slate-400 ">Shipping Address</h4>
                         </div>
                         <FieldWrapper label="Street Address">
@@ -794,7 +794,7 @@ export default function PurchaseOrderForm() {
 
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 mb-2">
-                          <Settings size={16} className="text-amber-500" />
+                          <Settings size={15} className="text-amber-500" />
                           <h4 className="text-xs font-extrabold text-slate-400 ">Trade Controls</h4>
                         </div>
                         <FieldWrapper label="Incoterm">
@@ -840,7 +840,7 @@ export default function PurchaseOrderForm() {
                       <div className="space-y-8">
                         <div>
                           <div className="flex items-center gap-2 mb-6">
-                            <CreditCard size={16} className="text-rose-500" />
+                            <CreditCard size={15} className="text-rose-500" />
                             <h4 className="text-xs font-extrabold text-slate-400 ">Payment Strategy</h4>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -934,7 +934,7 @@ export default function PurchaseOrderForm() {
                           <div className="pt-2">
                             <div className="flex items-center gap-3 p-2 bg-white/5 rounded border border-white/10 group-hover:bg-white/10 transition-colors">
                               <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded">
-                                <CreditCard size={16} />
+                                <CreditCard size={15} />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs  text-slate-400 ">Payment Channel</p>

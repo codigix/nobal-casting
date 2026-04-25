@@ -51,7 +51,7 @@ export default function DraftsList({ formName, onLoadDraft, onDeleteDraft, onClo
             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition flex-shrink-0"
             title="Delete draft"
           >
-            <Trash2 size={16} />
+            <Trash2 size={15} />
           </button>
         </div>
       ))}

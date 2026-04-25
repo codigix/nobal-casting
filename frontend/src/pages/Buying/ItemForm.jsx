@@ -900,7 +900,7 @@ export default function ItemForm() {
                               onMouseEnter={(e) => e.target.style.backgroundColor = '#45a049'}
                               onMouseLeave={(e) => e.target.style.backgroundColor = '#4CAF50'}
                             >
-                              <Check size={16} />
+                              <Check size={15} />
                             </button>
                             <button
                               type="button"
@@ -926,7 +926,7 @@ export default function ItemForm() {
                               onMouseEnter={(e) => e.target.style.backgroundColor = '#da190b'}
                               onMouseLeave={(e) => e.target.style.backgroundColor = '#f44336'}
                             >
-                              <X size={16} />
+                              <X size={15} />
                             </button>
                           </>
                         ) : (
@@ -951,7 +951,7 @@ export default function ItemForm() {
                             onMouseEnter={(e) => e.target.style.backgroundColor = '#1976D2'}
                             onMouseLeave={(e) => e.target.style.backgroundColor = '#2196F3'}
                           >
-                            <Edit size={16} />
+                            <Edit size={15} />
                           </button>
                         )}
                       </div>
@@ -1386,7 +1386,7 @@ export default function ItemForm() {
                               onMouseEnter={(e) => e.target.style.backgroundColor = '#45a049'}
                               onMouseLeave={(e) => e.target.style.backgroundColor = '#4CAF50'}
                             >
-                              <Check size={16} />
+                              <Check size={15} />
                             </button>
                             <button
                               type="button"
@@ -1411,7 +1411,7 @@ export default function ItemForm() {
                               onMouseEnter={(e) => e.target.style.backgroundColor = '#da190b'}
                               onMouseLeave={(e) => e.target.style.backgroundColor = '#f44336'}
                             >
-                              <X size={16} />
+                              <X size={15} />
                             </button>
                           </>
                         ) : (
@@ -1436,7 +1436,7 @@ export default function ItemForm() {
                             onMouseEnter={(e) => e.target.style.backgroundColor = '#1976D2'}
                             onMouseLeave={(e) => e.target.style.backgroundColor = '#2196F3'}
                           >
-                            <Edit size={16} />
+                            <Edit size={15} />
                           </button>
                         )}
                       </div>
@@ -1752,7 +1752,7 @@ export default function ItemForm() {
                               onMouseEnter={(e) => e.target.style.backgroundColor = '#45a049'}
                               onMouseLeave={(e) => e.target.style.backgroundColor = '#4CAF50'}
                             >
-                              <Check size={16} />
+                              <Check size={15} />
                             </button>
                             <button
                               type="button"
@@ -1777,7 +1777,7 @@ export default function ItemForm() {
                               onMouseEnter={(e) => e.target.style.backgroundColor = '#da190b'}
                               onMouseLeave={(e) => e.target.style.backgroundColor = '#f44336'}
                             >
-                              <X size={16} />
+                              <X size={15} />
                             </button>
                           </>
                         ) : (
@@ -1802,7 +1802,7 @@ export default function ItemForm() {
                             onMouseEnter={(e) => e.target.style.backgroundColor = '#1976D2'}
                             onMouseLeave={(e) => e.target.style.backgroundColor = '#2196F3'}
                           >
-                            <Edit size={16} />
+                            <Edit size={15} />
                           </button>
                         )}
                       </div>

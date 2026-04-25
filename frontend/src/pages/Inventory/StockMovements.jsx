@@ -274,7 +274,7 @@ export default function StockMovements() {
             className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xs transition-colors"
             title="View Details"
           >
-            <Eye size={16} />
+            <Eye size={15} />
           </button>
           {row.status === 'Pending' && (
             <>
@@ -283,14 +283,14 @@ export default function StockMovements() {
                 className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xs transition-colors"
                 title="Approve"
               >
-                <CheckCircle size={16} />
+                <CheckCircle size={15} />
               </button>
               <button
                 onClick={() => handleReject(row.id, 'Rejected by user')}
                 className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xs transition-colors"
                 title="Reject"
               >
-                <XCircle size={16} />
+                <XCircle size={15} />
               </button>
             </>
           )}
@@ -325,7 +325,7 @@ export default function StockMovements() {
               onClick={() => { setSelectedMovement(null); setShowModal(true) }}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white p-2  rounded-xs text-xs   shadow-blue-200 dark:shadow-none transition-all"
             >
-              <Plus size={16} />
+              <Plus size={15} />
               New Movement
             </button>
           </div>
@@ -344,7 +344,7 @@ export default function StockMovements() {
           ].map((stat, i) => (
             <div key={i} className="bg-white dark:bg-neutral-900 rounded-xs p-3 border border-neutral-200 dark:border-neutral-800 flex flex-col gap-2 hover:border-blue-100 dark:hover:border-blue-900 transition-colors group  ">
               <div className={`w-8 h-8 rounded-xs ${stat.bg} ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110  `}>
-                <stat.icon size={16} />
+                <stat.icon size={15} />
               </div>
               <div>
                 <p className="text-xs  text-neutral-400   leading-none mb-1">{stat.label}</p>
@@ -359,7 +359,7 @@ export default function StockMovements() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between p-2 gap-3">
             <div className="flex flex-1 items-center gap-2">
               <div className="relative flex-1 max-w-md group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-blue-500 transition-colors" size={16} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-blue-500 transition-colors" size={15} />
                 <input
                   type="text"
                   placeholder="Search transaction #, item code, or name..."
@@ -434,13 +434,13 @@ export default function StockMovements() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowColumnMenu(!showColumnMenu)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xs border text-[11px] font-medium transition-all ${showColumnMenu ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400' : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}
+                className={`flex items-center gap-2 p-1 rounded-xs border text-[11px] font-medium transition-all ${showColumnMenu ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400' : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}
               >
                 <Settings2 size={14} />
                 Columns
               </button>
               
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs text-[11px] font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all  ">
+              <button className="flex items-center gap-2 p-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs text-[11px] font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all  ">
                 <Download size={14} />
                 Export
               </button>

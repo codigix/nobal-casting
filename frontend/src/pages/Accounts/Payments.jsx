@@ -188,7 +188,7 @@ export default function Payments() {
             isCompleted 
               ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
               : 'bg-amber-50 text-amber-700 border-amber-200'
-          }   rounded  px-3 py-1.5`}>
+          }   rounded  p-1`}>
             {val.toUpperCase()}
           </Badge>
         )
@@ -285,7 +285,7 @@ export default function Payments() {
                 onClick={() => setShowCreateModal(true)}
                 className="flex items-center gap-2 p-2  rounded  bg-neutral-900 text-white hover:bg-neutral-800 text-[10px]   transition-all"
               >
-                <Plus size={16} strokeWidth={3} />
+                <Plus size={15} strokeWidth={3} />
                 RECORD PAYMENT
               </Button>
             </div>
@@ -324,7 +324,7 @@ export default function Payments() {
         <div className="bg-white border border-neutral-200 rounded   ">
           <div className="p-4 border-b border-neutral-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={15} />
               <input
                 type="text"
                 placeholder="Search by ID, Name or Reference..."

@@ -259,7 +259,7 @@ export default function Warehouses() {
             onClick={() => setShowForm(true)}
             className="flex items-center gap-2 p-2  bg-amber-500 hover:bg-amber-600 text-white text-xs  rounded-xs transition-all   active:transform active:scale-95"
           >
-            <Plus size={16} />
+            <Plus size={15} />
             Create Warehouse
           </button>
         </div>
@@ -298,7 +298,7 @@ export default function Warehouses() {
                   className="p-2 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
                   title="Clear filters"
                 >
-                  <RotateCcw size={16} />
+                  <RotateCcw size={15} />
                 </button>
               )}
 
@@ -338,7 +338,7 @@ export default function Warehouses() {
                         Visible Columns
                       </div>
                       {columns.map(col => (
-                        <label key={col.key} className="flex items-center px-3 py-1.5 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors">
+                        <label key={col.key} className="flex items-center p-1 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors">
                           <input
                             type="checkbox"
                             checked={visibleColumns.has(col.key)}

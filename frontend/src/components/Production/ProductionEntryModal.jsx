@@ -701,7 +701,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
             <div>
               <form onSubmit={handleAddTimeLog} className="mb-6 p-3 bg-white border border-gray-200 rounded-xs">
                 <h3 className="mb-4  text-gray-900 flex items-center gap-2 text-xs">
-                  <Plus size={16} /> Add Time Log Entry
+                  <Plus size={15} /> Add Time Log Entry
                 </h3>
                 
                 <div className="grid grid-cols-3 gap-3 mb-3">
@@ -1038,7 +1038,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
             <div>
               <form onSubmit={handleAddRejection} className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-xs">
                 <h3 className="mb-4  text-gray-900 flex items-center gap-2 text-xs">
-                  <Plus size={16} /> Add Rejection Entry
+                  <Plus size={15} /> Add Rejection Entry
                 </h3>
 
                 <div className="grid grid-cols-2 gap-3 mb-3">
@@ -1163,7 +1163,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
             <div>
               <form onSubmit={handleAddDowntime} className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-xs">
                 <h3 className="mb-4  text-gray-900 flex items-center gap-2 text-xs">
-                  <Plus size={16} /> Add Downtime Entry
+                  <Plus size={15} /> Add Downtime Entry
                 </h3>
 
                 <div className="grid grid-cols-2 gap-3 mb-3">

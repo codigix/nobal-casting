@@ -110,7 +110,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
                    <div className="flex-1 h-1.5 bg-slate-50 rounded overflow-hidden">
                       <div className="h-full rounded transition-all duration-1000 ease-out" style={{ width: `${kpi.value}%`, backgroundColor: kpi.color }}></div>
                    </div>
-                   <span className="text-[9px]    px-2 py-0.5 rounded-lg bg-slate-50 text-slate-400">{kpi.tag}</span>
+                   <span className="text-[9px]    px-2 py-0.5 rounded  bg-slate-50 text-slate-400">{kpi.tag}</span>
                 </div>
               </div>
             ))}
@@ -140,7 +140,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
           <div className="bg-white rounded border border-slate-100  overflow-hidden">
             <div className="p-2 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
               <div className="flex items-center gap-4">
-                <div className="w-6 h-6 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
+                <div className="w-6 h-6 rounded bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
                   <TrendingUp size={20} strokeWidth={2.5} />
                 </div>
                 <div>
@@ -153,7 +153,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-5 py-2 rounded-lg text-xs    transition-all ${
+                    className={`px-5 py-2 rounded  text-xs    transition-all ${
                       activeTab === tab
                         ? 'bg-white text-blue-600 '
                         : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'
@@ -390,7 +390,7 @@ const LineDetailsModal = ({ isOpen, line, onClose, setSelectedMachine, setModalO
                    <div className="flex-1 h-1.5 bg-slate-50 rounded overflow-hidden">
                       <div className="h-full rounded transition-all duration-1000 ease-out" style={{ width: `${kpi.value}%`, backgroundColor: kpi.color }}></div>
                    </div>
-                   <span className="text-[9px]    px-2 py-0.5 rounded-lg bg-slate-50 text-slate-400">{kpi.trend}</span>
+                   <span className="text-[9px]    px-2 py-0.5 rounded  bg-slate-50 text-slate-400">{kpi.trend}</span>
                 </div>
               </div>
             ))}
@@ -422,7 +422,7 @@ const LineDetailsModal = ({ isOpen, line, onClose, setSelectedMachine, setModalO
                         </div>
                       </td>
                       <td className="p-2 text-center">
-                        <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px]    border ${
+                        <span className={`inline-flex items-center gap-2 p-1 rounded text-[9px]    border ${
                           ['Running', 'active', 'Operational'].includes(m.status) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
                           m.status === 'Maintenance' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-slate-50 text-slate-600 border-slate-100'
                         }`}>
@@ -457,7 +457,7 @@ const LineDetailsModal = ({ isOpen, line, onClose, setSelectedMachine, setModalO
                       <td className="p-2 text-right">
                         <button 
                           onClick={() => { setSelectedMachine(m); setModalOpen(true); }}
-                          className="p-2 bg-[#1e3a8a]/5 text-[#1e3a8a] rounded-xl hover:bg-[#1e3a8a] hover:text-white transition-all "
+                          className="p-2 bg-[#1e3a8a]/5 text-[#1e3a8a] rounded hover:bg-[#1e3a8a] hover:text-white transition-all "
                         >
                           <Eye size={14} strokeWidth={2.5} />
                         </button>
@@ -846,7 +846,7 @@ const MachineAnalysis = () => {
                   <h3 className="text-sm  flex items-center gap-2">
                     <PieIcon size={14} className="text-indigo-500" /> Asset Health Spread
                   </h3>
-                  <div className="px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[9px]   er">Live Monitor</div>
+                  <div className="px-2 py-1 rounded  bg-indigo-50 text-indigo-600 text-[9px]   er">Live Monitor</div>
                 </div>
 
                 <div className="h-[300px] relative ">
@@ -918,7 +918,7 @@ const MachineAnalysis = () => {
                   {machineStatus.map((status, i) => (
                     <div 
                       key={i} 
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded border transition-all cursor-default ${
+                      className={`flex items-center gap-2 p-1 rounded border transition-all cursor-default ${
                         hoveredStatus?.name === status.name ? 'border-slate-200 bg-slate-50  translate-y--0.5' : 'border-transparent bg-transparent'
                       }`}
                     >
@@ -1177,14 +1177,14 @@ const MachineAnalysis = () => {
                       {line.machines.slice(0, 4).map((m, i) => (
                         <div 
                           key={i}
-                          className="inline-block h-9 w-9 rounded-xl ring-4 ring-white bg-slate-100 flex items-center justify-center text-xs  text-slate-500 shadow-sm border border-slate-200"
+                          className="inline-block h-9 w-9 rounded ring-4 ring-white bg-slate-100 flex items-center justify-center text-xs  text-slate-500 shadow-sm border border-slate-200"
                           title={m.name}
                         >
                           {m.name.charAt(0)}
                         </div>
                       ))}
                       {line.machines.length > 4 && (
-                        <div className="inline-block h-9 w-9 rounded-xl ring-4 ring-white bg-slate-50 flex items-center justify-center text-[10px]  text-slate-400 shadow-sm border border-slate-200">
+                        <div className="inline-block h-9 w-9 rounded ring-4 ring-white bg-slate-50 flex items-center justify-center text-[10px]  text-slate-400 shadow-sm border border-slate-200">
                           +{line.machines.length - 4}
                         </div>
                       )}
@@ -1204,7 +1204,7 @@ const MachineAnalysis = () => {
           <div className="bg-white rounded border border-slate-100 overflow-hidden ">
             <div className="p-4 bg-slate-50/30 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
               <div className="flex flex-1 max-w-lg relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e3a8a] transition-colors" size={16} strokeWidth={2.5} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e3a8a] transition-colors" size={15} strokeWidth={2.5} />
                 <input 
                   type="text" 
                   placeholder="Scan machine identifiers..."
@@ -1215,7 +1215,7 @@ const MachineAnalysis = () => {
               </div>
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-white border border-slate-200 rounded text-slate-400">
-                   <Filter size={16} strokeWidth={2.5} />
+                   <Filter size={15} strokeWidth={2.5} />
                 </div>
                 <select 
                   className="bg-white border border-slate-200 rounded px-4 py-3 text-xs  text-slate-700 focus:ring-4 focus:ring-[#1e3a8a]/10 focus:border-[#1e3a8a] outline-none transition-all appearance-none pr-10 cursor-pointer  min-w-[180px]"
@@ -1313,7 +1313,7 @@ const MachineAnalysis = () => {
         {activeTab === 'efficiency' && (
           <div className="bg-white rounded  border border-neutral-200 p-6 ">
             <h3 className="text-xs  text-neutral-400   mb-6 flex items-center gap-2">
-              <Activity size={16} className="text-neutral-400" /> Multi-Metric Performance Analysis
+              <Activity size={15} className="text-neutral-400" /> Multi-Metric Performance Analysis
             </h3>
             <div className="h-[450px]">
               <ResponsiveContainer width="100%" height="100%">

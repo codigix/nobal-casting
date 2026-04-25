@@ -203,7 +203,7 @@ export default function CreateDeliveryNoteModal({ isOpen, onClose, onSuccess }) 
                     Customer Name
                   </label>
                   <div className="flex items-center gap-2 p-2.5 bg-white border border-slate-200 rounded  text-slate-600  ">
-                    <User size={16} className="text-blue-500" />
+                    <User size={15} className="text-blue-500" />
                     <span className="text-sm font-semibold">{formData.customer_name || 'Select an order...'}</span>
                   </div>
                 </div>
@@ -214,7 +214,7 @@ export default function CreateDeliveryNoteModal({ isOpen, onClose, onSuccess }) 
                       Delivery Date
                     </label>
                     <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                       <input
                         type="date"
                         name="delivery_date"
@@ -230,7 +230,7 @@ export default function CreateDeliveryNoteModal({ isOpen, onClose, onSuccess }) 
                       Total Units to Dispatch
                     </label>
                     <div className="relative">
-                      <Box className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <Box className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                       <input
                         type="number"
                         name="total_qty"
@@ -269,7 +269,7 @@ export default function CreateDeliveryNoteModal({ isOpen, onClose, onSuccess }) 
                     Vehicle Number
                   </label>
                   <div className="relative">
-                    <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <input
                       type="text"
                       name="vehicle_no"
@@ -286,7 +286,7 @@ export default function CreateDeliveryNoteModal({ isOpen, onClose, onSuccess }) 
                     Driver Details
                   </label>
                   <div className="relative">
-                    <UserSquare className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <UserSquare className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <input
                       type="text"
                       name="driver_name"

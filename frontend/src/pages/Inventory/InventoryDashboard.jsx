@@ -711,7 +711,7 @@ const WorkflowStep = ({ title, desc, count, icon: Icon, color, link, isLast }) =
       
       {!isLast && (
         <div className="hidden md:block absolute top-1/2 -right-2 translate-x-1/2 -translate-y-1/2 z-0">
-          <ChevronRight size={16} className="text-gray-300" />
+          <ChevronRight size={15} className="text-gray-300" />
         </div>
       )}
     </div>

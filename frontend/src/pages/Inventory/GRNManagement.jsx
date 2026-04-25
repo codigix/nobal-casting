@@ -606,14 +606,14 @@ export default function GRNManagement() {
                   className={`p-1.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400  ' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
                   title="Table View"
                 >
-                  <ListIcon size={16} />
+                  <ListIcon size={15} />
                 </button>
                 <button
                   onClick={() => setViewMode('kanban')}
                   className={`p-1.5 rounded-xs transition-all ${viewMode === 'kanban' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400  ' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
                   title="Kanban View"
                 >
-                  <Grid3x3 size={16} />
+                  <Grid3x3 size={15} />
                 </button>
               </div>
             
@@ -641,7 +641,7 @@ export default function GRNManagement() {
           ].map((stat, i) => (
             <div key={i} className="bg-white dark:bg-neutral-900 rounded-xs p-3 border border-neutral-200 dark:border-neutral-800 flex flex-col gap-2 hover:border-indigo-100 dark:hover:border-indigo-900 transition-colors group  ">
               <div className={`w-8 h-8 rounded-xs ${stat.bg} ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110`}>
-                <stat.icon size={16} />
+                <stat.icon size={15} />
               </div>
               <div>
                 <p className="text-[10px]  text-neutral-400  tracking-wider leading-none mb-1">{stat.label}</p>
@@ -656,7 +656,7 @@ export default function GRNManagement() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between p-2 gap-3">
             <div className="flex flex-1 items-center gap-2">
               <div className="relative flex-1 max-w-md group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" size={15} />
                 <input
                   type="text"
                   placeholder="Search GRN, PO, or Supplier..."
@@ -700,13 +700,13 @@ export default function GRNManagement() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowColumnMenu(!showColumnMenu)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xs border text-[11px] font-medium transition-all ${showColumnMenu ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}
+                className={`flex items-center gap-2 p-1 rounded-xs border text-[11px] font-medium transition-all ${showColumnMenu ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}
               >
                 <Settings2 size={14} />
                 Columns
               </button>
               
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs text-[11px] font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all  ">
+              <button className="flex items-center gap-2 p-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs text-[11px] font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all  ">
                 <Download size={14} />
                 Export
               </button>
@@ -807,7 +807,7 @@ export default function GRNManagement() {
                                 </div>
                                 <div className="w-full h-1 bg-neutral-100 dark:bg-neutral-800 rounded  overflow-hidden">
                                   <div 
-                                    className={`h-full transition-all duration-500 ${config.iconColor.replace('text-', 'bg-')}`}
+                                    className={`transition-all duration-500 ${config.iconColor.replace('text-', 'bg-')}`}
                                     style={{ width: `${(acceptedItems / (totalItems || 1)) * 100}%` }}
                                   ></div>
                                 </div>
@@ -865,7 +865,7 @@ export default function GRNManagement() {
                   handleReject(selectedGRN.id)
                 }}
               >
-                <XCircle size={16} className="mr-2" />
+                <XCircle size={15} className="mr-2" />
                 Reject GRN
               </Button>
             )}
@@ -875,7 +875,7 @@ export default function GRNManagement() {
                 className="px-6 flex items-center gap-2"
                 onClick={() => handlePrintGRN(selectedGRN)}
               >
-                <Printer size={16} />
+                <Printer size={15} />
                 Print GRN
               </Button>
             )}
@@ -923,14 +923,14 @@ export default function GRNManagement() {
               <div className="bg-white dark:bg-neutral-900 p-4 rounded  border border-neutral-100 dark:border-neutral-800  ">
                 <p className="text-[10px] text-neutral-400  tracking-wider leading-none mb-2">PO Reference</p>
                 <p className="text-sm  text-neutral-900 dark:text-white flex items-center gap-2">
-                  <Truck size={16} className="text-indigo-500" />
+                  <Truck size={15} className="text-indigo-500" />
                   {selectedGRN.po_no || 'Manual Entry'}
                 </p>
               </div>
               <div className="bg-white dark:bg-neutral-900 p-4 rounded  border border-neutral-100 dark:border-neutral-800  ">
                 <p className="text-[10px] text-neutral-400  tracking-wider leading-none mb-2">Supplier</p>
                 <p className="text-sm  text-neutral-900 dark:text-white flex items-center gap-2">
-                  <Building2 size={16} className="text-indigo-500" />
+                  <Building2 size={15} className="text-indigo-500" />
                   {selectedGRN.supplier_name}
                 </p>
               </div>
@@ -1047,7 +1047,7 @@ export default function GRNManagement() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  {selectedGRN?.status === 'inspecting' ? <ShieldCheck size={16} /> : <Save size={16} />}
+                  {selectedGRN?.status === 'inspecting' ? <ShieldCheck size={15} /> : <Save size={15} />}
                   {selectedGRN?.status === 'inspecting' ? 'Complete QC & Submit' : 'Approve & Store'}
                 </div>
               )}
@@ -1067,7 +1067,7 @@ export default function GRNManagement() {
               <Button
                 variant="secondary"
                 size="sm"
-                className="text-[11px] px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 border-amber-200 dark:border-amber-900/30"
+                className="text-[11px] p-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 border-amber-200 dark:border-amber-900/30"
                 onClick={handleCheckAllQC}
               >
                 ✓ Check All

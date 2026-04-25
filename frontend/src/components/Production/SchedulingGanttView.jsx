@@ -6,13 +6,16 @@ import Badge from '../Badge/Badge';
 
 const parseDate = (dateStr) => {
   if (!dateStr) return null;
-  if (dateStr instanceof Date) return dateStr;
+  if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
   
+  let d;
   if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
-    const d = new Date(dateStr.replace(' ', 'T') + 'Z');
-    if (!isNaN(d.getTime())) return d;
+    d = new Date(dateStr.replace(' ', 'T') + 'Z');
+  } else {
+    d = new Date(dateStr);
   }
-  return new Date(dateStr);
+  
+  return isNaN(d.getTime()) ? null : d;
 };
 
 const getLocalDateString = (date = new Date()) => {
@@ -160,8 +163,8 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick, filters }
         return otherStart < end && otherEnd > start;
       })
       .sort((a, b) => {
-        const aStart = parseDate(a.scheduled_start_date).getTime();
-        const bStart = parseDate(b.scheduled_start_date).getTime();
+        const aStart = parseDate(a.scheduled_start_date)?.getTime() || 0;
+        const bStart = parseDate(b.scheduled_start_date)?.getTime() || 0;
         if (aStart !== bStart) return aStart - bStart;
         return a.job_card_id.localeCompare(b.job_card_id);
       });
@@ -179,8 +182,8 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick, filters }
     
     // Determine this job's position among overlaps
     const myIndex = overlaps.filter(other => {
-      const otherStart = parseDate(other.scheduled_start_date).getTime();
-      const myStart = start.getTime();
+      const otherStart = parseDate(other.scheduled_start_date)?.getTime() || 0;
+      const myStart = start?.getTime() || 0;
       if (otherStart < myStart) return true;
       if (otherStart === myStart) return other.job_card_id < job.job_card_id;
       return false;
@@ -207,11 +210,11 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick, filters }
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-slate-50/50">
         <div className="flex items-center gap-4">
-          <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
+          <div className="bg-indigo-100 p-2 rounded  text-indigo-600">
             <CalendarIcon size={20} />
           </div>
           <div>
@@ -220,7 +223,7 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick, filters }
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 bg-white p-1 rounded  border border-slate-200 shadow-sm">
           <button 
             onClick={() => setCurrentDate(getLocalDateString())} 
             className="px-3 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
@@ -338,7 +341,7 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick, filters }
                         </div>
 
                         {/* Professional Tooltip on hover */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-56 bg-slate-900/95 backdrop-blur-sm text-white text-[11px] p-3 rounded-lg hidden group-hover/job:block z-50 shadow-2xl border border-white/10 ring-1 ring-black/5 animate-in fade-in zoom-in duration-200">
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-56 bg-slate-900/95 backdrop-blur-sm text-white text-[11px] p-3 rounded  hidden group-hover/job:block z-50 shadow-2xl border border-white/10 ring-1 ring-black/5 animate-in fade-in zoom-in duration-200">
                           <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2">
                              <span className=" text-indigo-400 uppercase tracking-widest text-[9px]">{jc.job_card_id}</span>
                              <Badge status={jc.status} size="xs" />
@@ -351,7 +354,15 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick, filters }
                             </div>
                             <div className="flex items-center gap-2 text-white/70">
                               <Clock size={12} className="text-white/40" />
-                              <span>{parseDate(jc.scheduled_start_date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12: true})} - {parseDate(jc.scheduled_end_date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12: true})}</span>
+                              <span>
+                                {(() => {
+                                  const start = parseDate(jc.scheduled_start_date);
+                                  const end = parseDate(jc.scheduled_end_date);
+                                  const startStr = start instanceof Date && !isNaN(start.getTime()) ? start.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12: true}) : 'N/A';
+                                  const endStr = end instanceof Date && !isNaN(end.getTime()) ? end.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12: true}) : 'N/A';
+                                  return `${startStr} - ${endStr}`;
+                                })()}
+                              </span>
                             </div>
                             <div className="flex items-center gap-2 text-white/70">
                               <FileText size={12} className="text-white/40" />

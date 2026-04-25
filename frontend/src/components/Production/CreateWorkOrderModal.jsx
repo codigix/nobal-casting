@@ -159,7 +159,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                   Item to Produce *
                 </label>
                 <div className="relative">
-                  <Package className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Package className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                   <select
                     name="item_code"
                     value={formData.item_code}
@@ -182,7 +182,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                   Bill of Materials (BOM)
                 </label>
                 <div className="relative">
-                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                   <select
                     name="bom_no"
                     value={formData.bom_no}
@@ -205,7 +205,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                     Qty to Manufacture *
                   </label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <input
                       type="number"
                       name="quantity"
@@ -250,7 +250,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                   Sales Order Reference
                 </label>
                 <div className="relative">
-                  <ShoppingBag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <ShoppingBag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                   <select
                     name="sales_order_id"
                     value={formData.sales_order_id}
@@ -272,7 +272,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                   Required By Date *
                 </label>
                 <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                   <input
                     type="date"
                     name="required_date"
@@ -314,7 +314,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
               Production Notes & Instructions
             </label>
             <div className="relative">
-              <ClipboardList className="absolute left-3 top-3 text-slate-400" size={16} />
+              <ClipboardList className="absolute left-3 top-3 text-slate-400" size={15} />
               <textarea
                 name="notes"
                 value={formData.notes}

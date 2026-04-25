@@ -354,7 +354,7 @@ export default function EmployeesDesignations() {
                 onClick={handleAddEmployee}
                 className="p-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 flex items-center gap-2 transition text-xs"
               >
-                <Plus size={16} /> Add Employee
+                <Plus size={15} /> Add Employee
               </button>
             </div>
 
@@ -477,7 +477,7 @@ export default function EmployeesDesignations() {
                       disabled={loading}
                       className="p-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-2"
                     >
-                      <Save size={16} />
+                      <Save size={15} />
                       {loading ? 'Saving...' : 'Save'}
                     </button>
                   </div>
@@ -571,7 +571,7 @@ export default function EmployeesDesignations() {
                 onClick={handleAddDesignation}
                 className="p-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 flex items-center gap-2 transition text-xs"
               >
-                <Plus size={16} /> Add Designation
+                <Plus size={15} /> Add Designation
               </button>
             </div>
 
@@ -625,7 +625,7 @@ export default function EmployeesDesignations() {
                       disabled={loading}
                       className="p-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-2"
                     >
-                      <Save size={16} />
+                      <Save size={15} />
                       {loading ? 'Saving...' : 'Save'}
                     </button>
                   </div>

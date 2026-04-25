@@ -248,7 +248,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess, initial
                 <div className="bg-white p-2 rounded  border border-slate-200 ">
                   <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
                     <div className="p-1.5 bg-blue-50 text-blue-600 rounded ">
-                      <ShieldCheck size={16} />
+                      <ShieldCheck size={15} />
                     </div>
                     <h3 className="text-xs  text-slate-800  ">Billing Context</h3>
                   </div>
@@ -365,7 +365,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess, initial
                   <div className="relative z-0">
                     <div className="flex items-center gap-2 mb-6">
                       <div className="p-1 bg-white/10 rounded ">
-                        <TrendingUp size={16} className="text-indigo-200" />
+                        <TrendingUp size={15} className="text-indigo-200" />
                       </div>
                       <span className="text-xs    text-indigo-100">Financial Summary</span>
                     </div>
@@ -528,7 +528,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess, initial
 
                     <div className="p-4 bg-amber-50 border border-amber-100 rounded  flex gap-3   shadow-amber-100/50">
                       <div className="p-2 bg-white rounded  text-amber-500 shrink-0 h-fit border border-amber-100">
-                        <Info size={16} />
+                        <Info size={15} />
                       </div>
                       <div>
                         <p className="text-xs  text-amber-900   mb-0.5">Audit Notice</p>
@@ -565,9 +565,9 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess, initial
               className="flex items-center gap-2 px-8 py-3 bg-slate-900 text-white rounded  text-xs  hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-95 disabled:opacity-30 disabled:active:scale-100 disabled:cursor-not-allowed group"
             >
               {loading ? (
-                <RefreshCw size={16} className="animate-spin" />
+                <RefreshCw size={15} className="animate-spin" />
               ) : (
-                <CheckCircle2 size={16} className="text-emerald-400" />
+                <CheckCircle2 size={15} className="text-emerald-400" />
               )}
               GENERATE FINAL INVOICE
             </button>

@@ -223,7 +223,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
               disabled={loading}
               className="px-8  shadow-blue-100 flex items-center gap-2"
             >
-              {loading ? <RefreshCw size={16} className="animate-spin" /> : <Plus size={16} />}
+              {loading ? <RefreshCw size={15} className="animate-spin" /> : <Plus size={15} />}
               Create GRN Request
             </Button>
           </div>
@@ -419,7 +419,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                             onClick={() => handleRemoveItem(idx)}
                             className="p-2 text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded  transition-all "
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={15} />
                           </button>
                         </td>
                       </tr>

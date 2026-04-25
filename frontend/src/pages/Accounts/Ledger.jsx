@@ -207,7 +207,7 @@ export default function Ledger() {
                 variant="secondary"
                 className="flex items-center gap-2 p-2  rounded  border-neutral-200 text-[10px]   transition-all"
               >
-                <Download size={16} strokeWidth={3} />
+                <Download size={15} strokeWidth={3} />
                 EXPORT LEDGER
               </Button>
             </div>
@@ -246,7 +246,7 @@ export default function Ledger() {
         <div className="bg-white border border-neutral-200 rounded   ">
           <div className="p-4 border-b border-neutral-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={15} />
               <input
                 type="text"
                 placeholder="Search by ID, Account, Description..."

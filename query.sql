@@ -1,1 +1,1 @@
-SELECT * FROM production_plan_fg WHERE plan_id = 'PP-1776409106217';
+USE nobalcasting; SELECT name FROM workstation WHERE workstation_type = NULL;

@@ -1394,10 +1394,12 @@ export default function ProductionPlanningForm() {
 
         for (const item of itemsToCheck || []) {
           const itemBalances = balances.filter(b => b.item_code === item.item_code)
-          const totalAvailable = itemBalances.reduce((sum, b) => sum + parseFloat(b.available_qty || b.current_qty || 0), 0)
+          const totalPhysical = itemBalances.reduce((sum, b) => sum + parseFloat(b.current_qty || 0), 0)
+          const totalAvailable = itemBalances.reduce((sum, b) => sum + parseFloat(b.available_qty || 0), 0)
           const requested = item.requested_qty || item.qty || item.quantity || 0
 
           stockInfo[item.item_code] = {
+            physical: totalPhysical,
             available: totalAvailable,
             requested: requested,
             isAvailable: totalAvailable >= requested,
@@ -2002,7 +2004,7 @@ export default function ProductionPlanningForm() {
         <div className="relative">
           <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600  rounded  animate-spin"></div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <ClipboardCheck size={16} className="text-indigo-600" />
+            <ClipboardCheck size={15} className="text-indigo-600" />
           </div>
         </div>
         <div className="flex flex-col items-center">
@@ -2077,7 +2079,7 @@ export default function ProductionPlanningForm() {
                   onClick={() => setIsReadOnly(false)}
                   className="flex items-center gap-2 p-2  bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs font-medium"
                 >
-                  <FileText size={16} />
+                  <FileText size={15} />
                   <span>Edit Plan</span>
                 </button>
               ) : (
@@ -2086,7 +2088,7 @@ export default function ProductionPlanningForm() {
                   disabled={savingPlan || !selectedSalesOrders.length}
                   className="flex items-center gap-2 p-2  py-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all "
                 >
-                  <Save size={16} />
+                  <Save size={15} />
                   <span className="text-xs    text-xs  ">
                     {savingPlan ? 'Saving Plan...' : 'Save Strategic Plan'}
                   </span>
@@ -2107,7 +2109,7 @@ export default function ProductionPlanningForm() {
               <p className="text-xs  text-rose-500">{error}</p>
             </div>
             <button onClick={() => setError(null)} className="ml-auto text-rose-400 hover:text-rose-600">
-              <X size={16} />
+              <X size={15} />
             </button>
           </div>
         )}
@@ -2119,7 +2121,7 @@ export default function ProductionPlanningForm() {
               <p className="text-xs  text-emerald-500">{success}</p>
             </div>
             <button onClick={() => setSuccess(null)} className="ml-auto text-emerald-400 hover:text-emerald-600">
-              <X size={16} />
+              <X size={15} />
             </button>
           </div>
         )}
@@ -2187,7 +2189,7 @@ export default function ProductionPlanningForm() {
                       <div className="bg-white rounded  h-full w-0 transition-all duration-1000"></div>
                     </div>
                   </div>
-                  <TrendingUp size={16} className="text-white" />
+                  <TrendingUp size={15} className="text-white" />
                 </div>
               )
             })()}
@@ -3002,7 +3004,7 @@ export default function ProductionPlanningForm() {
                   disabled={creatingWorkOrder}
                   className="p-2  bg-indigo-600 text-white text-xs    rounded hover:bg-indigo-700 disabled:opacity-50 transition-all  shadow-indigo-100 flex items-center gap-2"
                 >
-                  <Check size={16} />
+                  <Check size={15} />
                   {creatingWorkOrder ? 'Processing...' : 'Confirm & Create Order'}
                 </button>
               </div>
@@ -3078,7 +3080,8 @@ export default function ProductionPlanningForm() {
                         <th className="p-3 text-xs  text-slate-500 ">Component Intelligence</th>
                         <th className="p-3 text-right text-xs  text-slate-500 ">Required</th>
                         <th className="p-3 text-right text-xs  text-slate-500 w-28">To Request</th>
-                        <th className="p-3 text-right text-xs  text-slate-500 ">Inventory</th>
+                        <th className="p-3 text-right text-xs  text-slate-500 ">Physical</th>
+                        <th className="p-3 text-right text-xs  text-slate-500 ">Available</th>
                         <th className="p-3 text-center text-xs  text-slate-500 ">Status</th>
                       </tr>
                     </thead>
@@ -3122,7 +3125,16 @@ export default function ProductionPlanningForm() {
                               {checkingStock ? (
                                 <Loader size={12} className="animate-spin ml-auto text-slate-400" />
                               ) : (
-                                <span className="text-xs font-medium text-slate-600">{stock?.available?.toFixed(2) || '0.00'}</span>
+                                <span className="text-xs font-medium text-slate-600">{stock?.physical?.toFixed(2) || '0.00'}</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-right">
+                              {checkingStock ? (
+                                <Loader size={12} className="animate-spin ml-auto text-slate-400" />
+                              ) : (
+                                <span className={`text-xs font-medium ${stock && stock.available < 0 ? 'text-rose-600' : 'text-slate-600'}`}>
+                                  {stock?.available?.toFixed(2) || '0.00'}
+                                </span>
                               )}
                             </td>
                             <td className="p-3 text-center">
@@ -3162,7 +3174,7 @@ export default function ProductionPlanningForm() {
                 disabled={creatingMaterialRequest || checkingStock}
                 className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded   shadow-slate-200 hover:bg-slate-800 disabled:opacity-50 transition-all text-xs"
               >
-                {creatingMaterialRequest ? <Loader size={16} className="animate-spin" /> : <Send size={16} />}
+                {creatingMaterialRequest ? <Loader size={15} className="animate-spin" /> : <Send size={15} />}
                 {creatingMaterialRequest ? 'SYNCHRONIZING...' : 'Material Request'}
               </button>
             </div>
@@ -3243,7 +3255,7 @@ export default function ProductionPlanningForm() {
                 onClick={() => setIsReadOnly(false)}
                 className="flex items-center gap-2 p-2  bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all  shadow-indigo-100 text-xs font-medium"
               >
-                <FileText size={16} />
+                <FileText size={15} />
                 <span>Edit Strategic Plan</span>
               </button>
             ) : (
@@ -3253,7 +3265,7 @@ export default function ProductionPlanningForm() {
                 className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all  shadow-slate-200  text-xs"
                 title={fetchingSubAssemblyBoms ? "BOM explosion in progress..." : "Save Strategic Plan"}
               >
-                <Save size={16} />
+                <Save size={15} />
                 {savingPlan ? 'Saving Plan...' : (fetchingSubAssemblyBoms ? 'Exploding BOM...' : 'Save Strategic Plan')}
               </button>
             )}

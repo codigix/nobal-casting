@@ -102,7 +102,7 @@ export default function Operations() {
             onClick={() => navigate('/manufacturing/operations/new')}
             className="btn-primary flex items-center gap-2 bg-gradient-to-br from-orange-400 to-orange-600"
           >
-            <Plus size={16} /> New operation
+            <Plus size={15} /> New operation
           </button>
         </div>
 

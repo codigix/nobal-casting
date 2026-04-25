@@ -542,7 +542,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                           className="text-red-600 hover:text-red-900 transition"
                           title="Delete"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={15} />
                         </button>
                       </td>
                     </tr>

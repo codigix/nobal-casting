@@ -640,7 +640,7 @@ export default function MaterialRequestForm() {
                   <div className="p-6 bg-slate-50 rounded  border border-slate-200 shadow-inner">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="p-1.5 bg-amber-500 text-white rounded">
-                        <Plus size={16} strokeWidth={3} />
+                        <Plus size={15} strokeWidth={3} />
                       </div>
                       <h4 className="text-xs font-extrabold text-slate-900  ">
                         {editingItemIndex !== null ? 'UPDATE MATERIAL ITEM' : 'ADD MATERIAL ITEM'}
@@ -698,7 +698,7 @@ export default function MaterialRequestForm() {
                             onClick={handleCancelEdit}
                             className="p-2.5 bg-white text-slate-500 border border-slate-200 rounded text-[11px]    hover:bg-slate-50 transition-all active:scale-95"
                           >
-                            <X size={16} />
+                            <X size={15} />
                           </button>
                         )}
                       </div>
@@ -727,7 +727,7 @@ export default function MaterialRequestForm() {
                               <td className="p-2 ">
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300">
-                                    <Package size={16} />
+                                    <Package size={15} />
                                   </div>
                                   <div>
                                     <p className="text-xs  text-slate-900 ">{item.item_code}</p>

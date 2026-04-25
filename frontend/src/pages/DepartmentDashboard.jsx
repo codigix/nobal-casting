@@ -547,7 +547,7 @@ export default function DepartmentDashboard() {
         <div className="flex justify-between items-start gap-3 mb-2">
           <span className="text-xs text-gray-500">{label}</span>
           <div className="flex items-center justify-center w-8 h-8 rounded" style={{ backgroundColor: bgColor }}>
-            {typeof Icon === 'string' ? <span className="text-lg">{Icon}</span> : <Icon size={16} color={borderColor} />}
+            {typeof Icon === 'string' ? <span className="text-lg">{Icon}</span> : <Icon size={15} color={borderColor} />}
           </div>
         </div>
         <div className="text-xl  text-gray-900 mb-1">{value}</div>

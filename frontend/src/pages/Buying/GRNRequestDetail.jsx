@@ -157,17 +157,17 @@ export default function GRNRequestDetail() {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'pending':
-        return <Clock size={16} />
+        return <Clock size={15} />
       case 'inspecting':
-        return <Package size={16} />
+        return <Package size={15} />
       case 'awaiting_inventory_approval':
-        return <Clock size={16} />
+        return <Clock size={15} />
       case 'approved':
-        return <CheckCircle size={16} />
+        return <CheckCircle size={15} />
       case 'rejected':
-        return <XCircle size={16} />
+        return <XCircle size={15} />
       case 'sent_back':
-        return <ArrowLeft size={16} />
+        return <ArrowLeft size={15} />
       default:
         return null
     }
@@ -616,7 +616,7 @@ export default function GRNRequestDetail() {
                   size="sm"
                   className="p-2 "
                 >
-                  <Send size={16} />
+                  <Send size={15} />
                 </Button>
               </div>
             </div>

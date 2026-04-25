@@ -676,7 +676,7 @@ export default function StockEntries() {
                       min="1"
                       value={newItem.qty}
                       onChange={(e) => setNewItem({ ...newItem, qty: parseFloat(e.target.value) })}
-                      className="w-full px-3 py-1.5 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
+                      className="w-full p-1 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
                     />
                   </div>
                   <div className="space-y-1">
@@ -686,7 +686,7 @@ export default function StockEntries() {
                       value={newItem.uom}
                       onChange={(e) => setNewItem({ ...newItem, uom: e.target.value })}
                       placeholder="Kg"
-                      className="w-full px-3 py-1.5 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
+                      className="w-full p-1 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
                     />
                   </div>
                   <div className="space-y-1">
@@ -696,7 +696,7 @@ export default function StockEntries() {
                       value={newItem.batch_no}
                       onChange={(e) => setNewItem({ ...newItem, batch_no: e.target.value })}
                       placeholder="Optional"
-                      className="w-full px-3 py-1.5 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
+                      className="w-full p-1 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
                     />
                   </div>
                   <div className="space-y-1">
@@ -708,7 +708,7 @@ export default function StockEntries() {
                       value={newItem.valuation_rate}
                       onChange={(e) => setNewItem({ ...newItem, valuation_rate: parseFloat(e.target.value) })}
                       placeholder="0.00"
-                      className="w-full px-3 py-1.5 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
+                      className="w-full p-1 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
                     />
                   </div>
                   <div className="flex items-end">
@@ -780,7 +780,7 @@ export default function StockEntries() {
               onClick={formModal.open}
               className="mt-6 bg-amber-500 hover:bg-amber-600 text-xs px-6"
             >
-              <Plus size={16} className="mr-2" />
+              <Plus size={15} className="mr-2" />
               Create First Entry
             </Button>
           </div>
@@ -892,7 +892,7 @@ export default function StockEntries() {
                         </div>
                         <div className="max-h-64 overflow-y-auto">
                           {columns.map(col => (
-                            <label key={col.key} className="flex items-center px-3 py-1.5 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors">
+                            <label key={col.key} className="flex items-center p-1 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors">
                               <input
                                 type="checkbox"
                                 checked={visibleColumns.has(col.key)}
@@ -1041,7 +1041,7 @@ export default function StockEntries() {
                         <button
                           onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                           disabled={currentPage === 1}
-                          className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 rounded-xs text-[11px]  text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                          className="p-1 border border-neutral-200 dark:border-neutral-700 rounded-xs text-[11px]  text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         >
                           Previous
                         </button>
@@ -1067,7 +1067,7 @@ export default function StockEntries() {
                         <button
                           onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                           disabled={currentPage === totalPages}
-                          className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 rounded-xs text-[11px]  text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                          className="p-1 border border-neutral-200 dark:border-neutral-700 rounded-xs text-[11px]  text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         >
                           Next
                         </button>

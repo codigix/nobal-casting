@@ -1610,7 +1610,7 @@ export default function WorkOrderForm() {
                                     </span>
                                     <div className="w-24 bg-slate-100 h-1 rounded  overflow-hidden">
                                       <div
-                                        className="bg-indigo-500 h-full transition-all duration-500"
+                                        className="bg-indigo-500 transition-all duration-500"
                                         style={{ width: `${Math.min(100, ((jc.completed_quantity || 0) / jc.planned_quantity) * 100)}%` }}
                                       />
                                     </div>
@@ -1795,7 +1795,7 @@ export default function WorkOrderForm() {
                         onClick={handleIssueToWIP}
                         title="Issue selected materials to WIP"
                         disabled={loading || isReadOnly || !id}
-                        className={`px-3 py-1.5 flex items-center gap-2 text-xs font-medium rounded border transition-all ${loading || isReadOnly || !id ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100'}`}
+                        className={`p-1 flex items-center gap-2 text-xs font-medium rounded border transition-all ${loading || isReadOnly || !id ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100'}`}
                       >
                         <Zap size={14} className={loading ? 'animate-pulse' : ''} />
                         Issue to WIP
@@ -2099,7 +2099,7 @@ export default function WorkOrderForm() {
                     </div>
                     <button
                       onClick={downloadReport}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs font-medium  "
+                      className="flex items-center gap-2 p-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs font-medium  "
                     >
                       <FileText size={14} />
                       Export CSV

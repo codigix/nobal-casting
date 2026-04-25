@@ -67,7 +67,7 @@ export default function Pagination({
           className="pagination-btn"
           title="Previous page"
         >
-          <ChevronLeft size={16} />
+          <ChevronLeft size={15} />
         </button>
 
         {pageNumbers.map((page, index) => (
@@ -91,7 +91,7 @@ export default function Pagination({
           className="pagination-btn"
           title="Next page"
         >
-          <ChevronRight size={16} />
+          <ChevronRight size={15} />
         </button>
       </div>
     </div>

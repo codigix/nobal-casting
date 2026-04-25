@@ -131,7 +131,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                     Production Entry *
                   </label>
                   <div className="relative">
-                    <ClipboardList className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <ClipboardList className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <select
                       name="production_entry_id"
                       value={formData.production_entry_id}
@@ -154,7 +154,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                     Reported By *
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <select
                       name="reported_by_id"
                       value={formData.reported_by_id}
@@ -230,7 +230,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
               <div className="p-5 space-y-5">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <Stethoscope size={16} className="text-blue-400" />
+                    <Stethoscope size={15} className="text-blue-400" />
                     Root Cause *
                   </label>
                   <textarea
@@ -246,7 +246,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
 
                 <div className="space-y-2 pt-2">
                   <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <Hammer size={16} className="text-green-500" />
+                    <Hammer size={15} className="text-green-500" />
                     Corrective Action *
                   </label>
                   <textarea

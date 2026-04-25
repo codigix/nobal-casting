@@ -104,7 +104,7 @@ export default function CreateExpenseModal({ isOpen, onClose, onSuccess }) {
               disabled={loading}
               className="flex items-center gap-2"
             >
-              {loading ? <RefreshCw size={16} className="animate-spin" /> : <Clock size={16} />}
+              {loading ? <RefreshCw size={15} className="animate-spin" /> : <Clock size={15} />}
               Save Draft
             </Button>
             <Button
@@ -113,7 +113,7 @@ export default function CreateExpenseModal({ isOpen, onClose, onSuccess }) {
               disabled={loading}
               className="flex items-center gap-2"
             >
-              {loading ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+              {loading ? <RefreshCw size={15} className="animate-spin" /> : <CheckCircle size={15} />}
               Record as Paid
             </Button>
           </div>
@@ -242,7 +242,7 @@ export default function CreateExpenseModal({ isOpen, onClose, onSuccess }) {
         <section className="bg-neutral-50 rounded  border border-neutral-200 p-4">
           <div className="flex items-start gap-3">
             <div className="p-2 bg-amber-500 rounded  text-white">
-              <Info size={16} />
+              <Info size={15} />
             </div>
             <div>
               <h4 className="text-xs  text-neutral-800  tracking-wider">Note</h4>

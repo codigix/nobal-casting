@@ -328,17 +328,17 @@ export default function Customers() {
                               className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
                               title="Modify Profile"
                             >
-                              <Edit2 size={16} />
+                              <Edit2 size={15} />
                             </button>
                             <button
                               onClick={() => handleDelete(customer.customer_id)}
                               className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
                               title="Delete Record"
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={15} />
                             </button>
                             <button className="p-2 text-slate-400 hover:text-slate-900 rounded">
-                              <MoreVertical size={16} />
+                              <MoreVertical size={15} />
                             </button>
                           </div>
                         </td>

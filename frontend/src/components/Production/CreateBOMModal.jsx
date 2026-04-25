@@ -281,7 +281,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                     <div className="space-y-1.5">
                       <label className="block text-[10px]  text-slate-400  ">Base Quantity *</label>
                       <div className="relative">
-                        <Package className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <Package className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                         <input
                           type="number"
                           name="quantity"
@@ -439,7 +439,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                   </select>
                 </div>
                 <div className="md:col-span-3">
-                  <Button type="button" onClick={addBomLine} variant="primary" className="w-full h-[38px] rounded  " icon={<Plus size={16} />}>
+                  <Button type="button" onClick={addBomLine} variant="primary" className="w-full h-[38px] rounded  " icon={<Plus size={15} />}>
                     Add Material
                   </Button>
                 </div>
@@ -471,7 +471,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                           <td className="p-2 ">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded  bg-slate-100 flex items-center justify-center text-slate-400">
-                                <Package size={16} />
+                                <Package size={15} />
                               </div>
                               <div>
                                 <div className=" text-slate-900">{line.component_name}</div>
@@ -564,7 +564,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                     </div>
                   </div>
                   <div className="md:col-span-2">
-                    <Button type="button" onClick={addOperation} variant="primary" className="w-full h-[38px] rounded  " icon={<Plus size={16} />}>
+                    <Button type="button" onClick={addOperation} variant="primary" className="w-full h-[38px] rounded  " icon={<Plus size={15} />}>
                       Add Step
                     </Button>
                   </div>
@@ -677,7 +677,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                   />
                 </div>
                 <div className="md:col-span-3">
-                  <Button type="button" onClick={addScrapItem} variant="primary" className="w-full h-[38px] rounded  " icon={<Plus size={16} />}>
+                  <Button type="button" onClick={addScrapItem} variant="primary" className="w-full h-[38px] rounded  " icon={<Plus size={15} />}>
                     Add Scrap
                   </Button>
                 </div>
@@ -836,7 +836,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
               variant="primary"
               isLoading={loading}
               className="px-10 rounded   shadow-blue-100    text-xs"
-              icon={<CheckCircle2 size={16} />}
+              icon={<CheckCircle2 size={15} />}
             >
               {editingId ? 'Save Revision' : 'Create BOM'}
             </Button>

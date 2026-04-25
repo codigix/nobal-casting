@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Play, StopCircle, Clock, AlertCircle } from 'lucide-react'
 import api from '../../services/api'
+import * as productionService from '../../services/productionService'
+import { useToast } from '../../components/ToastContainer'
 import OperationExecutionLog from './OperationExecutionLog'
 import SearchableSelect from '../SearchableSelect'
+import ResourceEngagementModal from './ResourceEngagementModal'
 
 const formatToUTC = (dateStr) => {
   if (!dateStr) return null;
@@ -11,7 +15,9 @@ const formatToUTC = (dateStr) => {
   return d.toISOString();
 };
 
-export default function OperationExecutionPanel({ jobCard, workstations, operations, operators, onUpdate, onOperationEnded }) {
+export default function OperationExecutionPanel({ jobCard, workstations, operations, operators, onUpdate, onOperationEnded, onStartSuccess }) {
+  const navigate = useNavigate()
+  const toast = useToast()
   const [executionData, setExecutionData] = useState({
     start_time: '',
     start_date: '',
@@ -36,6 +42,64 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
   const [success, setSuccess] = useState(null)
   const [isRunning, setIsRunning] = useState(jobCard?.status === 'in-progress')
   const [outwardChallans, setOutwardChallans] = useState([])
+
+  // Conflict state
+  const [showConflictModal, setShowConflictModal] = useState(false)
+  const [conflictData, setConflictData] = useState(null)
+  const [notifyingResourceId, setNotifyingResourceId] = useState(null)
+
+  const handleApplyNextAvailable = async (slot) => {
+    try {
+      if (!jobCard?.job_card_id || !slot) return;
+      setLoading(true);
+      await productionService.updateJobCard(jobCard.job_card_id, {
+        scheduled_start_date: slot.start,
+        scheduled_end_date: slot.end,
+        status: 'in-progress'
+      });
+      toast.addToast(`Rescheduled to ${new Date(slot.start).toLocaleString()} and started`, 'success');
+      setShowConflictModal(false);
+      setConflictData(null);
+      if (onStartSuccess) onStartSuccess();
+    } catch (err) {
+      toast.addToast(err.message || 'Failed to reschedule', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApplyAlternative = async (resource) => {
+    try {
+      if (!jobCard?.job_card_id || !resource) return;
+      setLoading(true);
+      const updateData = { status: 'in-progress' };
+      if (conflictData.resource_type === 'machine') {
+        updateData.machine_id = resource.name;
+      } else {
+        updateData.operator_id = resource.name;
+      }
+      await productionService.updateJobCard(jobCard.job_card_id, updateData);
+      toast.addToast(`Switched to ${resource.workstation_name || resource.name} and started`, 'success');
+      setShowConflictModal(false);
+      setConflictData(null);
+      if (onStartSuccess) onStartSuccess();
+    } catch (err) {
+      toast.addToast(err.message || 'Failed to switch resource', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNotifyWhenAvailable = async (resourceId) => {
+    try {
+      setNotifyingResourceId(resourceId);
+      await new Promise(resolve => setTimeout(resolve, 800));
+      toast.addToast(`We'll notify you as soon as ${resourceId} is free.`, 'info');
+    } catch (err) {
+      toast.addToast('Failed to set alert', 'error');
+    }
+  };
+
   const [inwardChallans, setInwardChallans] = useState([])
   const [timeLogs, setTimeLogs] = useState([])
 
@@ -174,7 +238,12 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
         if (onUpdate) onUpdate()
       }
     } catch (err) {
-      setError(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to start operation')
+      if (err.response?.status === 409 && err.response?.data?.conflict) {
+        setConflictData(err.response.data.conflict)
+        setShowConflictModal(true)
+      } else {
+        setError(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to start operation')
+      }
     } finally {
       setLoading(false)
     }
@@ -363,7 +432,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
               disabled={loading}
               className="flex-1 flex items-center justify-center gap-2 p-2 bg-green-500 text-white rounded-xs hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
-              <StopCircle size={16} /> End Operation
+              <StopCircle size={15} /> End Operation
             </button>
           </div>
         </div>
@@ -603,7 +672,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
             disabled={loading || !executionData.employee_id || !executionData.workstation_id || !executionData.start_date || !executionData.start_time || executionData.quantity <= 0}
             className="flex-1 flex items-center justify-center gap-2 p-2 bg-blue-500 text-white rounded-xs hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            <Play size={16} /> Start Operation
+            <Play size={15} /> Start Operation
           </button>
         </div>
       </div>
@@ -614,6 +683,18 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
           <OperationExecutionLog jobCardId={jobCard.job_card_id} />
         </div>
       )}
+      {/* Conflict Modal */}
+      <ResourceEngagementModal 
+        isOpen={showConflictModal}
+        onClose={() => setShowConflictModal(false)}
+        conflictData={conflictData}
+        jobCard={jobCard}
+        onApplyNextAvailable={handleApplyNextAvailable}
+        onApplyAlternative={handleApplyAlternative}
+        onNotifyWhenAvailable={handleNotifyWhenAvailable}
+        onViewAllSchedules={() => navigate('/manufacturing/job-cards?tab=scheduling')}
+        notifyingResourceId={notifyingResourceId}
+      />
     </div>
   )
 }

@@ -128,7 +128,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                     Work Order *
                   </label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <select
                       name="work_order_id"
                       value={formData.work_order_id}
@@ -151,7 +151,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                     Machine/Workstation *
                   </label>
                   <div className="relative">
-                    <Settings className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Settings className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <select
                       name="machine_id"
                       value={formData.machine_id}
@@ -174,7 +174,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                     Operator
                   </label>
                   <div className="relative">
-                    <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <select
                       name="operator_id"
                       value={formData.operator_id}
@@ -284,7 +284,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
 
                 <div className="space-y-2 pt-2">
                   <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <FileText size={16} className="text-slate-400" />
+                    <FileText size={15} className="text-slate-400" />
                     Production Remarks
                   </label>
                   <textarea

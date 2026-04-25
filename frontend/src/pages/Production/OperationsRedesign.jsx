@@ -214,13 +214,13 @@ export default function OperationsRedesign() {
                           onClick={() => handleEdit(op)}
                           className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                         >
-                          <Edit2 size={16} />
+                          <Edit2 size={15} />
                         </button>
                         <button 
                           onClick={() => handleDelete(op.name)}
                           className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </div>
@@ -301,7 +301,7 @@ export default function OperationsRedesign() {
                       <td className="p-2 ">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded flex items-center justify-center ${op.is_corrective_operation ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}>
-                            {op.is_corrective_operation ? <AlertCircle size={16} /> : <Zap size={16} />}
+                            {op.is_corrective_operation ? <AlertCircle size={15} /> : <Zap size={15} />}
                           </div>
                           <div>
                             <p className=" text-slate-900 text-xs group-hover:text-indigo-600 transition-colors">{op.operation_name || op.name}</p>
@@ -341,13 +341,13 @@ export default function OperationsRedesign() {
                             onClick={() => handleEdit(op)}
                             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                           >
-                            <Edit2 size={16} />
+                            <Edit2 size={15} />
                           </button>
                           <button 
                             onClick={() => handleDelete(op.name)}
                             className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>

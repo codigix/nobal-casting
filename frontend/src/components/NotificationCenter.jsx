@@ -218,7 +218,7 @@ export default function NotificationCenter() {
                           onClick={() => markAsRead(notification.id)}
                           title="Mark as read"
                         >
-                          <Check size={16} />
+                          <Check size={15} />
                         </button>
                       )}
                       <button
@@ -226,7 +226,7 @@ export default function NotificationCenter() {
                         onClick={() => deleteNotification(notification.id)}
                         title="Delete"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </div>

@@ -293,7 +293,7 @@ export default function RFQForm() {
                 onClick={() => setShowItemForm(!showItemForm)}
                 className="flex items-center gap-2"
               >
-                <Plus size={16} /> Add Item
+                <Plus size={15} /> Add Item
               </Button>
             </div>
 

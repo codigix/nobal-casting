@@ -192,7 +192,7 @@ export default function AdminDashboard() {
             <select 
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
-              className="text-sm border-slate-200 rounded focus:ring-blue-500 focus:border-blue-500 px-3 py-1.5" 
+              className="text-sm border-slate-200 rounded focus:ring-blue-500 focus:border-blue-500 p-1" 
               style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}
             >
               <option value="daily">Daily View</option>
@@ -353,7 +353,7 @@ export default function AdminDashboard() {
           <div className="p-4 rounded border " style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                <Shield size={16} className="text-blue-500" />
+                <Shield size={15} className="text-blue-500" />
                 Security & System Alerts
               </h3>
               <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded ">
@@ -393,7 +393,7 @@ export default function AdminDashboard() {
           <div className="p-4 rounded border " style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                <AlertTriangle size={16} className="text-amber-500" />
+                <AlertTriangle size={15} className="text-amber-500" />
                 Maintenance Queue
               </h3>
               <button onClick={() => navigate('/admin/machine-analysis')} className="text-[10px] text-blue-600 font-bold hover:underline uppercase">
@@ -424,7 +424,7 @@ export default function AdminDashboard() {
             </div>
             <div className="mt-6 p-3 rounded bg-amber-50/10 border border-amber-100/10 flex items-center gap-3">
               <div className="p-2 bg-amber-500 rounded text-white shadow-lg shadow-amber-200">
-                <Gauge size={16} />
+                <Gauge size={15} />
               </div>
               <div>
                 <p className="text-xs font-bold text-amber-500">Service Optimization</p>

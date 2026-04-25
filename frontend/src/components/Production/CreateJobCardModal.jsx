@@ -175,6 +175,9 @@ export default function CreateJobCardModal({
     }
   }, [isOpen, preSelectedWorkOrderId, workOrders, editingId, preSelectedOperation])
 
+  const [suggestedSlots, setSuggestedSlots] = useState([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+
   const initializeModal = async () => {
     setFetchingData(true)
     setError(null)
@@ -333,13 +336,26 @@ export default function CreateJobCardModal({
       const response = await schedulingAPI.suggestSlot(formData.machine_id, duration, date)
       
       if (response.data.success) {
-        const { start, end } = response.data.data
-        
-        setFormData(prev => ({
-          ...prev,
-          scheduled_start_date: formatForDateTimeLocal(start),
-          scheduled_end_date: formatForDateTimeLocal(end)
-        }))
+        const slots = response.data.data
+        if (Array.isArray(slots) && slots.length > 0) {
+          setSuggestedSlots(slots)
+          setShowSuggestions(true)
+          
+          const { start, end } = slots[0]
+          setFormData(prev => ({
+            ...prev,
+            scheduled_start_date: formatForDateTimeLocal(start),
+            scheduled_end_date: formatForDateTimeLocal(end)
+          }))
+        } else if (slots && slots.start) {
+          const { start, end } = slots
+          setFormData(prev => ({
+            ...prev,
+            scheduled_start_date: formatForDateTimeLocal(start),
+            scheduled_end_date: formatForDateTimeLocal(end)
+          }))
+          setSuggestedSlots([slots])
+        }
       }
     } catch (err) {
       setError('Failed to suggest a slot: ' + (err.response?.data?.message || err.message))
@@ -349,37 +365,78 @@ export default function CreateJobCardModal({
   }
 
   const getMachineConflict = () => {
-    const { machine_id, scheduled_start_date, scheduled_end_date } = formData;
-    if (!machine_id || !scheduled_start_date || !scheduled_end_date) return null;
+    const { machine_id, operator_id, scheduled_start_date, scheduled_end_date } = formData;
+    if (!scheduled_start_date || !scheduled_end_date) return null;
     
-    const startTime = parseUTCDate(scheduled_start_date).getTime();
-    const endTime = parseUTCDate(scheduled_end_date).getTime();
+    const start = parseUTCDate(scheduled_start_date);
+    const end = parseUTCDate(scheduled_end_date);
+    
+    const startTime = start instanceof Date && !isNaN(start.getTime()) ? start.getTime() : NaN;
+    const endTime = end instanceof Date && !isNaN(end.getTime()) ? end.getTime() : NaN;
     
     if (isNaN(startTime) || isNaN(endTime)) return null;
 
-    const workstation = allWorkstations.find(ws => ws.name === machine_id);
-    const capacity = workstation ? (workstation.parallel_capacity || 1) : 1;
-    
-    const conflicts = allJobCards.filter(jc => {
-      if (editingId && jc.job_card_id === editingId) return false;
-      if (jc.machine_id !== machine_id) return false;
-      if (['completed', 'cancelled'].includes((jc.status || '').toLowerCase())) return false;
+    // 1. Machine Conflict
+    if (machine_id) {
+      const workstation = allWorkstations.find(ws => ws.name === machine_id);
+      const capacity = workstation ? (workstation.parallel_capacity || 1) : 1;
       
-      const jcStart = parseUTCDate(jc.scheduled_start_date).getTime();
-      const jcEnd = parseUTCDate(jc.scheduled_end_date).getTime();
+      const conflicts = (allJobCards || []).filter(jc => {
+        if (!jc) return false;
+        if (editingId && jc.job_card_id === editingId) return false;
+        if (jc.machine_id !== machine_id) return false;
+        if (['completed', 'cancelled'].includes((jc.status || '').toLowerCase())) return false;
+        
+        const jcStartDate = parseUTCDate(jc.scheduled_start_date);
+        const jcEndDate = parseUTCDate(jc.scheduled_end_date);
+        
+        const jcStart = jcStartDate instanceof Date && !isNaN(jcStartDate.getTime()) ? jcStartDate.getTime() : NaN;
+        const jcEnd = jcEndDate instanceof Date && !isNaN(jcEndDate.getTime()) ? jcEndDate.getTime() : NaN;
+        
+        if (isNaN(jcStart) || isNaN(jcEnd)) return false;
+        
+        return jcStart < endTime && jcEnd > startTime;
+      });
       
-      if (isNaN(jcStart) || isNaN(jcEnd)) return false;
-      
-      return jcStart < endTime && jcEnd > startTime;
-    });
-    
-    if (conflicts.length >= capacity) {
-      return { 
-        job_card_id: conflicts[0].job_card_id,
-        start: conflicts[0].scheduled_start_date,
-        end: conflicts[0].scheduled_end_date,
-        message: `Machine busy with ${conflicts[0].job_card_id}` 
-      };
+      if (conflicts.length >= capacity) {
+        return { 
+          type: 'machine',
+          job_card_id: conflicts[0].job_card_id,
+          start: conflicts[0].scheduled_start_date,
+          end: conflicts[0].scheduled_end_date,
+          message: `Workstation busy with ${conflicts[0].job_card_id}` 
+        };
+      }
+    }
+
+    // 2. Operator Conflict
+    if (operator_id) {
+      const conflicts = (allJobCards || []).filter(jc => {
+        if (!jc) return false;
+        if (editingId && jc.job_card_id === editingId) return false;
+        if (jc.operator_id !== operator_id) return false;
+        if (['completed', 'cancelled'].includes((jc.status || '').toLowerCase())) return false;
+        
+        const jcStartDate = parseUTCDate(jc.scheduled_start_date);
+        const jcEndDate = parseUTCDate(jc.scheduled_end_date);
+        
+        const jcStart = jcStartDate instanceof Date && !isNaN(jcStartDate.getTime()) ? jcStartDate.getTime() : NaN;
+        const jcEnd = jcEndDate instanceof Date && !isNaN(jcEndDate.getTime()) ? jcEndDate.getTime() : NaN;
+        
+        if (isNaN(jcStart) || isNaN(jcEnd)) return false;
+        
+        return jcStart < endTime && jcEnd > startTime;
+      });
+
+      if (conflicts.length > 0) {
+        return { 
+          type: 'operator',
+          job_card_id: conflicts[0].job_card_id,
+          start: conflicts[0].scheduled_start_date,
+          end: conflicts[0].scheduled_end_date,
+          message: `Operator busy with ${conflicts[0].job_card_id}` 
+        };
+      }
     }
     
     return null;
@@ -407,18 +464,26 @@ export default function CreateJobCardModal({
     }
 
     if (prevOp && prevOp.scheduled_end_date) {
-      const prevEnd = parseUTCDate(prevOp.scheduled_end_date);
-      const currentStart = parseUTCDate(scheduled_start_date);
-      if (currentStart < prevEnd) {
-        return `Must start after ${prevOp.operation} (${parseUTCDate(prevEnd).toLocaleString([], { hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})`;
+      const prevEndObj = parseUTCDate(prevOp.scheduled_end_date);
+      const currentStartObj = parseUTCDate(scheduled_start_date);
+      
+      const prevEnd = prevEndObj instanceof Date && !isNaN(prevEndObj.getTime()) ? prevEndObj.getTime() : null;
+      const currentStart = currentStartObj instanceof Date && !isNaN(currentStartObj.getTime()) ? currentStartObj.getTime() : null;
+      
+      if (currentStart && prevEnd && currentStart < prevEnd) {
+        return `Must start after ${prevOp.operation} (${new Date(prevEnd).toLocaleString([], { hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})`;
       }
     }
 
     if (nextOp && nextOp.scheduled_start_date) {
-      const nextStart = parseUTCDate(nextOp.scheduled_start_date);
-      const currentEnd = parseUTCDate(scheduled_end_date);
-      if (currentEnd > nextStart) {
-        return `Must finish before ${nextOp.operation} (${parseUTCDate(nextStart).toLocaleString([], { hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})`;
+      const nextStartObj = parseUTCDate(nextOp.scheduled_start_date);
+      const currentEndObj = parseUTCDate(scheduled_end_date);
+      
+      const nextStart = nextStartObj instanceof Date && !isNaN(nextStartObj.getTime()) ? nextStartObj.getTime() : null;
+      const currentEnd = currentEndObj instanceof Date && !isNaN(currentEndObj.getTime()) ? currentEndObj.getTime() : null;
+      
+      if (currentEnd && nextStart && currentEnd > nextStart) {
+        return `Must finish before ${nextOp.operation} (${new Date(nextStart).toLocaleString([], { hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})`;
       }
     }
 
@@ -619,7 +684,7 @@ export default function CreateJobCardModal({
                     Operator
                   </label>
                   <div className="relative">
-                    <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <select
                       name="operator_id"
                       value={formData.operator_id}
@@ -700,7 +765,7 @@ export default function CreateJobCardModal({
                     Planned Qty *
                   </label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <input
                       type="number"
                       name="planned_quantity"
@@ -808,6 +873,56 @@ export default function CreateJobCardModal({
                       </span>
                     )}
                   </div>
+
+                  {showSuggestions && suggestedSlots.length > 0 && (
+                    <div className="col-span-2 bg-amber-50 p-3 rounded  border border-amber-200 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold text-amber-700 uppercase flex items-center gap-1.5">
+                          <Clock size={12} /> Available Time Slots
+                        </span>
+                        <button 
+                          type="button"
+                          onClick={() => setShowSuggestions(false)}
+                          className="text-[10px] text-amber-500 hover:text-amber-700"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2">
+                        {suggestedSlots.map((slot, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                scheduled_start_date: formatForDateTimeLocal(slot.start),
+                                scheduled_end_date: formatForDateTimeLocal(slot.end)
+                              }));
+                            }}
+                            className={`flex items-center justify-between p-2.5 rounded-md border text-xs transition-all ${
+                              formData.scheduled_start_date === formatForDateTimeLocal(slot.start)
+                                ? 'bg-amber-600 text-white border-amber-700 shadow-sm'
+                                : 'bg-white text-slate-700 border-amber-100 hover:border-amber-300 hover:bg-amber-50/50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="font-semibold">
+                                {new Date(slot.start).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              <ArrowRight size={12} className={formData.scheduled_start_date === formatForDateTimeLocal(slot.start) ? 'text-white/70' : 'text-slate-300'} />
+                              <span className="font-semibold">
+                                {new Date(slot.end).toLocaleString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            {formData.scheduled_start_date === formatForDateTimeLocal(slot.start) && (
+                              <CheckCircle2 size={14} className="text-white" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -818,7 +933,7 @@ export default function CreateJobCardModal({
               Instructions & Notes
             </label>
             <div className="relative">
-              <ClipboardList className="absolute left-3 top-3 text-slate-400" size={16} />
+              <ClipboardList className="absolute left-3 top-3 text-slate-400" size={15} />
               <textarea
                 name="notes"
                 value={formData.notes}

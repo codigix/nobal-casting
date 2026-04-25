@@ -144,7 +144,7 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
             onClick={handleApprove}
             loading={loading}
           >
-            <Save size={16} className="mr-2" />
+            <Save size={15} className="mr-2" />
             Approve & Store Stock
           </Button>
         </div>
@@ -199,7 +199,7 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
         <section className="bg-white rounded  border border-neutral-200   ">
           <div className="p-2  bg-neutral-50 border-b border-neutral-200 flex justify-between items-center">
             <h4 className=" text-neutral-800 flex items-center gap-2 text-sm">
-              <ClipboardCheck size={16} className="text-primary-600" /> 
+              <ClipboardCheck size={15} className="text-primary-600" /> 
               Material Receipt & Storage Assignment
             </h4>
             <div className="flex gap-2">

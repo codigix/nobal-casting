@@ -192,7 +192,7 @@ const SubcontractChallans = () => {
                 <option key={project} value={project}>{project}</option>
               ))}
             </select>
-            <ChevronDown className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" size={16} />
+            <ChevronDown className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" size={15} />
           </div>
         </div>
 
@@ -210,7 +210,7 @@ const SubcontractChallans = () => {
                 <option key={op} value={op}>{op}</option>
               ))}
             </select>
-            <ChevronDown className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" size={16} />
+            <ChevronDown className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" size={15} />
           </div>
         </div>
 
@@ -218,7 +218,7 @@ const SubcontractChallans = () => {
           onClick={applyFilters}
           className=" p-2 bg-slate-800 text-white rounded text-xs  hover:bg-slate-700 transition-colors flex items-center gap-2"
         >
-          <Search size={16} />
+          <Search size={15} />
           Apply Filters
         </button>
 

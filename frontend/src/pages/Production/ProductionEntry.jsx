@@ -13,6 +13,7 @@ import * as productionService from '../../services/productionService'
 import api from '../../services/api'
 import { useToast } from '../../components/ToastContainer'
 import Card from '../../components/Card/Card'
+import ResourceEngagementModal from '../../components/Production/ResourceEngagementModal'
 
 const normalizeStatus = (status) => String(status || '').toLowerCase().trim()
 const normalizeShift = (s) => String(s || '').trim().toUpperCase().replace(/^SHIFT\s+/, '');
@@ -433,7 +434,7 @@ const ProductionRibbon = ({
       {hasPreviousOp && inputAvailable < totalPlanned && (
         <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded flex items-center gap-3 text-amber-800  animate-pulse">
           <div className="p-2 bg-amber-100 rounded-full text-amber-600">
-            <ArrowRightLeft size={16} />
+            <ArrowRightLeft size={15} />
           </div>
           <div className="text-sm flex-1">
             <p className=" mb-0.5">Operation Dependency Active</p>
@@ -452,7 +453,7 @@ const ProductionRibbon = ({
         <div className="mb-3 p-3 bg-indigo-50 border border-indigo-200 rounded flex flex-col gap-3 text-indigo-800 ">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-100 rounded-full text-indigo-600">
-              <Boxes size={16} />
+              <Boxes size={15} />
             </div>
             <div className="text-sm flex-1">
               <p className=" mb-0.5">Production Constraints Active</p>
@@ -596,7 +597,7 @@ const ProductionRibbon = ({
           <div className="">
             <p className={`text-xs mb-2 ${isShipmentOp ? 'text-blue-500' : 'text-amber-500'}`}>{isShipmentOp ? 'Ready for Dispatch' : 'Ready to Transfer'}</p>
             <div className="flex items-baseline justify-left gap-1.5">
-              <span className={`text-md ${isShipmentOp ? 'text-blue-600 font-bold' : 'text-amber-600'} `}>
+              <span className={`text-md ${isShipmentOp ? 'text-blue-600 ' : 'text-amber-600'} `}>
                 {transferableQty.toLocaleString()}
               </span>
               <span className={`text-xs ${isShipmentOp ? 'text-blue-400' : 'text-amber-400'} `}>Units</span>
@@ -605,7 +606,7 @@ const ProductionRibbon = ({
           <div className="">
             <p className={`text-xs mb-2 ${isShipmentOp ? 'text-indigo-500' : 'text-indigo-500'}`}> {isShipmentOp ? 'Dispatched' : 'Transferred'} </p>
             <div className="flex items-baseline justify-left gap-1.5">
-              <span className={`text-md ${isShipmentOp ? 'text-indigo-600 font-bold' : 'text-indigo-600'} `}>
+              <span className={`text-md ${isShipmentOp ? 'text-indigo-600 ' : 'text-indigo-600'} `}>
                 {parseFloat(jobCardData?.transferred_quantity || 0).toLocaleString()}
               </span>
               <span className="text-xs  text-indigo-400 ">Units</span>
@@ -716,18 +717,18 @@ const HandoverStatusSection = ({ previousOperationData, totalPlanned, inputAvail
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-slate-400   ">Source Stage</p>
-              <h4 className="text-sm  text-slate-800">
+              <h4 className="text-xs  text-slate-800">
                 Sequence {previousOperationData.operation_sequence}: {previousOperationData.operation_name}
               </h4>
             </div>
             <div className="text-right">
-              <span className={`text-xs  p-1 rounded   ${handoverPercent >= 100 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+              <span className={`text-xs  ${handoverPercent >= 100 ? ' text-emerald-600' : ' text-amber-600'}`}>
                 {handoverPercent >= 100 ? 'Fully Transferred' : 'Partial Handover'}
               </span>
             </div>
           </div>
           
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center">
             <div className="flex-1 h-1 bg-slate-200 rounded overflow-hidden">
               <div 
                 className={`h-full transition-all duration-1000 ${handoverPercent >= 100 ? 'bg-emerald-500' : 'bg-amber-500'}`} 
@@ -741,7 +742,7 @@ const HandoverStatusSection = ({ previousOperationData, totalPlanned, inputAvail
           </p>
         </div>
 
-        <div className="grid grid-cols-4 gap-6 border-l border-slate-200 pl-6 w-full md:w-auto">
+        <div className="grid grid-cols-4 gap-2 border-l border-slate-200 pl-6 w-full md:w-auto">
           <div>
             <p className="text-xs text-slate-400    mb-1">Produced</p>
             <p className="text-md  text-slate-600 leading-none">
@@ -843,18 +844,18 @@ const UnifiedSubAssemblyStatus = ({ dependencies, buffers, bottleneck, jobCardDa
   }, [dependencies, buffers, jobCardData?.planned_quantity]);
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm mb-4 overflow-hidden">
+    <div className="bg-white rounded  border border-slate-200/60  mb-4 overflow-hidden">
       <div className="bg-slate-50/50 px-3 py-2 border-b border-slate-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-1 bg-white rounded shadow-sm text-indigo-600 border border-slate-100">
+          <div className="p-1 bg-white rounded  text-indigo-600 border border-slate-100">
             <Boxes size={14} />
           </div>
-          <h3 className="text-xs font-bold text-slate-700">Sub-Assembly & Component Flow</h3>
+          <h3 className="text-xs  text-slate-700">Sub-Assembly & Component Flow</h3>
         </div>
         {bottleneck && (
           <div className="px-2 py-0.5 bg-rose-50 border border-rose-100 rounded-full flex items-center gap-1.5 animate-pulse">
             <AlertTriangle size={10} className="text-rose-500" />
-            <span className="text-[9px] text-rose-600 font-bold uppercase">Bottleneck: {Math.floor(bottleneck.potential)} units</span>
+            <span className="text-[9px] text-rose-600  ">Bottleneck: {Math.floor(bottleneck.potential)} units</span>
           </div>
         )}
       </div>
@@ -867,20 +868,20 @@ const UnifiedSubAssemblyStatus = ({ dependencies, buffers, bottleneck, jobCardDa
           const isBottleneck = bottleneck && (item.item_name === bottleneck.name || item.item_code === bottleneck.name);
 
           return (
-            <div key={index} className={`flex flex-col p-2 rounded border transition-all ${isBottleneck ? 'bg-rose-50/40 border-rose-200 shadow-sm shadow-rose-100' : 'bg-white border-slate-100 hover:border-indigo-200'}`}>
+            <div key={index} className={`flex flex-col p-2 rounded border transition-all ${isBottleneck ? 'bg-rose-50/40 border-rose-200  shadow-rose-100' : 'bg-white border-slate-100 hover:border-indigo-200'}`}>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isBottleneck ? 'bg-rose-500 animate-pulse' : (prodProgress >= 100 ? 'bg-emerald-500' : 'bg-indigo-400')}`} />
                   <div className="flex flex-col min-w-0">
-                    <h4 className="text-[11px] font-bold text-slate-700 truncate leading-none mb-0.5" title={item.item_name}>{item.item_name}</h4>
+                    <h4 className="text-[11px]  text-slate-700 truncate leading-none mb-0.5" title={item.item_name}>{item.item_name}</h4>
                     {item.child_wo_id && (
                       <span className="text-[8px] text-slate-400 font-medium truncate">{item.child_wo_id}</span>
                     )}
                   </div>
                 </div>
                 <div className="flex flex-col items-end flex-shrink-0">
-                   <span className="text-[9px] font-bold text-slate-400 leading-none">{item.item_code.split('-').pop()}</span>
-                   <span className={`text-[8px] font-bold uppercase mt-0.5 ${item.status === 'Completed' ? 'text-emerald-600' : 'text-amber-500'}`}>{item.status}</span>
+                   <span className="text-[9px]  text-slate-400 leading-none">{item.item_code.split('-').pop()}</span>
+                   <span className={`text-[8px]   mt-0.5 ${item.status === 'Completed' ? 'text-emerald-600' : 'text-amber-500'}`}>{item.status}</span>
                 </div>
               </div>
               
@@ -888,7 +889,7 @@ const UnifiedSubAssemblyStatus = ({ dependencies, buffers, bottleneck, jobCardDa
                 <div className="flex flex-col">
                   <div className="flex justify-between text-[9px] mb-0.5 leading-none">
                     <span className="text-slate-400">Accepted</span>
-                    <span className="font-bold text-slate-600">{Math.round(item.accepted)} / {Math.round(item.required_total || item.planned)}</span>
+                    <span className=" text-slate-600">{Math.round(item.accepted)} / {Math.round(item.required_total || item.planned)}</span>
                   </div>
                   <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
                     <div 
@@ -900,7 +901,7 @@ const UnifiedSubAssemblyStatus = ({ dependencies, buffers, bottleneck, jobCardDa
                 <div className="flex flex-col">
                   <div className="flex justify-between text-[9px] mb-0.5 leading-none">
                     <span className="text-slate-400">Ready Qty</span>
-                    <span className={`font-bold ${isBottleneck ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    <span className={` ${isBottleneck ? 'text-rose-600' : 'text-emerald-600'}`}>
                       {Math.floor(item.ready_units)}
                     </span>
                   </div>
@@ -1081,6 +1082,10 @@ export default function ProductionEntry() {
   const [additionalTimeMins, setAdditionalTimeMins] = useState(0)
   const [remainingQtyForModal, setRemainingQtyForModal] = useState(0)
   const [hasPromptedContinue, setHasPromptedContinue] = useState(false)
+
+  // Conflict state
+  const [showConflictModal, setShowConflictModal] = useState(false)
+  const [conflictData, setConflictData] = useState(null)
 
   const [timeLogs, setTimeLogs] = useState([])
   const [rejections, setRejections] = useState([])
@@ -1498,11 +1503,11 @@ export default function ProductionEntry() {
                   {formatTime12H(row.from_time, row.from_period)} - {formatTime12H(row.to_time, row.to_period)}
                 </span>
                 <div className="flex items-center gap-1 mt-0.5 whitespace-nowrap">
-                  <span className="text-xs text-indigo-500 font-semibold" title="Production Time">
+                  <span className="text-xs text-indigo-500 " title="Production Time">
                     {row.time_in_minutes || 0}
                   </span>
                   {shiftDowntime > 0 && (
-                    <span className="text-xs text-amber-500 font-semibold" title="Machine Breakdown (Downtime)">
+                    <span className="text-xs text-amber-500 " title="Machine Breakdown (Downtime)">
                       + {shiftDowntime}
                     </span>
                   )}
@@ -1922,7 +1927,7 @@ export default function ProductionEntry() {
           />
         ) : (
           <div className="flex flex-col items-end">
-            <span className="text-indigo-600 font-semibold text-xs">{val || 0}</span>
+            <span className="text-indigo-600  text-xs">{val || 0}</span>
             <span className="text-[8px] text-slate-400  ">Minutes</span>
           </div>
         );
@@ -1957,7 +1962,7 @@ export default function ProductionEntry() {
           />
         ) : (
           <div className="flex flex-col items-end">
-            <span className="text-slate-900 font-semibold text-xs">{parseFloat(val || 0).toLocaleString()}</span>
+            <span className="text-slate-900  text-xs">{parseFloat(val || 0).toLocaleString()}</span>
             <span className="text-[8px] text-slate-400   font-medium">Gross Total</span>
           </div>
         );
@@ -2041,7 +2046,7 @@ export default function ProductionEntry() {
       align: 'right',
       render: (val) => (
         <div className="flex flex-col items-end">
-          <span className="text-amber-600 font-semibold text-xs">
+          <span className="text-amber-600  text-xs">
             ₹{(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
           <span className="text-[8px] text-slate-400  ">Production Cost</span>
@@ -2054,7 +2059,7 @@ export default function ProductionEntry() {
       align: 'right',
       render: (val) => (
         <div className="flex flex-col items-end">
-          <span className={`font-semibold text-xs ${val > 0 ? 'text-rose-600' : val < 0 ? 'text-emerald-600' : 'text-slate-600'}`}>
+          <span className={` text-xs ${val > 0 ? 'text-rose-600' : val < 0 ? 'text-emerald-600' : 'text-slate-600'}`}>
             {val > 0 ? '+' : ''}₹{Math.abs(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
           <span className="text-[8px] text-slate-400  ">+/- Cost</span>
@@ -2400,7 +2405,12 @@ export default function ProductionEntry() {
           await productionService.updateJobCard(jobCard.job_card_id, updateData)
           jobCard.status = 'in-progress'
         } catch (startErr) {
-          console.warn('Failed to auto-start job card:', startErr.message);
+          if (startErr.response?.status === 409 && startErr.response?.data?.conflict) {
+            setConflictData(startErr.response.data.conflict)
+            setShowConflictModal(true)
+          } else {
+            console.warn('Failed to auto-start job card:', startErr.message);
+          }
           // Don't block the page load, just don't set to in-progress
         }
       }
@@ -3014,22 +3024,19 @@ export default function ProductionEntry() {
 
       const isJobActive = ['ready', 'pending', 'in-progress', 'open', 'completed'].includes(normalizeStatus(jobCardData?.status));
 
-      // Allow entries before/after schedule if job is active/started, just log a warning
+      // Allow entries before/after schedule but log a warning - reality often drifts from schedule
       if (entryStart && entryStart < scheduledStart) {
+        console.warn(`Production entry before schedule: ${entryStart.toLocaleString()} < ${scheduledStart.toLocaleString()}`);
         if (!isJobActive) {
-          toast.addToast(`Time Error: The entry cannot start before the scheduled time (${scheduledStart.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'error');
-          return;
-        } else {
-          console.warn(`Production entry before schedule: ${entryStart.toLocaleString()} < ${scheduledStart.toLocaleString()}`);
+          toast.addToast(`Time Alert: This work is starting earlier than planned (scheduled for ${scheduledStart.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'warning');
         }
       }
 
       if (scheduledEnd && entryEnd && entryEnd > scheduledEnd) {
+        console.warn(`Production entry after schedule: ${entryEnd.toLocaleString()} > ${scheduledEnd.toLocaleString()}`);
         if (!isJobActive) {
-          toast.addToast(`Time Error: The entry cannot end after the scheduled time (${scheduledEnd.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'error');
-          return;
-        } else {
-          console.warn(`Production entry after schedule: ${entryEnd.toLocaleString()} > ${scheduledEnd.toLocaleString()}`);
+          const scheduledStr = scheduledEnd.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
+          toast.addToast(`Schedule Notice: This work is being logged until ${entryEnd.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}, which is later than the original plan (${scheduledStr}). We have updated the records, but please ensure this matches the actual physical completion time.`, 'warning');
         }
       }
     }
@@ -3100,8 +3107,8 @@ export default function ProductionEntry() {
       `Material Shortage: Total units processed (${projectedTotalProcessed.toLocaleString()}) would exceed the available material limit (${materialLimit.toLocaleString()}).` :
       `Production Limit: Total units processed (${projectedTotalProcessed.toLocaleString()}) would exceed the planned quantity plus rejections.`;
     
-    toast.addToast(`${reason} (Already processed: ${totalProducedQty.toLocaleString()})`, 'error');
-    return;
+    toast.addToast(`${reason} (Already processed: ${totalProducedQty.toLocaleString()})`, 'warning');
+    // Downgraded to warning for now per user request
   }
 
     // Flow Manufacturing: Buffer Bottleneck Logic
@@ -3119,8 +3126,7 @@ export default function ProductionEntry() {
       });
 
       if (inputQty > minBottleneck + 0.001) {
-        toast.addToast(`Missing Materials: You only have ${minBottleneck.toLocaleString()} units of '${bottleneckItem}' available. Please transfer more units from the previous stage.`, 'error');
-        return;
+        toast.addToast(`Material Shortage: You only have ${minBottleneck.toLocaleString()} units of '${bottleneckItem}' available. You can still save this, but please verify stock levels.`, 'warning');
       }
     }
 
@@ -3182,8 +3188,13 @@ export default function ProductionEntry() {
       toast.addToast(`Time log added successfully.${overlappingDowntimes.length > 0 ? ` Deducted ${durationMins - actualProductionMinutes} mins downtime.` : ''}`, 'success')
       fetchAllData()
     } catch (err) {
-      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to add time log';
-      toast.addToast(errorMsg, 'error')
+      if (err.response?.status === 409 && err.response?.data?.conflict) {
+        setConflictData(err.response.data.conflict)
+        setShowConflictModal(true)
+      } else {
+        const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to add time log';
+        toast.addToast(errorMsg, 'error')
+      }
     } finally {
       setFormLoading(false)
     }
@@ -3224,8 +3235,8 @@ export default function ProductionEntry() {
     const projectedTotalProcessed = totalProducedQty + shiftImpact;
 
     if (projectedTotalProcessed > materialLimit + 0.001) {
-      toast.addToast(`Material Shortage: Total units processed (${projectedTotalProcessed.toLocaleString()}) would exceed the available material limit (${materialLimit.toLocaleString()}).`, 'error');
-      return;
+      toast.addToast(`Material Shortage: Total units processed (${projectedTotalProcessed.toLocaleString()}) would exceed the available material limit (${materialLimit.toLocaleString()}).`, 'warning');
+      // Downgraded to warning for now per user request
     }
 
     // Validation: Scheduled Date Range Check
@@ -3240,22 +3251,18 @@ export default function ProductionEntry() {
       entryDate.setHours(0, 0, 0, 0);
 
       if (entryDate < scheduledStart) {
+        console.warn(`Quality entry before schedule: ${entryDate.toLocaleDateString()} < ${scheduledStart.toLocaleDateString()}`);
         const isJobInProgress = normalizeStatus(jobCardData?.status) === 'in-progress';
         if (!isJobInProgress) {
-          toast.addToast(`Quality entry date cannot be before scheduled start date (${scheduledStart.toLocaleDateString()})`, 'error');
-          return;
-        } else {
-          console.warn(`Quality entry before schedule: ${entryDate.toLocaleDateString()} < ${scheduledStart.toLocaleDateString()}`);
+          toast.addToast(`Schedule Alert: Quality check date is before the planned start (${scheduledStart.toLocaleDateString()})`, 'warning');
         }
       }
 
       if (scheduledEnd && entryDate > scheduledEnd) {
+        console.warn(`Quality entry after schedule: ${entryDate.toLocaleDateString()} > ${scheduledEnd.toLocaleDateString()}`);
         const isJobInProgress = normalizeStatus(jobCardData?.status) === 'in-progress';
         if (!isJobInProgress) {
-          toast.addToast(`Quality entry date cannot be after scheduled end date (${scheduledEnd.toLocaleDateString()})`, 'error');
-          return;
-        } else {
-          console.warn(`Quality entry after schedule: ${entryDate.toLocaleDateString()} > ${scheduledEnd.toLocaleDateString()}`);
+          toast.addToast(`Schedule Notice: This quality check is being logged for ${entryDate.toLocaleDateString()}, which is after the planned completion date (${scheduledEnd.toLocaleDateString()}).`, 'warning');
         }
       }
     }
@@ -3330,23 +3337,19 @@ export default function ProductionEntry() {
       const scheduledEnd = jobCardData?.scheduled_end_date ? new Date(jobCardData.scheduled_end_date) : null;
 
       if (entryStart && entryStart < scheduledStart) {
+        console.warn(`Downtime entry before schedule: ${entryStart.toLocaleString()} < ${scheduledStart.toLocaleString()}`);
         const isJobInProgress = normalizeStatus(jobCardData?.status) === 'in-progress';
         if (!isJobInProgress) {
-          toast.addToast(`Downtime start time (${entryStart.toLocaleString('en-IN')}) cannot be before the scheduled start (${scheduledStart.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'error');
-          return;
-        } else {
-          console.warn(`Downtime entry before schedule: ${entryStart.toLocaleString()} < ${scheduledStart.toLocaleString()}`);
+          toast.addToast(`Schedule Alert: Downtime starts before the planned start (${scheduledStart.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'warning');
         }
       }
 
       if (scheduledEnd && entryEnd && entryEnd > scheduledEnd) {
+        console.warn(`Downtime entry after schedule: ${entryEnd.toLocaleString()} > ${scheduledEnd.toLocaleString()}`);
         const isJobInProgress = normalizeStatus(jobCardData?.status) === 'in-progress';
         if (!isJobInProgress) {
-          toast.addToast(`Downtime end time (${entryEnd.toLocaleString('en-IN')}) cannot be after the scheduled end (${scheduledEnd.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'error');
-          return;
-        } else {
-          // Allow as warning for downtimes during in-progress jobs after schedule
-          console.warn(`Downtime entry after schedule: ${entryEnd.toLocaleString()} > ${scheduledEnd.toLocaleString()}`);
+          const scheduledStr = scheduledEnd.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+          toast.addToast(`Schedule Notice: This downtime is being logged until ${entryEnd.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}, which is later than the original plan (${scheduledStr}). We have updated the records, but please ensure this matches the actual physical completion time.`, 'warning');
         }
       }
     }
@@ -3475,6 +3478,65 @@ export default function ProductionEntry() {
     setEditForm({ ...item });
   }
 
+  // Conflict Resolution Handlers
+  const handleApplyNextAvailable = async (slot) => {
+    try {
+      if (!jobCardId || !slot) return;
+
+      setFormLoading(true);
+      await productionService.updateJobCard(jobCardId, {
+        scheduled_start_date: slot.start,
+        scheduled_end_date: slot.end,
+        status: 'in-progress' // Retry the start
+      });
+
+      toast.addToast(`Rescheduled to ${new Date(slot.start).toLocaleString()} and started`, 'success');
+      setShowConflictModal(false);
+      setConflictData(null);
+      fetchAllData();
+    } catch (err) {
+      toast.addToast(err.message || 'Failed to reschedule', 'error');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleApplyAlternative = async (resource) => {
+    try {
+      if (!jobCardId || !resource) return;
+
+      setFormLoading(true);
+      const updateData = { status: 'in-progress' };
+      if (conflictData.resource_type === 'machine') {
+        updateData.machine_id = resource.name;
+      } else {
+        updateData.operator_id = resource.name;
+      }
+
+      await productionService.updateJobCard(jobCardId, updateData);
+
+      toast.addToast(`Switched to ${resource.workstation_name || resource.name} and started`, 'success');
+      setShowConflictModal(false);
+      setConflictData(null);
+      fetchAllData();
+    } catch (err) {
+      toast.addToast(err.message || 'Failed to switch resource', 'error');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const [notifyingResourceId, setNotifyingResourceId] = useState(null);
+  const handleNotifyWhenAvailable = async (resourceId) => {
+    try {
+      setNotifyingResourceId(resourceId);
+      await new Promise(resolve => setTimeout(resolve, 800));
+      toast.addToast(`We'll notify you as soon as ${resourceId} is free.`, 'info');
+    } catch (err) {
+      toast.addToast('Failed to set alert', 'error');
+    }
+  };
+
   const handleCancelInlineEdit = () => {
     setEditingId(null);
     setEditingType(null);
@@ -3507,8 +3569,7 @@ export default function ProductionEntry() {
             // Simple check for now: if we are increasing, check against limit
             // (Strictly we should use the shiftMap logic, but totalProducedQty + diff is a safe upper bound)
             if (totalProducedQty + diff > materialLimit + 0.001) {
-                toast.addToast(`Material Shortage: Increasing this log would exceed the material limit of ${materialLimit.toLocaleString()}.`, 'error');
-                return;
+                toast.addToast(`Material Shortage: Increasing this log would exceed the material limit of ${materialLimit.toLocaleString()}. Please verify stock later.`, 'warning');
             }
         }
 
@@ -3522,8 +3583,7 @@ export default function ProductionEntry() {
         
         if (diff > 0) {
             if (totalProducedQty + diff > materialLimit + 0.001) {
-                toast.addToast(`Material Shortage: Increasing this quality entry would exceed the material limit of ${materialLimit.toLocaleString()}.`, 'error');
-                return;
+                toast.addToast(`Material Shortage: Increasing this quality entry would exceed the material limit of ${materialLimit.toLocaleString()}. Please verify stock later.`, 'warning');
             }
         }
         await productionService.updateRejection(editingId, editForm);
@@ -3706,7 +3766,12 @@ export default function ProductionEntry() {
         fetchAllData()
       }
     } catch (err) {
-      toast.addToast(err.message || 'Failed to update production', 'error')
+      if (err.response?.status === 409 && err.response?.data?.conflict) {
+        setConflictData(err.response.data.conflict)
+        setShowConflictModal(true)
+      } else {
+        toast.addToast(err.message || 'Failed to update production', 'error')
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -3789,7 +3854,12 @@ export default function ProductionEntry() {
       toast.addToast(isShipmentOp ? `Items dispatched successfully` : `Units transferred to ${targetOpName} successfully`, 'success')
       fetchAllData()
     } catch (err) {
-      toast.addToast(err.message || 'Failed to transfer units', 'error')
+      if (err.response?.status === 409 && err.response?.data?.conflict) {
+        setConflictData(err.response.data.conflict)
+        setShowConflictModal(true)
+      } else {
+        toast.addToast(err.message || 'Failed to transfer units', 'error')
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -3857,7 +3927,12 @@ export default function ProductionEntry() {
       toast.addToast(`Units transferred to ${selectedOp.operation_name || selectedOp.name} successfully`, 'success');
       fetchAllData();
     } catch (err) {
-      toast.addToast(err.message || 'Failed to transfer units', 'error');
+      if (err.response?.status === 409 && err.response?.data?.conflict) {
+        setConflictData(err.response.data.conflict)
+        setShowConflictModal(true)
+      } else {
+        toast.addToast(err.message || 'Failed to transfer units', 'error');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -4212,7 +4287,7 @@ export default function ProductionEntry() {
                 const efficiency = actualMinutes > 0 ? ((expectedMinutes / actualMinutes) * 100).toFixed(0) : 0
 
                 return !isShipmentOp ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-4">
                     <StatCard label="Efficiency" value={`${efficiency}%`} icon={Activity} color={efficiency >= 90 ? 'emerald' : efficiency >= 75 ? 'amber' : 'rose'} subtitle={`${actualMinutes.toFixed(0)} / ${expectedMinutes.toFixed(0)} MIN`} />
                     <StatCard label="Quality Yield" value={`${qualityScore}%`} icon={ShieldCheck} color={hasPendingApproval ? 'amber' : (qualityScore >= 98 ? 'emerald' : 'amber')} subtitle={hasPendingApproval ? "PENDING APPROVAL" : "ACCEPTANCE RATE"} />
                     <StatCard label="Productivity" value={actualMinutes > 0 ? ((totalAcceptedQty / (actualMinutes / 60)).toFixed(1)) : '0'} icon={Boxes} color="indigo" subtitle="UNITS PER HOUR" />
@@ -4235,7 +4310,7 @@ export default function ProductionEntry() {
               )}
             </div>
 
-            <div className="col-span-12 space-y-2 pb-20">
+            <div className="col-span-12 space-y-2">
               {!isShipmentOp && (
                 <>
                   <div id="time-logs" className="bg-white rounded  border border-slate-100 p-2 scroll-mt-6">
@@ -4253,7 +4328,7 @@ export default function ProductionEntry() {
                     if (shiftDowntime === 0) return null;
 
                     return (
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded  text-amber-700 animate-in fade-in slide-in-from-right-4 duration-500">
+                      <div className="flex items-center gap-2 p-1 bg-amber-50 border border-amber-100 rounded  text-amber-700 animate-in fade-in slide-in-from-right-4 duration-500">
                         <AlertTriangle size={14} className="animate-pulse" />
                         <span className="text-xs   tracking-tight">Shift Downtime:</span>
                         <span className="text-xs ">{shiftDowntime} mins</span>
@@ -4292,18 +4367,17 @@ export default function ProductionEntry() {
                           <input 
                             type="number" 
                             step="0.01" 
-                            max={readyQty}
                             value={timeLogForm.completed_qty} 
                             onChange={(e) => {
                               const val = parseFloat(e.target.value) || 0;
-                              if (val > readyQty) {
-                                toast.addToast(`Quantity exceeds available material (${readyQty} units)`, 'warning');
+                              if (val > readyQty + 0.001) {
+                                toast.addToast(`Note: Quantity exceeds estimated available material (${readyQty.toLocaleString()} units). You can still save it, but please verify stock levels.`, 'warning');
                               }
                               setTimeLogForm({ ...timeLogForm, completed_qty: e.target.value });
                             }} 
-                            className={`w-full p-2 bg-white border rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${parseFloat(timeLogForm.completed_qty) > readyQty ? 'border-rose-500 text-rose-600' : 'border-slate-200 text-slate-700'}`} 
+                            className={`w-full p-2 bg-white border rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${parseFloat(timeLogForm.completed_qty) > readyQty + 0.001 ? 'border-amber-500 text-amber-600' : 'border-slate-200 text-slate-700'}`} 
                             required 
-                            title={`Maximum allowed: ${readyQty} units`}
+                            title={readyQty < Infinity ? `Estimated availability: ${readyQty.toLocaleString()} units` : 'No availability limit'}
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">units</span>
                         </div>
@@ -4316,7 +4390,7 @@ export default function ProductionEntry() {
                 {hasSubAssemblies && (
                            <div className="my-1.5 flex items-center gap-1.5 p-1.5 bg-indigo-50 rounded border border-indigo-100 text-[10px] text-indigo-600 font-medium animate-in fade-in zoom-in duration-300">
                              <Boxes size={12} className="shrink-0" />
-                             <span>Capped by component availability: <b>{readyQty.toLocaleString()} units</b></span>
+                             <span>Estimated component availability: <b>{readyQty.toLocaleString()} units</b></span>
                            </div>
                         )}
                 <DataTable columns={timeLogColumns} data={timeLogs} renderActions={(row) => renderTableActions(row, 'timeLog')} />
@@ -4621,24 +4695,24 @@ export default function ProductionEntry() {
           <div id="next-operation" className="bg-white rounded  border border-slate-100 p-2 scroll-mt-6">
                 <SectionTitle title="Next Stage Configuration" icon={ArrowRight} subtitle="Specify destination and operational parameters for the next manufacturing phase" />
                 {isShipmentOp && planFulfillmentStatus && (
-                  <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                  <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded ">
                     <div className="flex items-center justify-between mb-4">
                        <div>
-                         <h4 className="text-sm font-bold text-slate-800">Overall Production Plan Status</h4>
+                         <h4 className="text-sm  text-slate-800">Overall Production Plan Status</h4>
                          <p className="text-xs text-slate-500">Validation across all work orders in plan: {jobCardData.production_plan_id}</p>
                        </div>
-                       <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${planFulfillmentStatus.allReady ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-700 border border-amber-200'}`}>
+                       <div className={`px-3 py-1 rounded-full text-[10px]   tracking-wider ${planFulfillmentStatus.allReady ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-700 border border-amber-200'}`}>
                          {planFulfillmentStatus.allReady ? 'Ready for Dispatch' : 'Production Incomplete'}
                        </div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {planFulfillmentStatus.woGroups.map((group, idx) => (
-                        <div key={idx} className="p-3 bg-white border border-slate-100 rounded shadow-sm hover:border-indigo-100 transition-colors">
+                        <div key={idx} className="p-3 bg-white border border-slate-100 rounded  hover:border-indigo-100 transition-colors">
                           <div className="flex justify-between items-start mb-2">
                             <div className="min-w-0">
-                              <p className="text-[10px] text-slate-400 font-medium truncate uppercase">{group.item_code}</p>
-                              <h5 className="text-xs font-bold text-slate-700 truncate" title={group.item_name}>{group.item_name}</h5>
+                              <p className="text-[10px] text-slate-400 font-medium truncate ">{group.item_code}</p>
+                              <h5 className="text-xs  text-slate-700 truncate" title={group.item_name}>{group.item_name}</h5>
                             </div>
                             {group.is_ready ? (
                               <div className="bg-emerald-100 p-1 rounded-full"><CheckCircle2 size={14} className="text-emerald-600" /></div>
@@ -4649,12 +4723,12 @@ export default function ProductionEntry() {
                           <div className="flex justify-between items-end">
                             <div className="flex flex-col">
                               <span className="text-[10px] text-slate-400 font-medium">Ready Qty</span>
-                              <span className={`text-sm font-bold ${group.is_ready ? 'text-emerald-600' : 'text-slate-700'}`}>
+                              <span className={`text-sm  ${group.is_ready ? 'text-emerald-600' : 'text-slate-700'}`}>
                                 {group.total_accepted.toFixed(0)} <span className="text-[10px] text-slate-400 font-normal">/ {group.total_planned.toFixed(0)}</span>
                               </span>
                             </div>
                             <div className="text-right">
-                               <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter ${
+                               <span className={`text-[9px] px-1.5 py-0.5 rounded   tracking-tighter ${
                                  normalizeStatus(group.status) === 'completed' ? 'bg-emerald-50 text-emerald-600' : 
                                  normalizeStatus(group.status) === 'in-progress' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-500'
                                }`}>
@@ -4668,10 +4742,10 @@ export default function ProductionEntry() {
 
                     {!planFulfillmentStatus.allReady && (
                       <div className="mt-4 p-2 bg-amber-50 border border-amber-100 rounded-md flex items-center gap-3 text-amber-700">
-                        <div className="bg-amber-500 text-white p-1 rounded-full shadow-sm">
+                        <div className="bg-amber-500 text-white p-1 rounded-full ">
                           <AlertTriangle size={14} />
                         </div>
-                        <p className="text-xs font-semibold">Production plan is not fully fulfilled. Full dispatch is disabled to prevent shipping errors.</p>
+                        <p className="text-xs ">Production plan is not fully fulfilled. Full dispatch is disabled to prevent shipping errors.</p>
                       </div>
                     )}
                   </div>
@@ -4833,7 +4907,7 @@ export default function ProductionEntry() {
                                     className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20"
                                     max={transferableQty}
                                   />
-                                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-slate-500 font-bold pointer-events-none group-focus-within:border-indigo-200 group-focus-within:bg-indigo-50 group-focus-within:text-indigo-600 transition-colors">
+                                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-slate-500  pointer-events-none group-focus-within:border-indigo-200 group-focus-within:bg-indigo-50 group-focus-within:text-indigo-600 transition-colors">
                                      Ready: {transferableQty.toFixed(0)}
                                   </div>
                                 </div>
@@ -4845,7 +4919,7 @@ export default function ProductionEntry() {
                           ) : (
                             <div className="col-span-12 md:col-span-4">
                               <FieldWrapper label="Dispatch Quantity">
-                                <div className={`p-2 border rounded text-xs font-bold flex items-center justify-between ${planFulfillmentStatus?.allReady ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                                <div className={`p-2 border rounded text-xs  flex items-center justify-between ${planFulfillmentStatus?.allReady ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
                                   <span>{transferableQty.toFixed(0)} Units (Full)</span>
                                   {planFulfillmentStatus?.allReady && <CheckCircle2 size={12} />}
                                 </div>
@@ -4930,7 +5004,7 @@ export default function ProductionEntry() {
                         }}
                         className="flex items-center gap-2 p-2 bg-rose-600 text-white rounded text-xs hover:bg-rose-700 transition-all shadow-lg shadow-rose-100"
                       >
-                        <FileText size={16} />
+                        <FileText size={15} />
                         Create Outward Challan
                       </button>
                     )}
@@ -4947,7 +5021,7 @@ export default function ProductionEntry() {
                         : (transferableQty > 0 ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200' : 'bg-slate-300 cursor-not-allowed shadow-none')
                         }`}
                     >
-                      {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded  animate-spin" /> : (isOperationFinished ? <CheckCircle2 size={20} /> : <ArrowRight size={20} />)}
+                      {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded  animate-spin" /> : (isOperationFinished ? <CheckCircle2 size={15} /> : <ArrowRight size={15} />)}
                       {isShipmentOp ? 
                         (shipmentForm.is_partial 
                           ? `Dispatch ${parseFloat(shipmentForm.dispatch_qty || 0).toFixed(0)} Units (Partial)` 
@@ -5072,7 +5146,7 @@ export default function ProductionEntry() {
         <div className="space-y-4">
           <div className="flex items-start gap-4 p-4 bg-amber-50 rounded border border-amber-200">
             <div className="p-2 bg-amber-200 rounded text-amber-700 mt-1">
-              <AlertTriangle size={20} />
+              <AlertTriangle size={15} />
             </div>
             <div>
               <h4 className=" text-amber-900">Machine allocation time has passed!</h4>
@@ -5109,6 +5183,18 @@ export default function ProductionEntry() {
         </div>
       </Modal>
 
+      {/* Conflict Modal */}
+      <ResourceEngagementModal 
+        isOpen={showConflictModal}
+        onClose={() => setShowConflictModal(false)}
+        conflictData={conflictData}
+        jobCard={jobCardData}
+        onApplyNextAvailable={handleApplyNextAvailable}
+        onApplyAlternative={handleApplyAlternative}
+        onNotifyWhenAvailable={handleNotifyWhenAvailable}
+        onViewAllSchedules={() => navigate('/manufacturing/job-cards?tab=scheduling')}
+        notifyingResourceId={notifyingResourceId}
+      />
     </div>
   )
 }

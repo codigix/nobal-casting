@@ -418,7 +418,7 @@ export default function ProjectDetails() {
                     <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded flex items-center justify-center">
-                          <ShoppingCart size={16} />
+                          <ShoppingCart size={15} />
                         </div>
                         <div>
                           <p className="text-[10px]  text-slate-400  leading-none mb-1">Last Request</p>
@@ -580,10 +580,10 @@ export default function ProjectDetails() {
                 <h4 className="text-lg  text-slate-900 m-0 ">Production Workflow Analysis</h4>
                 <p className="text-xs text-slate-500 font-medium mt-1  ">Status of operations across all manufacturing phases</p>
               </div>
-              <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded  border border-slate-200">
                 <span className="text-[10px]  text-slate-400  tracking-widest pl-2">Filter Item:</span>
                 <select 
-                  className="bg-white border border-slate-200 rounded px-3 py-1.5 text-xs  text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all cursor-pointer min-w-[200px]"
+                  className="bg-white border border-slate-200 rounded p-1 text-xs  text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all cursor-pointer min-w-[200px]"
                   value={selectedItemForStages}
                   onChange={(e) => setSelectedItemForStages(e.target.value)}
                 >
@@ -755,7 +755,7 @@ export default function ProjectDetails() {
                 <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-1">Production Yield</p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold text-emerald-600">{yieldRate}%</h3>
-                  <TrendingUp size={16} className="text-emerald-500" />
+                  <TrendingUp size={15} className="text-emerald-500" />
                 </div>
               </div>
               <div className="bg-white p-4 rounded border border-slate-200">
@@ -986,7 +986,7 @@ export default function ProjectDetails() {
               <div className="bg-white rounded border border-slate-200 overflow-hidden">
                 <div className="p-4 border-b border-slate-100">
                   <h4 className="text-sm  text-slate-900 m-0 font-semibold flex items-center gap-2">
-                    <Truck size={16} className="text-indigo-600" /> Dispatch Events (Production)
+                    <Truck size={15} className="text-indigo-600" /> Dispatch Events (Production)
                   </h4>
                 </div>
                 <div className="p-0">
@@ -1027,7 +1027,7 @@ export default function ProjectDetails() {
               <div className="bg-white rounded border border-slate-200 overflow-hidden">
                 <div className="p-4 border-b border-slate-100">
                   <h4 className="text-sm  text-slate-900 m-0 font-semibold flex items-center gap-2">
-                    <Package size={16} className="text-blue-600" /> Delivery Challans / Official Orders
+                    <Package size={15} className="text-blue-600" /> Delivery Challans / Official Orders
                   </h4>
                 </div>
                 <div className="p-0">

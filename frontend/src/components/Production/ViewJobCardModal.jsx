@@ -88,17 +88,19 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
   }
 
   const statusWorkflow = {
-    'draft': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
-    'planned': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
-    'ready': ['pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
+    'draft': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor', 'shipped'],
+    'planned': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor', 'shipped'],
+    'ready': ['pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor', 'shipped'],
     'sent-to-vendor': ['partially-received', 'received', 'completed', 'hold', 'cancelled'],
     'partially-received': ['received', 'completed', 'hold', 'cancelled'],
     'received': ['completed', 'hold', 'cancelled'],
-    'in-progress': ['completed', 'hold', 'cancelled'],
+    'in-progress': ['completed', 'hold', 'cancelled', 'shipped'],
     'hold': ['in-progress', 'completed', 'cancelled', 'sent-to-vendor', 'received'],
-    'completed': ['completed'],
-    'open': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
-    'pending': ['ready', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
+    'completed': ['completed', 'shipped'],
+    'shipped': ['delivered', 'completed', 'cancelled'],
+    'delivered': ['delivered'],
+    'open': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor', 'shipped'],
+    'pending': ['ready', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor', 'shipped'],
     'cancelled': ['cancelled']
   }
 
@@ -121,13 +123,15 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
     if (nextStatus === 'in-progress') {
       const executionMode = (jobCard?.execution_mode || '').toUpperCase().trim();
       const isOutsource = executionMode === 'OUTSOURCE' || executionMode === 'SUBCONTRACT';
+      const operation = (jobCard?.operation || '').toLowerCase();
+      const isShipment = operation.includes('shipment') || operation.includes('dispatch') || operation.includes('delivery') || jobCard?.is_shipment;
 
       if (!isOutsource) {
         if (!jobCard?.operator_id) {
           toast.addToast('Please assign an operator before starting the job card', 'error');
           return;
         }
-        if (!jobCard?.machine_id) {
+        if (!jobCard?.machine_id && !isShipment) {
           toast.addToast('Please assign a workstation before starting the job card', 'error');
           return;
         }
@@ -506,13 +510,13 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                 </div>
                 <div className="p-2 bg-indigo-50/50 rounded border border-indigo-100">
                   <p className="text-[10px] text-indigo-600 font-medium mb-1">Production Start</p>
-                  <p className="text-xs text-indigo-900 font-semibold">
+                  <p className="text-xs text-indigo-900 ">
                     {metrics?.productionStartDisplay}
                   </p>
                 </div>
                 <div className="p-2 bg-amber-50/50 rounded border border-amber-100">
                   <p className="text-[10px] text-amber-600 font-medium mb-1">Estimated End</p>
-                  <p className="text-xs text-amber-900 font-semibold">
+                  <p className="text-xs text-amber-900 ">
                     {metrics?.estimatedEndDisplay}
                   </p>
                 </div>
@@ -553,7 +557,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="bg-indigo-50 p-1.5 rounded text-indigo-600">
-                      <Layers size={16} />
+                      <Layers size={15} />
                     </div>
                     <div>
                       <h4 className="text-xs  text-slate-800">Sub-Assembly Readiness</h4>
@@ -655,19 +659,19 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-2 bg-white rounded border border-amber-100">
                     <p className="text-[10px] text-amber-600   mb-1">Assigned Vendor</p>
-                    <p className="text-xs text-gray-900 font-semibold">{jobCard?.vendor_name || 'N/A'}</p>
+                    <p className="text-xs text-gray-900 ">{jobCard?.vendor_name || 'N/A'}</p>
                   </div>
                   <div className="p-2 bg-white rounded border border-amber-100">
                     <p className="text-[10px] text-amber-600   mb-1">Dispatch Status</p>
-                    <p className="text-xs text-gray-900 font-semibold">{jobCard?.subcontract_status?.replace(/_/g, ' ') || 'DRAFT'}</p>
+                    <p className="text-xs text-gray-900 ">{jobCard?.subcontract_status?.replace(/_/g, ' ') || 'DRAFT'}</p>
                   </div>
                   <div className="p-2 bg-white rounded border border-amber-100">
                     <p className="text-[10px] text-amber-600   mb-1">Sent Qty</p>
-                    <p className="text-xs text-gray-900 font-semibold">{jobCard?.sent_qty || 0} Units</p>
+                    <p className="text-xs text-gray-900 ">{jobCard?.sent_qty || 0} Units</p>
                   </div>
                   <div className="p-2 bg-white rounded border border-amber-100">
                     <p className="text-[10px] text-amber-600   mb-1">Received Qty</p>
-                    <p className="text-xs text-gray-900 font-semibold">{jobCard?.received_qty || 0} Units</p>
+                    <p className="text-xs text-gray-900 ">{jobCard?.received_qty || 0} Units</p>
                   </div>
                 </div>
               </div>

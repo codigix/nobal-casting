@@ -130,7 +130,7 @@ export default function ReceivePurchaseOrderModal({ isOpen, onClose, onSuccess, 
               disabled={loading || totalQty <= 0}
               className="px-8 shadow-blue-100 flex items-center gap-2"
             >
-              {loading ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+              {loading ? <RefreshCw size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
               Confirm Receipt & Update Stock
             </Button>
           </div>

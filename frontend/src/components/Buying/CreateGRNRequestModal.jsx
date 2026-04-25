@@ -149,7 +149,7 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
               <div className="px-5 py-4 border-b border-neutral-100 bg-neutral-50/30 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-blue-100 text-blue-600 rounded ">
-                    <Package size={16} />
+                    <Package size={15} />
                   </div>
                   <h3 className="text-xs  text-neutral-800 ">Inspection Queue</h3>
                 </div>

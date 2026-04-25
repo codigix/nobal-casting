@@ -1240,10 +1240,12 @@ export default function ProductionPlanning() {
 
         for (const item of items || []) {
           const itemBalance = balances.find(b => b.item_code === item.item_code)
-          const availableQty = itemBalance ? parseFloat(itemBalance.available_qty || itemBalance.current_qty || 0) : 0
+          const currentQty = itemBalance ? parseFloat(itemBalance.current_qty || 0) : 0
+          const availableQty = itemBalance ? parseFloat(itemBalance.available_qty || 0) : 0
           const requested = item.requested_qty || item.quantity || item.qty || 0
 
           stockInfo[item.item_code] = {
+            physical: currentQty,
             available: availableQty,
             requested: requested,
             isAvailable: availableQty > 0 && availableQty >= requested,
@@ -1481,7 +1483,7 @@ export default function ProductionPlanning() {
               onClick={handleTruncate}
               className="group flex items-center gap-2 px-5 py-2 text-rose-600 hover:bg-rose-50 rounded  transition-all text-xs    border border-transparent hover:border-rose-100"
             >
-              <Trash2 size={16} className="group-hover:rotate-12 transition-transform" />
+              <Trash2 size={15} className="group-hover:rotate-12 transition-transform" />
               CLear Data
             </button>
             <button
@@ -1841,9 +1843,9 @@ Create Production Plan            </button>
                   className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded  hover:bg-slate-800 shadow  shadow-slate-200 transition-all text-xs    disabled:opacity-50"
                 >
                   {creatingWorkOrder ? (
-                    <Loader size={16} className="animate-spin" />
+                    <Loader size={15} className="animate-spin" />
                   ) : (
-                    <Zap size={16} />
+                    <Zap size={15} />
                   )}
                   {creatingWorkOrder ? 'Implementing...' : 'Initiate Production'}
                 </button>
@@ -2014,8 +2016,9 @@ Create Production Plan            </button>
                       <tr className="bg-gray-50 border-b border-gray-100">
                         <th className="p-2 text-xs text-gray-400 ">Component Intelligence</th>
                         <th className="p-2 text-xs text-gray-400 text-right">Required</th>
-                        <th className="p-2 text-xs text-gray-400 text-right w-24">To Request</th>
-                        <th className="p-2 text-xs text-gray-400 text-right">Inventory</th>
+                        <th className="p-2 text-xs text-gray-400 text-right">To Request</th>
+                        <th className="p-2 text-xs text-gray-400 text-right">Physical</th>
+                        <th className="p-2 text-xs text-gray-400 text-right">Available</th>
                         <th className="p-2 text-xs text-gray-400 text-center">Status</th>
                         <th className="p-2 text-xs text-gray-400 text-center">Actions</th>
                       </tr>
@@ -2091,6 +2094,9 @@ Create Production Plan            </button>
                                 />
                               </td>
                               <td className="p-2 text-right text-xs text-gray-900">
+                                {stock ? stock.physical.toFixed(2) : '-'}
+                              </td>
+                              <td className={`p-2 text-right text-xs font-medium ${stock && stock.available < 0 ? 'text-rose-600' : 'text-gray-900'}`}>
                                 {stock ? stock.available.toFixed(2) : '-'}
                               </td>
                               <td className="p-2 text-center">
@@ -2150,7 +2156,7 @@ Create Production Plan            </button>
                 disabled={sendingMaterialRequest}
                 className="flex items-center gap-2 p-2 bg-slate-900 text-white rounded hover:bg-slate-800 shadow shadow-slate-200 transition-all text-xs disabled:opacity-50"
               >
-                {sendingMaterialRequest ? <Loader size={16} className="animate-spin" /> : <Send size={16} />}
+                {sendingMaterialRequest ? <Loader size={15} className="animate-spin" /> : <Send size={15} />}
                 {sendingMaterialRequest ? 'SYNCHRONIZING...' : 'Material Request'}
               </button>
             </div>
@@ -2242,7 +2248,7 @@ Create Production Plan            </button>
                               </div>
                               <div className="mt-2 w-full h-1 bg-gray-100 rounded-full overflow-hidden">
                                 <div 
-                                  className={`h-full transition-all duration-500 ${progressPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                                  className={`transition-all duration-500 ${progressPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
                                   style={{ width: `${progressPercent}%` }}
                                 />
                               </div>
@@ -2257,7 +2263,7 @@ Create Production Plan            </button>
                   {mrHistory[selectedPlanForHistory.plan_id].some(mr => mr.status !== 'completed') && (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-amber-600 px-1">
-                        <Clock size={16} className="animate-pulse" />
+                        <Clock size={15} className="animate-pulse" />
                         <h3 className="text-[10px]  uppercase tracking-[0.2em]">Active Requests</h3>
                         <div className="flex-1 h-px bg-amber-100/50 ml-2" />
                         <span className="text-[10px] bg-amber-50 px-2 py-0.5 rounded  border border-amber-100 ">
@@ -2276,7 +2282,7 @@ Create Production Plan            </button>
                   {mrHistory[selectedPlanForHistory.plan_id].some(mr => mr.status === 'completed') && (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-emerald-600 px-1">
-                        <CheckCircle2 size={16} />
+                        <CheckCircle2 size={15} />
                         <h3 className="text-[10px]  uppercase tracking-[0.2em]">Completed Archive</h3>
                         <div className="flex-1 h-px bg-emerald-100/50 ml-2" />
                         <span className="text-[10px] bg-emerald-50 px-2 py-0.5 rounded  border border-emerald-100 ">

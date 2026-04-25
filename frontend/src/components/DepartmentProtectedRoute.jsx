@@ -44,38 +44,8 @@ export default function DepartmentProtectedRoute({ children, departments = [] })
   })
 
   if (!allowedDepts.includes(userDept)) {
-    console.warn(`[DepartmentProtectedRoute] Access denied. User department: "${userDept}", Allowed departments: ${JSON.stringify(allowedDepts)}`);
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        flexDirection: 'column',
-        textAlign: 'center',
-        gap: '20px'
-      }}>
-        <div style={{ fontSize: '48px' }}>🚫</div>
-        <h2 style={{ color: 'var(--text-primary)', marginBottom: '10px' }}>
-          Access Denied
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '20px' }}>
-          This page is only available for {departments.map(d => {
-            const deptMap = {
-              'inventory': 'Inventory',
-              'manufacturing': 'Production/Manufacturing',
-              'production': 'Production/Manufacturing',
-              'admin': 'Administration',
-              'accounts': 'Accounts & Finance'
-            }
-            return deptMap[d.toLowerCase()] || d
-          }).join(', ')} department.
-        </p>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-          Your department: <strong>{userDept === 'manufacturing' ? 'Production' : userDept.charAt(0).toUpperCase() + userDept.slice(1)}</strong>
-        </p>
-      </div>
-    )
+    console.warn(`[DepartmentProtectedRoute] Access denied. User department: "${userDept}", Allowed departments: ${JSON.stringify(allowedDepts)}. Redirecting to dashboard.`);
+    return <Navigate to="/dashboard" replace />
   }
 
   return children

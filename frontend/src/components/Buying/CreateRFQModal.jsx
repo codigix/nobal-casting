@@ -247,7 +247,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
             loading={loading}
             disabled={formData.items.length === 0 || formData.suppliers.length === 0}
           >
-            <CheckCircle size={16} className="mr-2" />
+            <CheckCircle size={15} className="mr-2" />
             Create RFQ
           </Button>
         </div>
@@ -359,7 +359,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
                         onClick={() => handleRemoveSupplier(s.id)}
                         className="p-1 text-neutral-400 hover:text-red-600 transition-colors"
                       >
-                        <X size={16} />
+                        <X size={15} />
                       </button>
                     </div>
                   ))

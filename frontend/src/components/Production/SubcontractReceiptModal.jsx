@@ -352,7 +352,7 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
       onClick={() => handleRemoveItem(row.id)}
       className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
     >
-      <Trash2 size={16} />
+      <Trash2 size={15} />
     </button>
   );
 
@@ -360,10 +360,10 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
     e.preventDefault()
     
     const validations = getValidations()
-    const allValid = Object.values(validations).every(v => v.status === 'success' || v.status === 'warning')
+    const hasErrors = Object.values(validations).some(v => v.status === 'error')
     
-    if (!allValid) {
-      toast.addToast('Please fix validation errors before submitting', 'error')
+    if (hasErrors) {
+      toast.addToast('Please fix required validation errors before submitting', 'error')
       return
     }
 

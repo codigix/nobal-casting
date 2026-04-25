@@ -438,7 +438,7 @@ export default function SupplierQuotations() {
               variant="primary"
               className="bg-neutral-900 hover:bg-neutral-800 text-white flex items-center gap-2 p-2  rounded h-10 border-0"
             >
-              <Plus size={16} strokeWidth={3} /> 
+              <Plus size={15} strokeWidth={3} /> 
               <span className="text-xs   ">New Quotation</span>
             </Button>
           </div>
@@ -493,7 +493,7 @@ export default function SupplierQuotations() {
         {/* Filters Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="relative flex-1 group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-600 transition-colors" size={16} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-600 transition-colors" size={15} />
             <input 
               type="text"
               placeholder="SEARCH QUOTATIONS..."

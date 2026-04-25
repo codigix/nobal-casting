@@ -16,7 +16,7 @@ const CashFlowItem = ({ label, amount, type = 'inflow' }) => (
   <div className="px-4 py-4 flex items-center justify-between border-b border-neutral-50 last:border-0">
     <div className="flex items-center gap-3">
       <div className={`p-2 rounded  ${type === 'inflow' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-        {type === 'inflow' ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
+        {type === 'inflow' ? <ArrowDownLeft size={15} /> : <ArrowUpRight size={15} />}
       </div>
       <span className="text-[11px]  text-neutral-800  ">{label}</span>
     </div>

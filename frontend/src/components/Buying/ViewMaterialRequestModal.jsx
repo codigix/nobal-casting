@@ -563,7 +563,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
               <div className="bg-white rounded  border border-slate-200   overflow-hidden">
                 <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 ">
+                    <div className="p-2 bg-indigo-50 rounded  text-indigo-600 ">
                       <Package size={20} />
                     </div>
                     <div>
@@ -575,7 +575,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                     <button 
                       onClick={() => checkStockAvailability(request)}
                       disabled={checkingStock}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded hover:bg-slate-50 transition-all text-[11px]  "
+                      className="flex items-center gap-2 p-1 bg-white border border-slate-200 text-slate-600 rounded hover:bg-slate-50 transition-all text-[11px]  "
                     >
                       <RefreshCw size={14} className={checkingStock ? 'animate-spin' : ''} />
                       {checkingStock ? 'Updating...' : 'Refresh Stock'}
@@ -682,14 +682,14 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                       <ArrowRight size={12} />
                                     </div>
                                     {stock?.breakdown?.length > 1 && !itemWarehouses[item.item_code] && (
-                                      <div className="flex items-center justify-center gap-1.5 py-1 px-2 bg-indigo-50/50 rounded-lg">
+                                      <div className="flex items-center justify-center gap-1.5 py-1 px-2 bg-indigo-50/50 rounded ">
                                         <Info size={10} className="text-indigo-500" />
                                         <p className="text-xs  text-indigo-600  ">Optimization Possible</p>
                                       </div>
                                     )}
                                   </div>
                                 ) : (
-                                  <div className="flex flex-col items-center gap-1 py-2 px-3 bg-rose-50 border border-rose-100 rounded-xl">
+                                  <div className="flex flex-col items-center gap-1 py-2 px-3 bg-rose-50 border border-rose-100 rounded">
                                     <div className="flex items-center gap-1.5 text-rose-600">
                                       <XCircle size={12} />
                                       <span className="text-xs   ">Out of Stock</span>
@@ -732,7 +732,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                       )}
                                     </div>
                                   ) : (
-                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-50 border border-slate-100 rounded-lg">
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-50 border border-slate-100 rounded ">
                                       <Activity size={10} className="text-slate-400" />
                                       <span className="text-xs  text-slate-500  ">{stock.warehouse}</span>
                                     </div>
@@ -831,7 +831,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                 onClick={handleDelete}
                 className="flex items-center gap-2 px-3 py-2 text-xs   text-rose-600 hover:bg-rose-50 rounded  transition-all group"
               >
-                <Trash2 size={16} className="group-hover:scale-110 transition-transform" /> 
+                <Trash2 size={15} className="group-hover:scale-110 transition-transform" /> 
                 <span>Remove Request</span>
               </button>
             )}
@@ -859,7 +859,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   variant="primary"
                   className="p-2  shadow-blue-600/20  text-xs rounded  flex items-center gap-2"
                 >
-                  Send for Approval <ArrowRight size={16} />
+                  Send for Approval <ArrowRight size={15} />
                 </Button>
                 <Button
                   onClick={handleApprove}
@@ -867,7 +867,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   disabled={loading || (isTransferOrIssue && !anyAvailable)}
                   className="p-2   shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
                 >
-                  Release Material <CheckCircle size={16} />
+                  Release Material <CheckCircle size={15} />
                 </Button>
               </div>
             )}
@@ -889,7 +889,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   disabled={loading || (isTransferOrIssue && (!anyAvailable || request?.items?.every(item => Number(item.issued_qty) >= Number(item.qty))))}
                   className="p-2   shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
                 >
-                  Release Material <CheckCircle size={16} />
+                  Release Material <CheckCircle size={15} />
                 </Button>
               </div>
             )}

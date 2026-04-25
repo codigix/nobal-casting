@@ -164,7 +164,7 @@ export default function ViewProductionPlanModal({ isOpen, onClose, planId }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '25px' }}>
             <div style={{ padding: '12px', background: '#fef3c7', borderRadius: '6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <Calendar size={16} style={{ color: '#f59e0b' }} />
+                <Calendar size={15} style={{ color: '#f59e0b' }} />
                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Planning Date</label>
               </div>
               <p style={{ fontSize: '0.9rem', fontWeight: '600', margin: 0 }}>
@@ -173,14 +173,14 @@ export default function ViewProductionPlanModal({ isOpen, onClose, planId }) {
             </div>
             <div style={{ padding: '12px', background: '#dbeafe', borderRadius: '6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <Zap size={16} style={{ color: '#3b82f6' }} />
+                <Zap size={15} style={{ color: '#3b82f6' }} />
                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Week Number</label>
               </div>
               <p style={{ fontSize: '0.9rem', fontWeight: '600', margin: 0 }}>{plan?.week_number || 'N/A'}</p>
             </div>
             <div style={{ padding: '12px', background: '#f0fdf4', borderRadius: '6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <Package size={16} style={{ color: '#10b981' }} />
+                <Package size={15} style={{ color: '#10b981' }} />
                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#666' }}>Company</label>
               </div>
               <p style={{ fontSize: '0.9rem', fontWeight: '600', margin: 0 }}>{plan?.company || 'N/A'}</p>
@@ -543,7 +543,7 @@ export default function ViewProductionPlanModal({ isOpen, onClose, planId }) {
                       onMouseLeave={(e) => e.target.style.background = '#ffffff'}
                     >
                       <span>
-                        {expandedWOs[wo.wo_id] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        {expandedWOs[wo.wo_id] ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
                       </span>
                       <div style={{ flex: 1 }}>
                         <p style={{ fontWeight: '600', margin: 0, fontSize: '0.9rem' }}>

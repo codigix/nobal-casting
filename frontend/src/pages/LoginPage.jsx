@@ -23,9 +23,16 @@ export default function LoginPage() {
     { value: 'admin', label: 'Admin', icon: <Shield className="w-4 h-4" /> }
   ]
 
-  const { login, register } = useAuth()
+  const { login, register, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -41,8 +48,8 @@ export default function LoginPage() {
         await login(email, password)
         setSuccess('Login successful! Redirecting...')
         setTimeout(() => {
-          const from = location.state?.from?.pathname || '/dashboard'
-          navigate(from)
+          // Always redirect to dashboard to ensure department redirection logic in Dashboard component runs
+          navigate('/dashboard', { replace: true })
         }, 1000)
       } else {
         if (!email || !fullName || !password || !confirmPassword || !department) {
@@ -57,7 +64,7 @@ export default function LoginPage() {
         await register(email, fullName, password, confirmPassword, department)
         setSuccess('Registration successful! Redirecting...')
         setTimeout(() => {
-          navigate('/dashboard')
+          navigate('/dashboard', { replace: true })
         }, 1000)
       }
     } catch (err) {

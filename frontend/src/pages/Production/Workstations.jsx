@@ -206,13 +206,13 @@ export default function Workstations() {
                             onClick={() => handleEdit(ws)}
                             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                           >
-                            <Edit2 size={16} />
+                            <Edit2 size={15} />
                           </button>
                           <button 
                             onClick={() => handleDelete(ws.name)}
                             className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </div>
@@ -279,7 +279,7 @@ export default function Workstations() {
                         <td className="p-2">
                           <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded flex items-center justify-center ${ws.is_active === false ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}>
-                              {ws.is_active === false ? <AlertCircle size={16} /> : <Settings size={16} />}
+                              {ws.is_active === false ? <AlertCircle size={15} /> : <Settings size={15} />}
                             </div>
                             <div>
                               <p className=" text-slate-900 text-xs group-hover:text-indigo-600 transition-colors">{ws.workstation_name || ws.name}</p>
@@ -301,13 +301,13 @@ export default function Workstations() {
                               onClick={() => handleEdit(ws)}
                               className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
                             >
-                              <Edit2 size={16} />
+                              <Edit2 size={15} />
                             </button>
                             <button 
                               onClick={() => handleDelete(ws.name)}
                               className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={15} />
                             </button>
                           </div>
                         </td>

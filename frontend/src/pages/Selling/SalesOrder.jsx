@@ -435,7 +435,7 @@ export default function SalesOrder() {
         {/* Total Value Card */}
         <div className="bg-white rounded border border-slate-200 p-2 ">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+            <div className="w-6 h-6 rounded  bg-blue-50 flex items-center justify-center text-blue-600">
               <DollarSign size={20} />
             </div>
             <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded ">
@@ -459,7 +459,7 @@ export default function SalesOrder() {
         {/* Active Fulfillment Card */}
         <div className="bg-white rounded border border-slate-200 p-2">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+            <div className="w-6 h-6 rounded  bg-amber-50 flex items-center justify-center text-amber-600">
               <Clock size={20} />
             </div>
             <span className="px-2 py-1 rounded  bg-amber-50 text-amber-600 text-[10px]   tracking-tight">Active</span>
@@ -488,7 +488,7 @@ export default function SalesOrder() {
         {/* Critical Alerts Card */}
         <div className="bg-white rounded border border-slate-200 p-2">
           <div className="flex items-center justify-between mb-2">
-            <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${stats.overdue > 0 ? 'bg-rose-50 text-rose-600 animate-pulse' : 'bg-slate-50 text-slate-400'}`}>
+            <div className={`w-6 h-6 rounded  flex items-center justify-center ${stats.overdue > 0 ? 'bg-rose-50 text-rose-600 animate-pulse' : 'bg-slate-50 text-slate-400'}`}>
               <AlertTriangle size={20} />
             </div>
             {stats.overdue > 0 && (
@@ -510,7 +510,7 @@ export default function SalesOrder() {
         {/* Successful Deliveries Card */}
         <div className="bg-white rounded border border-slate-200 p-2">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <div className="w-6 h-6 rounded  bg-emerald-50 flex items-center justify-center text-emerald-600">
               <CheckCircle size={20} />
             </div>
             <span className="px-2 py-1 rounded  bg-emerald-50 text-emerald-600 text-[10px]   tracking-tight">Completed</span>
@@ -532,7 +532,7 @@ export default function SalesOrder() {
         {/* Intelligence Filters Section */}
       <div className="glass-filters p-2 mb-2  flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         <div className="flex-1 relative">
-          <Search className=" absolute z-10 top-2 left-2 text-gray-500" size={16} />
+          <Search className=" absolute z-10 top-2 left-2 text-gray-500" size={15} />
           <input
             type="text"
             placeholder="Query Intelligence Engine (ID, Customer, Item)..."

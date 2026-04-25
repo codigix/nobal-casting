@@ -197,7 +197,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
             loading={loading}
             disabled={!formData.supplier_id || !formData.rfq_id || formData.items.length === 0}
           >
-            <CheckCircle size={16} className="mr-2" />
+            <CheckCircle size={15} className="mr-2" />
             Create Quotation
           </Button>
         </div>

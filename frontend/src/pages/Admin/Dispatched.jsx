@@ -145,7 +145,7 @@ export default function Dispatched() {
       key: 'delivery_note_id',
       render: (val, row) => (
         <div className="flex flex-col">
-          <span className="font-mono text-xs font-bold text-slate-700">{val}</span>
+          <span className="font-mono text-xs  text-slate-700">{val}</span>
           {row.job_card_id && <span className="text-[9px] text-slate-400">JC: {row.job_card_id}</span>}
         </div>
       )
@@ -168,7 +168,7 @@ export default function Dispatched() {
     {
       label: 'Quantity',
       key: 'quantity',
-      render: (val) => <span className="font-bold text-indigo-600">{val}</span>
+      render: (val) => <span className=" text-indigo-600">{val}</span>
     },
     {
       label: 'Logistics',
@@ -192,72 +192,72 @@ export default function Dispatched() {
   ]
 
   return (
-    <div className="p-6">
+    <div className="p-4">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
+          <h1 className="text-xl  text-slate-900 flex items-center gap-2">
             <Truck className="text-blue-600" size={24} />
             Dispatch Intelligence
           </h1>
-          <p className="text-sm text-slate-500">Monitor production-to-inventory dispatch workflows</p>
+          <p className="text-xs text-slate-500">Monitor production-to-inventory dispatch workflows</p>
         </div>
         <div className="flex gap-2">
           <button 
             onClick={fetchData}
-            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded text-sm text-slate-600 hover:bg-slate-50"
+            className="flex items-center gap-2 p-1 bg-white border border-slate-200 rounded text-sm text-slate-600 hover:bg-slate-50"
           >
-            <RefreshCcw size={16} />
+            <RefreshCcw size={15} />
             Refresh
           </button>
-          <button className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 shadow-sm">
-            <Download size={16} />
+          <button className="flex items-center gap-2 p-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 shadow-sm">
+            <Download size={15} />
             Export CSV
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white p-4 rounded border border-slate-200 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+        <div className="bg-white p-2 rounded border border-slate-200 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-emerald-50 text-emerald-600 rounded">
-              <CheckCircle size={20} />
+              <CheckCircle size={15} />
             </div>
             <span className="text-sm text-slate-500">Fully Dispatched</span>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900">
+          <h3 className="text-xl  text-slate-900">
             {data.filter(p => p.dispatch_status === 'Fully Dispatched').length}
           </h3>
         </div>
-        <div className="bg-white p-4 rounded border border-slate-200 shadow-sm">
+        <div className="bg-white p-2 rounded border border-slate-200 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-amber-50 text-amber-600 rounded">
-              <Package size={20} />
+              <Package size={15} />
             </div>
             <span className="text-sm text-slate-500">Partially Dispatched</span>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900">
+          <h3 className="text-xl  text-slate-900">
             {data.filter(p => p.dispatch_status === 'Partially Dispatched').length}
           </h3>
         </div>
-        <div className="bg-white p-4 rounded border border-slate-200 shadow-sm">
+        <div className="bg-white p-2 rounded border border-slate-200 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-slate-50 text-slate-600 rounded">
-              <Clock size={20} />
+              <Clock size={15} />
             </div>
             <span className="text-sm text-slate-500">Units in Transit</span>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900">
+          <h3 className="text-xl  text-slate-900">
             {individualData.reduce((sum, d) => sum + (parseFloat(d.quantity) || 0), 0).toFixed(0)}
           </h3>
         </div>
       </div>
 
-      <div className="bg-white rounded border border-slate-200 overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-lg">
+      <div className="">
+        <div className="p-2 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-2 p-1 bg-slate-100 rounded ">
             <button
               onClick={() => setActiveTab('summary')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 p-2 rounded text-xs  transition-all ${
                 activeTab === 'summary' 
                   ? 'bg-white text-blue-600 shadow-sm' 
                   : 'text-slate-500 hover:text-slate-700'
@@ -268,7 +268,7 @@ export default function Dispatched() {
             </button>
             <button
               onClick={() => setActiveTab('individual')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 p-2 rounded text-xs  transition-all ${
                 activeTab === 'individual' 
                   ? 'bg-white text-blue-600 shadow-sm' 
                   : 'text-slate-500 hover:text-slate-700'
@@ -280,23 +280,23 @@ export default function Dispatched() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="relative flex-1 min-w-[300px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
               <input 
                 type="text" 
                 placeholder={activeTab === 'summary' ? "Search by project, customer or SO#" : "Search by Dispatch ID, SO, Driver..."}
-                className="w-full pl-9 pr-4 py-1.5 border border-slate-200 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full pl-9 pr-4 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             {activeTab === 'summary' && (
-              <div className="flex gap-1 bg-slate-50 p-1 rounded-md border border-slate-200">
+              <div className="flex gap-1 bg-slate-50 p-1 rounded border border-slate-200">
                 {['all', 'Fully Dispatched', 'Partially Dispatched'].map(status => (
                   <button
                     key={status}
                     onClick={() => setStatusFilter(status)}
-                    className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-all ${
+                    className={`px-3 py-1 rounded text-[10px]  uppercase tracking-wider transition-all ${
                       statusFilter === status 
                         ? 'bg-blue-600 text-white shadow-sm' 
                         : 'text-slate-500 hover:bg-slate-200/50'

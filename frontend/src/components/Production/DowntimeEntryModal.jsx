@@ -244,7 +244,7 @@ export default function DowntimeEntryModal({ isOpen, onClose, jobCardId, jobCard
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}
                         title="Delete"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                       </button>
                     </td>
                   </tr>

@@ -34,13 +34,13 @@ export default function OperationExecutionLog({ jobCardId }) {
   const getEventIcon = (eventType) => {
     switch (eventType) {
       case 'START':
-        return <Zap className="text-blue-500" size={16} />
+        return <Zap className="text-blue-500" size={15} />
       case 'END':
-        return <CheckCircle className="text-green-500" size={16} />
+        return <CheckCircle className="text-green-500" size={15} />
       case 'DELAY':
-        return <AlertCircle className="text-amber-500" size={16} />
+        return <AlertCircle className="text-amber-500" size={15} />
       default:
-        return <Clock className="text-gray-500" size={16} />
+        return <Clock className="text-gray-500" size={15} />
     }
   }
 

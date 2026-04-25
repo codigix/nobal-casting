@@ -158,7 +158,7 @@ export default function Quotation() {
             className="flex items-center justify-center p-2 text-primary-600 hover:bg-primary-100 rounded transition-colors duration-200"
             title="View"
           >
-            <Eye size={16} />
+            <Eye size={15} />
           </button>
           {row.status === 'draft' && (
             <>
@@ -167,14 +167,14 @@ export default function Quotation() {
                 className="flex items-center justify-center p-2 text-green-600 hover:bg-green-50 rounded transition-colors duration-200"
                 title="Edit"
               >
-                <Edit2 size={16} />
+                <Edit2 size={15} />
               </button>
               <button 
                 onClick={() => handleSendQuotation(row.quotation_id)}
                 className="flex items-center justify-center p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors duration-200"
                 title="Send"
               >
-                <Mail size={16} />
+                <Mail size={15} />
               </button>
             </>
           )}
@@ -184,7 +184,7 @@ export default function Quotation() {
               className="flex items-center justify-center p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors duration-200"
               title="Convert to Sales Order"
             >
-              <FileText size={16} />
+              <FileText size={15} />
             </button>
           )}
           <button 
@@ -192,7 +192,7 @@ export default function Quotation() {
             className="flex items-center justify-center p-2 text-red-600 hover:bg-red-50 rounded transition-colors duration-200"
             title="Delete"
           >
-            <Trash2 size={16} />
+            <Trash2 size={15} />
           </button>
         </div>
       )
@@ -588,7 +588,7 @@ export default function Quotation() {
                       e.currentTarget.style.color = '#1a1a1a'
                     }}
                   >
-                    <Plus size={16} /> New Quotation
+                    <Plus size={15} /> New Quotation
                   </button>
 
                   <button
@@ -618,7 +618,7 @@ export default function Quotation() {
                       e.currentTarget.style.color = '#1a1a1a'
                     }}
                   >
-                    <Edit2 size={16} /> View Drafts
+                    <Edit2 size={15} /> View Drafts
                   </button>
 
                   <button
@@ -648,7 +648,7 @@ export default function Quotation() {
                       e.currentTarget.style.color = '#1a1a1a'
                     }}
                   >
-                    <Mail size={16} /> View Sent
+                    <Mail size={15} /> View Sent
                   </button>
 
                   <button
@@ -678,7 +678,7 @@ export default function Quotation() {
                       e.currentTarget.style.color = '#1a1a1a'
                     }}
                   >
-                    <CheckCircle size={16} /> Convert Orders
+                    <CheckCircle size={15} /> Convert Orders
                   </button>
                 </div>
 

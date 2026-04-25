@@ -411,7 +411,7 @@ export default function OperationFormRedesign() {
                             onClick={() => handleRemoveSubOperation(idx)}
                             className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={15} />
                           </button>
                         )}
                       </div>
@@ -423,7 +423,7 @@ export default function OperationFormRedesign() {
                   onClick={handleAddSubOperation}
                   className="mt-6 w-full py-2 border-2 border-dashed border-slate-200 rounded text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all flex items-center justify-center gap-2 text-xs  "
                 >
-                  <Plus size={16} /> Add Task Step
+                  <Plus size={15} /> Add Task Step
                 </button>
               </div>
             </div>

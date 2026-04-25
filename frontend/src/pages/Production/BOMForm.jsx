@@ -1532,7 +1532,7 @@ export default function BOMForm() {
                     {loading ? (
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded animate-spin" />
                     ) : (
-                      <Save size={16} className="group-hover:rotate-12 transition-transform" />
+                      <Save size={15} className="group-hover:rotate-12 transition-transform" />
                     )}
                     <span>Initialize Production formulation</span>
                   </div>
@@ -2068,13 +2068,13 @@ export default function BOMForm() {
                                               const updated = bomLines.map(l => l.id === line.id ? updatedData : l)
                                               setBomLines(updated)
                                               setEditingRowId(null)
-                                            }} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded  transition-all"><Check size={16} strokeWidth={3} /></button>
-                                            <button type="button" onClick={() => setEditingRowId(null)} className="p-2 text-slate-400 hover:bg-slate-50 rounded  transition-all"><X size={16} strokeWidth={3} /></button>
+                                            }} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded  transition-all"><Check size={15} strokeWidth={3} /></button>
+                                            <button type="button" onClick={() => setEditingRowId(null)} className="p-2 text-slate-400 hover:bg-slate-50 rounded  transition-all"><X size={15} strokeWidth={3} /></button>
                                           </>
                                         ) : (
                                           <>
-                                            <button type="button" onClick={() => { setEditingRowId(line.id); setEditingRowData({ ...line }); }} className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all "><Settings size={16} /></button>
-                                            <button type="button" onClick={() => removeBomLine(line.id)} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all duration-300 hover:scale-110"><Trash2 size={16} strokeWidth={2.5} /></button>
+                                            <button type="button" onClick={() => { setEditingRowId(line.id); setEditingRowData({ ...line }); }} className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all "><Settings size={15} /></button>
+                                            <button type="button" onClick={() => removeBomLine(line.id)} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all duration-300 hover:scale-110"><Trash2 size={15} strokeWidth={2.5} /></button>
                                           </>
                                         )}
                                       </div>
@@ -2099,7 +2099,7 @@ export default function BOMForm() {
                       ) : (
                         <div className="text-center p-2 border-2 border-dashed border-slate-100 rounded bg-slate-50/30 group/empty">
                           <div className="w-6 h-6 rounded bg-white  shadow-slate-200/50 flex items-center justify-center mx-auto mb-6 group-hover/empty:scale-110 group-hover/empty:rotate-6 transition-all duration-700">
-                            <Layers size={16} className="text-indigo-400" />
+                            <Layers size={15} className="text-indigo-400" />
                           </div>
                           <p className="    ">No components identified</p>
                           <p className="text-xs text-slate-400 mt-3 font-medium    opacity-60">Initialize specifications to build intelligence</p>
@@ -2407,13 +2407,13 @@ export default function BOMForm() {
                                                               } else {
                                                                 setEditingRowId(null);
                                                               }
-                                                            }} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded  transition-all"><Check size={16} strokeWidth={3} /></button>
-                                                            <button type="button" onClick={() => setEditingRowId(null)} className="p-2 text-slate-400 hover:bg-slate-50 rounded  transition-all"><X size={16} strokeWidth={3} /></button>
+                                                            }} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded  transition-all"><Check size={15} strokeWidth={3} /></button>
+                                                            <button type="button" onClick={() => setEditingRowId(null)} className="p-2 text-slate-400 hover:bg-slate-50 rounded  transition-all"><X size={15} strokeWidth={3} /></button>
                                                           </>
                                                         ) : (
                                                           <>
-                                                            <button type="button" onClick={() => { setEditingRowId(material.id); setEditingRowData({ ...material }); }} className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all "><Settings size={16} /></button>
-                                                            <button type="button" onClick={() => removeRawMaterial(material.id)} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all "><Trash2 size={16} /></button>
+                                                            <button type="button" onClick={() => { setEditingRowId(material.id); setEditingRowData({ ...material }); }} className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all "><Settings size={15} /></button>
+                                                            <button type="button" onClick={() => removeRawMaterial(material.id)} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all "><Trash2 size={15} /></button>
                                                           </>
                                                         )}
                                                       </div>
@@ -2774,7 +2774,7 @@ export default function BOMForm() {
                                           onClick={() => removeOperation(op.id)}
                                           className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all "
                                         >
-                                          <Trash2 size={16} />
+                                          <Trash2 size={15} />
                                         </button>
                                       </td>
                                     </tr>
@@ -2907,7 +2907,7 @@ export default function BOMForm() {
                                           onClick={() => removeScrapItem(item.id)}
                                           className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all "
                                         >
-                                          <Trash2 size={16} />
+                                          <Trash2 size={15} />
                                         </button>
                                       </td>
                                     </tr>

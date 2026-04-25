@@ -252,7 +252,7 @@ export default function ProductionHierarchy() {
           <AlertCircle className="mx-auto text-rose-500 mb-6" size={64} />
           <h2 className="text-2xl  text-slate-900 mb-2 tracking-tight">Mapping Engine Halted</h2>
           <p className="text-slate-500  mb-8 leading-relaxed">{error}</p>
-          <button onClick={() => navigate(-1)} className="w-full py-4 bg-slate-900 text-black/50 rounded-xl  tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
+          <button onClick={() => navigate(-1)} className="w-full py-4 bg-slate-900 text-black/50 rounded  tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
             TERMINATE & RETURN
           </button>
         </div>
@@ -374,7 +374,7 @@ export default function ProductionHierarchy() {
 
         <div className="flex items-center gap-3">
           <button onClick={handleDownloadPDF} className="flex items-center gap-2 p-2 text-black/50 rounded bg-orange-100 transition-all ">
-            <Download size={16} />
+            <Download size={15} />
             <span className="text-[10px]  uppercase tracking-wider">Download PDF</span>
           </button>
           <div className="flex bg-slate-50 rounded border border-slate-200 p-0.5">
@@ -448,7 +448,7 @@ export default function ProductionHierarchy() {
             );
           }) : (
              <div className="flex flex-col items-center opacity-40">
-                <div className="text-[10px]  text-slate-400  p-2 border-2 border-dashed border-slate-200 rounded-xl">No Production Plans Drafted</div>
+                <div className="text-[10px]  text-slate-400  p-2 border-2 border-dashed border-slate-200 rounded">No Production Plans Drafted</div>
                 <SvgConnector type="straight" height={60} isDotted={true} />
              </div>
           )}

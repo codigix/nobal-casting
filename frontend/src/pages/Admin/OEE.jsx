@@ -77,7 +77,7 @@ const KPICard = ({ label, value, status, colorClass }) => (
 const WorkstationList = ({ machines }) => (
   <div className="bg-white   border border-slate-100 overflow-hidden">
     <div className="p-4 border-b border-slate-50 flex items-center gap-2">
-      <Monitor size={16} className="text-slate-400" />
+      <Monitor size={15} className="text-slate-400" />
       <h3 className="text-xs  text-slate-700  ">Workstation OEE Analysis</h3>
     </div>
     <div className="divide-y divide-slate-50">
@@ -365,7 +365,7 @@ const OEEDrillDownModal = ({ isOpen, machine, onClose, filters }) => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-1 bg-white p-6 rounded border border-slate-200">
                   <h3 className="text-xs  text-slate-900   mb-6 flex items-center gap-2">
-                    <ZapOff size={16} className="text-blue-500" />
+                    <ZapOff size={15} className="text-blue-500" />
                     Loss Classification (min/qty)
                   </h3>
                   <div className="space-y-6">
@@ -403,7 +403,7 @@ const OEEDrillDownModal = ({ isOpen, machine, onClose, filters }) => {
                 <div className="lg:col-span-2 bg-white rounded border border-slate-200 flex flex-col">
                   <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                     <h3 className="text-xs  text-slate-900   flex items-center gap-2">
-                      <Layers size={16} className="text-indigo-600" />
+                      <Layers size={15} className="text-indigo-600" />
                       {level === 'workstation' ? 'Child Work Orders' : level === 'work-order' ? 'Production Job Cards' : 'Shift Performance Logs'}
                     </h3>
                     <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded  ">
@@ -457,7 +457,7 @@ const OEEDrillDownModal = ({ isOpen, machine, onClose, filters }) => {
                                   onClick={() => handleDrillDown(level === 'workstation' ? 'work-order' : 'job-card', item.id, item.name || item.id)}
                                   className="p-1.5 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all opacity-0 group-hover:opacity-100"
                                 >
-                                  <ChevronRight size={16} />
+                                  <ChevronRight size={15} />
                                 </button>
                               )}
                             </td>
@@ -609,7 +609,7 @@ const MachineCard = ({ machine, onClick }) => {
         </div>
 
         {machine.active_jobs > 0 && (
-          <div className="mb-3 px-3 py-1.5 bg-blue-50 rounded  border border-blue-100 flex items-center justify-between">
+          <div className="mb-3 p-1 bg-blue-50 rounded  border border-blue-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Activity size={12} className="text-blue-600" />
               <span className="text-[10px]  text-blue-700 ">Active BOM's</span>
@@ -625,7 +625,7 @@ const MachineCard = ({ machine, onClick }) => {
           </div>
           <div className="flex items-center gap-1 text-slate-400 group-hover:text-blue-600 transition-colors">
             <span className="text-[10px]   ">Analysis</span>
-            <ChevronRight size={16} />
+            <ChevronRight size={15} />
           </div>
         </div>
       </div>
@@ -1130,7 +1130,7 @@ export default function OEE() {
             onClick={handleExportReport}
             className="flex items-center gap-2 p-2 bg-[#1e3a8a] text-white text-xs  rounded hover:bg-[#1e3a8a]/90  shadow-md transition-all"
           >
-            <Download size={16} />
+            <Download size={15} />
             Export Report
           </button>
         </div>
@@ -1165,8 +1165,8 @@ export default function OEE() {
             <div className="space-y-6">
               {/* Filter bar for Machine Analytics */}
               <div className="bg-white  border border-slate-200 p-3 flex flex-wrap items-center gap-4 ">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded text-slate-500">
-                  <Filter size={16} />
+                <div className="flex items-center gap-2 p-1 bg-slate-100 rounded text-slate-500">
+                  <Filter size={15} />
                   <span className="text-[10px]   tracking-wider">Filters</span>
                 </div>
                 <select value={filters.line} onChange={(e) => setFilters({ ...filters, line: e.target.value })} className="bg-slate-50 border-none text-xs  text-slate-700 rounded p-2  focus:ring-0 outline-none cursor-pointer">
@@ -1195,7 +1195,7 @@ export default function OEE() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded border border-slate-200 p-6 ">
                   <h3 className="text-xs  text-slate-700  tracking-wider mb-8 flex items-center gap-2">
-                    <PieChartIcon size={16} className="text-indigo-500" />
+                    <PieChartIcon size={15} className="text-indigo-500" />
                     Loss Category Distribution
                   </h3>
                   <ResponsiveContainer width="100%" height={340}>
@@ -1220,7 +1220,7 @@ export default function OEE() {
                 </div>
                 <div className="bg-white rounded border border-slate-200 p-6 ">
                   <h3 className="text-xs  text-slate-700  tracking-wider mb-8 flex items-center gap-2">
-                    <AlertTriangle size={16} className="text-blue-500" />
+                    <AlertTriangle size={15} className="text-blue-500" />
                     Production Bottlenecks
                   </h3>
                   <div className="space-y-3">

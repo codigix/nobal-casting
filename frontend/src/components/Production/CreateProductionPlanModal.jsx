@@ -157,7 +157,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
                   Bill of Materials (BOM) *
                 </label>
                 <div className="relative">
-                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                   <select
                     name="bom_id"
                     value={formData.bom_id}
@@ -180,7 +180,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
                   Product Name
                 </label>
                 <div className="relative">
-                  <Layout className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Layout className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                   <input
                     type="text"
                     name="product_name"
@@ -199,7 +199,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
                     Planned Qty *
                   </label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                     <input
                       type="number"
                       name="planned_quantity"
@@ -244,7 +244,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
                   Planned Start Date *
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                   <input
                     type="date"
                     name="start_date"
@@ -261,7 +261,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
                   Planned End Date *
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
                   <input
                     type="date"
                     name="end_date"
@@ -302,7 +302,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
               Planning Notes & Strategy
             </label>
             <div className="relative">
-              <ClipboardList className="absolute left-3 top-3 text-slate-400" size={16} />
+              <ClipboardList className="absolute left-3 top-3 text-slate-400" size={15} />
               <textarea
                 name="notes"
                 value={formData.notes}

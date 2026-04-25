@@ -136,8 +136,8 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
             <p className="text-[10px] font-medium text-gray-500 italic">{subtitle}</p>
           )}
         </div>
-        <div className={`p-3 rounded-xl shadow-sm transition-all duration-500 group-hover:rotate-12 ${iconColorMap[color] || iconColorMap.blue}`}>
-          <Icon size={20} strokeWidth={2.5} />
+        <div className={`p-2 rounded shadow-sm transition-all duration-500 group-hover:rotate-12 ${iconColorMap[color] || iconColorMap.blue}`}>
+          <Icon size={15} strokeWidth={2.5} />
         </div>
       </div>
     </div>
@@ -233,11 +233,11 @@ const WorkOrderRow = React.memo(({
             <div className="flex flex-col gap-1 text-[10px] text-gray-500">
               <div className="flex items-center gap-2">
                 <Calendar size={10} className="text-emerald-500" />
-                <span className="font-semibold text-gray-600">START: {order.planned_start_date ? new Date(order.planned_start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase() : 'N/A'}</span>
+                <span className=" text-gray-600">START: {order.planned_start_date ? new Date(order.planned_start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase() : 'N/A'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Clock size={10} className="text-rose-500" />
-                <span className="font-semibold text-gray-600">DUE: {order.planned_end_date ? new Date(order.planned_end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase() : 'N/A'}</span>
+                <span className=" text-gray-600">DUE: {order.planned_end_date ? new Date(order.planned_end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase() : 'N/A'}</span>
               </div>
             </div>
           </div>
@@ -253,7 +253,7 @@ const WorkOrderRow = React.memo(({
           </div>
 
           <div className="w-28 text-right">
-            <span className="text-[10px]  text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+            <span className="text-[10px]  text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-100">
               {order.wo_id}
             </span>
           </div>
@@ -324,7 +324,7 @@ const WorkOrderRow = React.memo(({
                 const parts = (order.wo_id || '').split('-')
                 const displayId = parts.length > 3 ? `${parts[0]}-${parts[1]}-..-${parts[parts.length-1]}` : order.wo_id
                 return (
-                  <span className="text-[10px]  font-mono text-indigo-600 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100/50" title={order.wo_id}>
+                  <span className="text-[10px]  font-mono text-indigo-600 bg-indigo-50/50 p-2 rounded border border-indigo-100/50" title={order.wo_id}>
                     {displayId}
                   </span>
                 )
@@ -374,28 +374,28 @@ const WorkOrderRow = React.memo(({
               className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
               title="Visual Audit"
             >
-              <Eye size={16} />
+              <Eye size={15} />
             </button>
             <button
               onClick={() => navigate(`/manufacturing/job-cards?filter_work_order=${order.wo_id}`)}
               className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
               title="Track Execution"
             >
-              <Activity size={16} />
+              <Activity size={15} />
             </button>
             <button
               onClick={() => handleEdit(order)}
               className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all"
               title="Edit Order"
             >
-              <Edit2 size={16} />
+              <Edit2 size={15} />
             </button>
             <button
               onClick={() => handleDelete(order.wo_id)}
               className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
               title="Delete Order"
             >
-              <Trash size={16} />
+              <Trash size={15} />
             </button>
           </div>
         </div>
@@ -845,7 +845,7 @@ export default function WorkOrder() {
       key: 'wo_id',
       label: 'WORK ORDER ID',
       render: (val) => (
-        <span className="text-[10px]  font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+        <span className="text-[10px]  font-mono text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-100">
           {val}
         </span>
       )
@@ -860,28 +860,28 @@ export default function WorkOrder() {
             className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
             title="View Intelligence"
           >
-            <Eye size={16} />
+            <Eye size={15} />
           </button>
           <button
             onClick={() => navigate(`/manufacturing/job-cards?filter_work_order=${row.wo_id}`)}
             className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
             title="Operational Flow"
           >
-            <Activity size={16} />
+            <Activity size={15} />
           </button>
           <button
             onClick={() => handleEdit(row)}
             className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all"
             title="Update Configuration"
           >
-            <Edit2 size={16} />
+            <Edit2 size={15} />
           </button>
           <button
             onClick={() => handleDelete(row.wo_id)}
             className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
             title="Delete Entry"
           >
-            <Trash size={16} />
+            <Trash size={15} />
           </button>
         </div>
       )
@@ -925,7 +925,7 @@ export default function WorkOrder() {
                 className="p-2 bg-rose-50 text-rose-600 rounded hover:bg-rose-600 hover:text-white transition-all duration-500 border border-rose-100   shadow-rose-50"
                 title="Truncate All"
               >
-                <Trash2 size={20} />
+                <Trash2 size={15} />
               </button>
             </div>
           </div>
@@ -937,7 +937,7 @@ export default function WorkOrder() {
         {success && (
           <div className="mb-10 p-2  bg-emerald-50 border border-emerald-100 rounded flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
             <div className="w-6 h-6 rounded bg-emerald-500 flex items-center justify-center text-white  shadow-emerald-200">
-              <CheckCircle2 size={24} />
+              <CheckCircle2 size={15} />
             </div>
             <div>
               <p className="text-xs   text-emerald-600  mb-0.5">Success</p>
@@ -949,7 +949,7 @@ export default function WorkOrder() {
         {error && (
           <div className="mb-10 p-2  bg-rose-50 border border-rose-100 rounded flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
             <div className="w-6 h-6 rounded bg-rose-500 flex items-center justify-center text-white  shadow-rose-200">
-              <AlertCircle size={24} />
+              <AlertCircle size={15} />
             </div>
             <div>
               <p className="text-xs   text-rose-600  mb-0.5">Error</p>
@@ -997,7 +997,7 @@ export default function WorkOrder() {
         <div className="bg-gray-50/50  ">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex-1 min-w-[350px] relative group">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={15} />
               <input
                 type="text"
                 name="search"
@@ -1010,7 +1010,7 @@ export default function WorkOrder() {
 
             <div className="flex flex-wrap items-center gap-2 ">
               <div className="relative group">
-                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500" size={16} />
+                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500" size={15} />
                 <select
                   name="status"
                   value={filters.status}
@@ -1024,7 +1024,7 @@ export default function WorkOrder() {
                   <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={15} />
               </div>
 
               <div className="flex items-center gap-2 bg-white p-2 rounded   border border-gray-100  ">
@@ -1141,18 +1141,18 @@ export default function WorkOrder() {
                               >
                                 <div className="flex items-center gap-4">
                                   <div className="text-gray-400">
-                                    {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                                    {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
                                   </div>
                                   <div className={`p-2 rounded  ${group.allCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}   border ${group.allCompleted ? 'border-emerald-100' : 'border-indigo-100'}`}>
-                                    {group.allCompleted ? <CheckCircle2 size={24} /> : <Layers size={24} />}
+                                    {group.allCompleted ? <CheckCircle2 size={15} /> : <Layers size={15} />}
                                   </div>
                                   <div>
                                     <div className="flex items-center gap-2">
-                                      <h3 className="text-sm font-semibold text-gray-900">{group.customer_name}</h3>
-                                      <span className="text-[10px] font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-100 text-amber-700">
+                                      <h3 className="text-sm  text-gray-900">{group.customer_name}</h3>
+                                      <span className="text-[10px] font-medium bg-amber-50 p-2 rounded border border-amber-100 text-amber-700">
                                         {group.project_name || 'No Project'}
                                       </span>
-                                      <span className="text-[10px] font-mono bg-white px-2 py-0.5 rounded border border-gray-200 text-gray-500  ">
+                                      <span className="text-[10px] font-mono bg-white p-2 rounded border border-gray-200 text-gray-500  ">
                                         {group.id === 'NO_SALES_ORDER' ? 'Direct Production' : group.id}
                                       </span>
                                     </div>

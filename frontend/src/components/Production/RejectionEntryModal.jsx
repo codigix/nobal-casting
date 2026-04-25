@@ -258,7 +258,7 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#059669' }}
                           title="Approve"
                         >
-                          <CheckCircle2 size={16} />
+                          <CheckCircle2 size={15} />
                         </button>
                       )}
                       <button
@@ -266,7 +266,7 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}
                         title="Delete"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   )

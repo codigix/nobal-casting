@@ -127,7 +127,7 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
               loading={loading}
               disabled={acceptedItems.length === 0}
             >
-              <CheckCircle size={16} className="mr-2" />
+              <CheckCircle size={15} className="mr-2" />
               Approve & Store Stock
             </Button>
           ) : (
@@ -137,7 +137,7 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
               loading={loading}
               disabled={!rejectionReason.trim()}
             >
-              <XCircle size={16} className="mr-2" />
+              <XCircle size={15} className="mr-2" />
               Confirm Rejection
             </Button>
           )}
@@ -250,7 +250,7 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
             <div className="bg-white border border-neutral-200 rounded  overflow-hidden">
               <div className="p-2  bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
                 <h3 className="font-semibold text-neutral-800 flex items-center gap-2">
-                  <MapPin size={16} className="text-primary-600" />
+                  <MapPin size={15} className="text-primary-600" />
                   Warehouse Allocation
                 </h3>
                 <Badge variant="primary">{acceptedItems.length} Items to Assign</Badge>
@@ -315,7 +315,7 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
           <div className="space-y-4 animate-in fade-in duration-300">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-                <FileText size={16} className="text-red-500" />
+                <FileText size={15} className="text-red-500" />
                 Reason for Rejection *
               </label>
               <textarea

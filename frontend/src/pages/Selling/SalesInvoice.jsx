@@ -242,7 +242,7 @@ export default function SalesInvoice() {
             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all"
             title="View Details"
           >
-            <Eye size={16} />
+            <Eye size={15} />
           </button>
 
           {row.status === 'draft' && (
@@ -252,14 +252,14 @@ export default function SalesInvoice() {
                 className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded  transition-all"
                 title="Submit Invoice"
               >
-                <CheckCircle size={16} />
+                <CheckCircle size={15} />
               </button>
               <button
                 onClick={() => handleDeleteInvoice(row.invoice_id)}
                 className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all"
                 title="Delete Draft"
               >
-                <Trash2 size={16} />
+                <Trash2 size={15} />
               </button>
             </>
           )}
@@ -288,7 +288,7 @@ export default function SalesInvoice() {
               className="p-2 text-emerald-600 hover:bg-emerald-50 rounded  transition-all"
               title="Download PDF"
             >
-              <Download size={16} />
+              <Download size={15} />
             </button>
           )}
         </div>
@@ -317,7 +317,7 @@ export default function SalesInvoice() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <div className="hidden md:flex items-center px-3 py-1.5 bg-slate-50 border border-slate-200 rounded  text-[10px]  text-slate-500 gap-2">
+              <div className="hidden md:flex items-center p-1 bg-slate-50 border border-slate-200 rounded  text-[10px]  text-slate-500 gap-2">
                 <History size={14} className="text-indigo-500" />
                 LAST REFRESHED: {refreshTime.toLocaleTimeString()}
               </div>

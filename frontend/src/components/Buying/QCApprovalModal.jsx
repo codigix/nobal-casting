@@ -310,7 +310,7 @@ export default function QCApprovalModal({ grn, onClose, onSuccess }) {
                               </td>
                               <td className="p-2 ">
                                 <div className="flex justify-end">
-                                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded  text-xs  border ${
+                                  <div className={`inline-flex items-center gap-2 p-1 rounded  text-xs  border ${
                                     statusColor === 'success' 
                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
                                     : statusColor === 'warning' 

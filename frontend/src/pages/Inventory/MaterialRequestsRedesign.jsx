@@ -421,7 +421,7 @@ export default function MaterialRequestsRedesign() {
             </div>
             
             <div className="flex items-center gap-2">
-              <span className="text-xs  text-slate-400 bg-white px-3 py-1.5 rounded border border-slate-100 ">
+              <span className="text-xs  text-slate-400 bg-white p-1 rounded border border-slate-100 ">
                 Showing {filteredRequests.length} of {requests.length} results
               </span>
             </div>
@@ -566,7 +566,7 @@ export default function MaterialRequestsRedesign() {
                           <td className="p-2">
                             <div className="flex items-center gap-3">
                               <div className={`p-2 rounded ${config.bg} ${config.color}`}>
-                                <StatusIcon size={16} />
+                                <StatusIcon size={15} />
                               </div>
                               <div>
                                 <p className="text-xs  text-slate-900  group-hover:text-blue-600 transition-colors">{row.mr_id}</p>

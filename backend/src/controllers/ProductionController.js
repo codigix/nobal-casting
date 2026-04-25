@@ -1346,6 +1346,7 @@ class ProductionController {
         accepted_qty, rejected_qty, scrap_quantity, accepted_quantity, rejected_quantity: rejQty,
         transfer_to_next_op, transfer_quantity, next_job_card_id, next_operator_id, next_machine_id, next_warehouse_id,
         carrier_name, tracking_number, dispatch_date, shipping_notes, is_partial,
+        vehicle_no, package_count, gross_weight, net_weight,
         is_shipment, source_warehouse_id, target_warehouse_id, dispatch_qty
       } = req.body
 
@@ -2124,10 +2125,7 @@ class ProductionController {
         message: 'Operation started successfully'
       })
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message
-      })
+      this.handleError(res, error, 'Error starting operation')
     }
   }
 
@@ -2779,6 +2777,7 @@ class ProductionController {
       }
 
       const card = jobCard[0];
+      const requirements = [];
 
       // 1. Check for Material Request
       if (!card.mr_id && auto_create_mr) {
@@ -2790,39 +2789,101 @@ class ProductionController {
         return;
       }
 
-      if (card.mr_id) {
+      if (!card.mr_id) {
+        requirements.push({
+          type: 'material',
+          status: 'missing',
+          title: 'Material Request Missing',
+          message: 'No material request was found. You need to request materials and have them received in the warehouse before starting this job.'
+        });
+      } else {
         const mrStatus = (card.mr_status || '').toLowerCase().trim();
-        if (mrStatus !== 'received' && mrStatus !== 'completed' && mrStatus !== 'approved' && mrStatus !== 'partial') {
-           // We allow it if it's approved or partial too, but ideally 'received'
-           // Let's stick to 'received' or 'completed' for strict flow if needed, 
-           // but the frontend handleStartJobCard allows proceeding anyway with a warning.
-           // However, THIS endpoint is for strict validation.
+        const isValidMR = ['received', 'completed', 'approved', 'partial'].includes(mrStatus);
+        
+        if (!isValidMR) {
+          requirements.push({
+            type: 'material',
+            status: 'pending',
+            title: 'Materials Not Ready',
+            message: `The material request (${card.mr_id}) is currently ${mrStatus.toUpperCase() || 'DRAFT'}. Please ensure materials are approved and received before you begin.`
+          });
         }
       }
 
       // 2. Comprehensive Status & Assignment Validation
+      let canStart = true;
+      let validationMessage = 'Job card is ready to start';
+
       try {
         await this.productionModel.validateJobCardStatusTransition(job_card_id, 'in-progress');
       } catch (valErr) {
-        return res.status(200).json({
-          success: true,
-          message: valErr.message,
-          data: {
-            job_card_id,
-            can_start: false,
-            reason: valErr.message
-          }
-        });
+        if (valErr.name === 'ConflictError') {
+          return res.status(409).json({
+            success: false,
+            message: valErr.message,
+            conflict: true,
+            details: valErr.details
+          });
+        }
+        
+        canStart = false;
+        validationMessage = valErr.message;
+
+        // Categorize common errors for better UI presentation
+        if (valErr.message.includes('No operator assigned')) {
+          requirements.push({
+            type: 'assignment',
+            status: 'missing',
+            title: 'Operator Unassigned',
+            message: 'A person (operator) must be assigned to this job card so we know who is working on it.'
+          });
+        }
+        if (valErr.message.includes('No workstation assigned')) {
+          requirements.push({
+            type: 'assignment',
+            status: 'missing',
+            title: 'Machine Unassigned',
+            message: 'Please assign a machine or workstation where this operation will take place.'
+          });
+        }
+        if (valErr.message.includes('No schedule set') || valErr.message.includes('Schedule date and time not set')) {
+          requirements.push({
+            type: 'schedule',
+            status: 'missing',
+            title: 'Schedule Missing',
+            message: 'This job hasn\'t been scheduled yet. Please set a start and end time.'
+          });
+        }
+        if (valErr.message.includes('Sequence Error')) {
+          requirements.push({
+            type: 'sequence',
+            status: 'blocked',
+            title: 'Previous Work Pending',
+            message: 'You cannot start this operation yet because the previous step in the process is not finished.'
+          });
+        }
+        
+        // If it's none of the above but still an error
+        if (requirements.length === 0) {
+          requirements.push({
+            type: 'general',
+            status: 'error',
+            title: 'Action Required',
+            message: valErr.message
+          });
+        }
       }
 
       res.status(200).json({
         success: true,
-        message: 'Job card is ready to start',
+        message: validationMessage,
         data: {
           job_card_id,
           mr_id: card.mr_id,
           mr_status: card.mr_status,
-          can_start: true
+          can_start: canStart && requirements.length === 0,
+          requirements: requirements,
+          reason: validationMessage
         }
       });
     } catch (error) {
