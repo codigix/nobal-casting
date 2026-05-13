@@ -112,9 +112,10 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
   const fetchWorkOrderDetails = async (woId) => {
     try {
       setLoading(true)
-      const [woRes, stockRes] = await Promise.all([
+      const [woRes, stockRes, depRes] = await Promise.all([
         productionService.getWorkOrder(woId),
-        productionService.getStockBalance()
+        productionService.getStockBalance(),
+        productionService.getWorkOrderDependencies(woId, 'child')
       ])
       
       if (woRes.success) {
@@ -141,6 +142,22 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
           available_qty: stockMap[item.item_code] || 0,
           release_qty: ((parseFloat(item.required_qty) / parseFloat(woRes.data.quantity)) * remainingToDispatch)
         }))
+
+        // Add sub-assemblies (child work orders) that have been produced
+        if (depRes && depRes.success && Array.isArray(depRes.data)) {
+          const subAssemblies = depRes.data.map(dep => ({
+            id: Math.random().toString(36).substr(2, 9),
+            item_code: dep.child_item_code,
+            item_name: dep.child_item_name || `(Sub-Assembly) ${dep.child_item_code}`,
+            batch_no: 'BATCH-WIP',
+            available_qty: parseFloat(dep.child_produced_qty) || 0,
+            required_qty: parseFloat(dep.child_planned_qty) || 0,
+            release_qty: ((parseFloat(dep.child_planned_qty) / parseFloat(woRes.data.quantity)) * remainingToDispatch),
+            uom: 'pcs',
+            is_sub_assembly: true
+          }))
+          opItems = [...opItems, ...subAssemblies]
+        }
 
         if (opItems.length === 0) {
            opItems = [{

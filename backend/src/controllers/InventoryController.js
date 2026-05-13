@@ -196,6 +196,32 @@ class InventoryController {
     }
   }
 
+  async getMaterialAllocationForSalesOrder(req, res) {
+    try {
+      const { sales_order_id } = req.params
+
+      if (!sales_order_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'sales_order_id is required'
+        })
+      }
+
+      const allocations = await this.inventoryModel.getMaterialAllocationForSalesOrder(sales_order_id)
+
+      res.status(200).json({
+        success: true,
+        data: allocations
+      })
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        message: 'Error fetching material allocation for sales order',
+        error: error.message
+      })
+    }
+  }
+
   // ============================================================================
   // REPORTS: Get waste report
   // ============================================================================

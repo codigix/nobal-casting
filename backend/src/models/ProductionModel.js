@@ -405,11 +405,13 @@ class ProductionModel {
       const column = type === 'child' ? 'parent_wo_id' : 'child_wo_id'
       const [dependencies] = await (connection || this.db).query(
         `SELECT d.*, wo.status as child_status, wo.item_code as child_item_code, wo.quantity as child_planned_qty,
+         i.name as child_item_name,
          (SELECT produced_quantity FROM job_card jc WHERE jc.work_order_id = d.child_wo_id ORDER BY CAST(operation_sequence AS DECIMAL(18,6)) DESC LIMIT 1) as child_produced_qty,
          (SELECT accepted_quantity FROM job_card jc WHERE jc.work_order_id = d.child_wo_id ORDER BY CAST(operation_sequence AS DECIMAL(18,6)) DESC LIMIT 1) as child_accepted_qty,
          (SELECT transferred_quantity FROM job_card jc WHERE jc.work_order_id = d.child_wo_id ORDER BY CAST(operation_sequence AS DECIMAL(18,6)) DESC LIMIT 1) as child_transferred_qty
          FROM work_order_dependency d
          JOIN work_order wo ON d.child_wo_id = wo.wo_id
+         LEFT JOIN item i ON wo.item_code = i.item_code
          WHERE d.${column} = ?`,
         [wo_id]
       )
@@ -3671,7 +3673,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           // Strict validation: Re-validate allocation when moving to in-progress
           if (!operatorId) throw new Error('Cannot start: No operator assigned.');
           if (!machineId && !isShipment) throw new Error('Cannot start: No workstation assigned.');
-          if (!scheduledStart || !scheduledEnd) throw new Error('Cannot start: No schedule set.');
+          if ((!scheduledStart || !scheduledEnd) && !isShipment) throw new Error('Cannot start: No schedule set.');
 
           if (!isShipment) {
             await this.validateAllocation({
@@ -3693,7 +3695,7 @@ async deleteAllBOMRawMaterials(bom_id) {
             if ((!machineId || String(machineId) === 'undefined' || String(machineId) === 'UNASSIGNED') && !isShipment) {
               throw new Error('Cannot start Job Card: No workstation assigned.');
             }
-            if (!scheduledStart) {
+            if (!scheduledStart && !isShipment) {
               throw new Error('Cannot start Job Card: Schedule date and time not set.');
             }
           }

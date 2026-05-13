@@ -135,7 +135,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
           toast.addToast('Please assign a workstation before starting the job card', 'error');
           return;
         }
-        if (!jobCard?.scheduled_start_date) {
+        if (!jobCard?.scheduled_start_date && !isShipment) {
           toast.addToast('Please set a scheduled start date and time before starting the job card', 'error');
           return;
         }

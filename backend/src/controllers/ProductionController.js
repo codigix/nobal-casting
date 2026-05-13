@@ -2789,6 +2789,8 @@ class ProductionController {
         return;
       }
 
+      /* 
+      // Material request validation disabled as per user request
       if (!card.mr_id) {
         requirements.push({
           type: 'material',
@@ -2809,6 +2811,7 @@ class ProductionController {
           });
         }
       }
+      */
 
       // 2. Comprehensive Status & Assignment Validation
       let canStart = true;

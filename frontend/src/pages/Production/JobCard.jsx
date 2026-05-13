@@ -294,7 +294,7 @@ export default function JobCard() {
       if (!currentCard.machine_id && !isShipment) {
         return { canStart: false, reason: 'Please assign a workstation before starting the job card' }
       }
-      if (!currentCard.scheduled_start_date) {
+      if (!currentCard.scheduled_start_date && !isShipment) {
         return { canStart: false, reason: 'Please set a scheduled start date and time before starting the job card' }
       }
     } else {
@@ -327,20 +327,27 @@ export default function JobCard() {
 
       toast.addToast('⏳ Validating start conditions...', 'info')
 
-      // 1. Backend validation (MR, Sequence, and now Assignment)
+      // 1. Backend validation (Sequence and Assignment)
       const validateRes = await api.post(`/production/job-cards/${jobCardId}/validate-start`, { auto_create_mr: true })
       const validation = validateRes.data?.data || validateRes.data
 
       if (validation && !validation.can_start) {
         if (validation.requirements && validation.requirements.length > 0) {
-          validation.requirements.forEach(req => {
-            toast.addToast(`${req.title}: ${req.message}`, 'error')
-          })
+          // Filter out material requirements if they still come from backend (even though we commented them out, safety first)
+          const nonMaterialReqs = validation.requirements.filter(r => r.type !== 'material')
+          
+          if (nonMaterialReqs.length > 0) {
+            nonMaterialReqs.forEach(req => {
+              toast.addToast(`${req.title}: ${req.message}`, 'error')
+            })
+            setLoading(false)
+            return
+          }
         } else {
-          toast.addToast(validation.reason || validation.message || "We couldn't start this job card. Please make sure materials are received and a machine/operator is assigned.", 'error')
+          toast.addToast(validation.reason || validation.message || "We couldn't start this job card. Please make sure a machine and operator are assigned.", 'error')
+          setLoading(false)
+          return
         }
-        setLoading(false)
-        return
       }
 
       // 2. Check dependencies (sub-assemblies)

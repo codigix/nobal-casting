@@ -283,9 +283,10 @@ export default function ProjectDetails() {
     detailedData.chartData.forEach(item => {
       item.data.forEach(point => {
         if (!aggregated[point.date]) {
-          aggregated[point.date] = { date: point.date, actual: 0 };
+          aggregated[point.date] = { date: point.date, actual: 0, rejected: 0 };
         }
         aggregated[point.date].actual += point.actual;
+        aggregated[point.date].rejected += (point.rejected || 0);
       });
     });
     
@@ -574,7 +575,7 @@ export default function ProjectDetails() {
         )}
 
         {activeTab === 'stages' && (
-          <div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between p-2 rounded  gap-2">
               <div>
                 <h4 className="text-lg  text-slate-900 m-0 ">Production Workflow Analysis</h4>
@@ -591,7 +592,104 @@ export default function ProjectDetails() {
                 </select>
               </div>
             </div>
+            
             <ProcessFlow stages={displayStages} />
+
+            {/* Stage-wise Progress Analysis Chart */}
+            {displayStages && displayStages.length > 0 && (
+              <div className="bg-white p-6 rounded border border-slate-200 mt-6">
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h4 className="text-lg font-bold text-slate-900 m-0">Global Production Tracking</h4>
+                    <p className="text-slate-500 text-xs mt-1">Consolidated Operation Progress Analysis</p>
+                  </div>
+                  <div className="flex gap-6">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-[#10b981] rounded " />
+                      <span className="text-[10px] font-bold text-slate-500">PLAN</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-[#ef4444] rounded " />
+                      <span className="text-[10px] font-bold text-slate-500">ACTUAL</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-[400px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={displayStages} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis 
+                        dataKey="stage_name" 
+                        axisLine={{ stroke: '#e2e8f0' }}
+                        tickLine={false}
+                        tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }}
+                        angle={-45}
+                        textAnchor="end"
+                        interval={0}
+                      />
+                      <YAxis 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#94a3b8', fontSize: 10 }}
+                      />
+                      <Tooltip 
+                        cursor={{ fill: '#f8fafc' }}
+                        contentStyle={{ 
+                          backgroundColor: '#ffffff', 
+                          border: '1px solid #e2e8f0', 
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                          fontSize: '12px'
+                        }}
+                      />
+                      <Bar 
+                        dataKey="planned_qty" 
+                        name="PLAN" 
+                        fill="#10b981" 
+                        radius={[4, 4, 0, 0]}
+                        barSize={30}
+                      />
+                      <Bar 
+                        dataKey="accepted_qty" 
+                        name="ACTUAL" 
+                        fill="#ef4444" 
+                        radius={[4, 4, 0, 0]}
+                        barSize={30}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                {/* Data Summary Table */}
+                <div className="mt-8 rounded border border-slate-100 overflow-hidden">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="p-3 text-[10px] font-bold text-slate-400 border-r border-slate-100 w-32 uppercase tracking-wider">TYPE</th>
+                        {displayStages.map((s, i) => (
+                          <th key={i} className="p-3 text-[10px] font-bold text-slate-400 text-center border-r border-slate-100 uppercase tracking-wider">{s.stage_name}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-t border-slate-100 hover:bg-slate-50/30">
+                        <td className="p-3 text-xs font-bold text-emerald-600 border-r border-slate-100">PLAN</td>
+                        {displayStages.map((s, i) => (
+                          <td key={i} className="p-3 text-xs text-slate-700 text-center border-r border-slate-100">{s.planned_qty}</td>
+                        ))}
+                      </tr>
+                      <tr className="border-t border-slate-100 hover:bg-slate-50/30">
+                        <td className="p-3 text-xs font-bold text-rose-600 border-r border-slate-100">ACTUAL</td>
+                        {displayStages.map((s, i) => (
+                          <td key={i} className="p-3 text-xs text-slate-700 text-center border-r border-slate-100">{s.accepted_qty}</td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -767,102 +865,6 @@ export default function ProjectDetails() {
               </div>
             </div>
 
-            {/* Stage-wise Progress Analysis */}
-            {detailedData.stages && detailedData.stages.length > 0 ? (
-              <div className="bg-white p-6 rounded border border-slate-200">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h4 className="text-lg font-bold text-slate-900 m-0">Global Production Tracking</h4>
-                    <p className="text-slate-500 text-xs mt-1">Consolidated Operation Progress Analysis</p>
-                  </div>
-                  <div className="flex gap-6">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-[#10b981] rounded " />
-                      <span className="text-[10px] font-bold text-slate-500">PLAN</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-[#ef4444] rounded " />
-                      <span className="text-[10px] font-bold text-slate-500">ACTUAL</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-[400px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={detailedData.stages} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis 
-                        dataKey="stage_name" 
-                        axisLine={{ stroke: '#e2e8f0' }}
-                        tickLine={false}
-                        tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }}
-                        angle={-45}
-                        textAnchor="end"
-                        interval={0}
-                      />
-                      <YAxis 
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: '#94a3b8', fontSize: 10 }}
-                      />
-                      <Tooltip 
-                        cursor={{ fill: '#f8fafc' }}
-                        contentStyle={{ 
-                          backgroundColor: '#ffffff', 
-                          border: '1px solid #e2e8f0', 
-                          borderRadius: '8px',
-                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                          fontSize: '12px'
-                        }}
-                      />
-                      <Bar 
-                        dataKey="planned_qty" 
-                        name="PLAN" 
-                        fill="#10b981" 
-                        radius={[4, 4, 0, 0]}
-                        barSize={30}
-                      />
-                      <Bar 
-                        dataKey="accepted_qty" 
-                        name="ACTUAL" 
-                        fill="#ef4444" 
-                        radius={[4, 4, 0, 0]}
-                        barSize={30}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                {/* Data Summary Table */}
-                <div className="mt-8 rounded border border-slate-100 overflow-hidden">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="p-3 text-[10px] font-bold text-slate-400 border-r border-slate-100 w-32 uppercase tracking-wider">TYPE</th>
-                        {detailedData.stages.map((s, i) => (
-                          <th key={i} className="p-3 text-[10px] font-bold text-slate-400 text-center border-r border-slate-100 uppercase tracking-wider">{s.stage_name}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-t border-slate-100 hover:bg-slate-50/30">
-                        <td className="p-3 text-xs font-bold text-emerald-600 border-r border-slate-100">PLAN</td>
-                        {detailedData.stages.map((s, i) => (
-                          <td key={i} className="p-3 text-xs text-slate-700 text-center border-r border-slate-100">{s.planned_qty}</td>
-                        ))}
-                      </tr>
-                      <tr className="border-t border-slate-100 hover:bg-slate-50/30">
-                        <td className="p-3 text-xs font-bold text-rose-600 border-r border-slate-100">ACTUAL</td>
-                        {detailedData.stages.map((s, i) => (
-                          <td key={i} className="p-3 text-xs text-slate-700 text-center border-r border-slate-100">{s.accepted_qty}</td>
-                        ))}
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : null}
-
             {/* Daily Production Trend Chart */}
             {trendData.length > 0 && (
               <div className="bg-white p-6 rounded border border-slate-200">
@@ -877,6 +879,10 @@ export default function ProjectDetails() {
                         <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
                           <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorRejected" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -899,6 +905,7 @@ export default function ProjectDetails() {
                           fontSize: '12px'
                         }}
                       />
+                      <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: '10px', paddingBottom: '10px' }} />
                       <Area 
                         type="monotone" 
                         dataKey="actual" 
@@ -907,6 +914,16 @@ export default function ProjectDetails() {
                         fillOpacity={1} 
                         fill="url(#colorActual)" 
                         name="Verified Output"
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="rejected" 
+                        stroke="#ef4444" 
+                        strokeWidth={2}
+                        fillOpacity={1} 
+                        fill="url(#colorRejected)" 
+                        name="Rejected Units"
+                        strokeDasharray="5 5"
                       />
                     </AreaChart>
                   </ResponsiveContainer>

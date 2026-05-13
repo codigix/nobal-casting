@@ -944,7 +944,8 @@ class MastersController {
              DATE(pe.entry_date) as date,
              wo.item_code,
              i.name as item_name,
-             SUM(pe.accepted_quantity) as actual
+             SUM(pe.accepted_quantity) as actual,
+             SUM(pe.quantity_rejected) as rejected
            FROM production_entry pe
            JOIN work_order wo ON pe.work_order_id = wo.wo_id
            LEFT JOIN item i ON wo.item_code = i.item_code
@@ -962,6 +963,7 @@ class MastersController {
           acc[itemName].push({
             date: new Date(row.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
             actual: parseFloat(row.actual || 0),
+            rejected: parseFloat(row.rejected || 0),
             planned: 0 // Daily planned is not explicitly tracked per date, using 0
           });
           return acc;
