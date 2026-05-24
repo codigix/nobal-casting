@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Save, X, Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react'
+import { useAuth } from '../../hooks/AuthContext'
 import Card from '../../components/Card/Card'
 
 export default function OperationForm() {
   const navigate = useNavigate()
   const { id } = useParams()
+  const { user } = useAuth()
+  const isAdmin = user?.department?.toLowerCase() === 'admin'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
@@ -299,23 +302,25 @@ export default function OperationForm() {
                   <p className="text-xs text-gray-500 ml-8 mt-1">Mark if this is a corrective/rework operation</p>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-2">Hourly Rate</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-gray-500">₹</span>
-                    <input
-                      type="number"
-                      name="hourly_rate"
-                      value={formData.hourly_rate}
-                      onChange={handleInputChange}
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                      className="w-full p-2.5 pl-8 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                    />
+                {isAdmin && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Hourly Rate</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-gray-500">₹</span>
+                      <input
+                        type="number"
+                        name="hourly_rate"
+                        value={formData.hourly_rate}
+                        onChange={handleInputChange}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        className="w-full p-2.5 pl-8 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Cost per hour for this operation</p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Cost per hour for this operation</p>
-                </div>
+                )}
               </div>
             </div>
           </div>

@@ -4537,6 +4537,9 @@ async deleteAllBOMRawMaterials(bom_id) {
         );
         totalAccepted = parseFloat(dnRows[0].total_dn_qty || 0);
         
+        // Ensure produced quantity is at least equal to accepted for shipments
+        totalProduced = Math.max(totalProduced, totalAccepted);
+        
         // If we are currently dispatching, and it's not yet in the DB (newly created in this transaction), add it
         if (dispatch_qty > 0) {
           // We need to check if this dispatch_qty was already included in the SUM above
@@ -4544,10 +4547,14 @@ async deleteAllBOMRawMaterials(bom_id) {
           // In _handleStockUpdates, it's inserted.
           // To be safe, we just ensure it's at least the current dispatch_qty if SUM was 0
           totalAccepted = Math.max(totalAccepted, dispatch_qty);
+          totalProduced = Math.max(totalProduced, totalAccepted);
         }
       }
 
       let totalLoss = Math.max(totalRejected, totalScrap);
+
+      // DATA INTEGRITY: Gross quantity cannot be less than Net quantity
+      totalProduced = Math.max(totalProduced, totalAccepted);
 
       // --- CALCULATE ACTUAL OPERATING COST ---
       // Real-time cost calculation based on actual execution data

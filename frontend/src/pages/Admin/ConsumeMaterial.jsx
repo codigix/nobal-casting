@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react'
-import { Package, Search, Download, RefreshCcw, Box, PieChart, Info, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Package, Search, Download, RefreshCcw, Box, PieChart, Info, AlertTriangle, CheckCircle, Eye } from 'lucide-react'
 import { getProjectMaterialReport } from '../../services/adminService'
 import DataTable from '../../components/Table/DataTable'
+import MaterialConsumptionModal from '../../components/Inventory/MaterialConsumptionModal'
 
 export default function ConsumeMaterial() {
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedProject, setSelectedProject] = useState(null)
 
   const fetchData = async () => {
     try {
@@ -112,6 +114,19 @@ export default function ConsumeMaterial() {
           </span>
         )
       }
+    },
+    {
+      label: 'Action',
+      key: 'action',
+      render: (val, row) => (
+        <button 
+          onClick={() => setSelectedProject(row)}
+          className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+          title="View Consumption Report"
+        >
+          <Eye size={18} />
+        </button>
+      )
     }
   ]
 
@@ -219,6 +234,13 @@ export default function ConsumeMaterial() {
           <AlertTriangle size={18} />
           <span>High volume of allocated material remains unconsumed. Ensure production plans are updated and material issues are being recorded.</span>
         </div>
+      )}
+
+      {selectedProject && (
+        <MaterialConsumptionModal 
+          project={selectedProject}
+          onClose={() => setSelectedProject(null)}
+        />
       )}
     </div>
   )

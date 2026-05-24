@@ -21,7 +21,7 @@ class StockEntryModel {
           CASE 
             WHEN se.entry_type = 'Material Transfer' THEN 'Transfer'
             WHEN se.entry_type = 'Material Issue' THEN 'Issue'
-            WHEN se.entry_type IN ('Material Receipt', 'Purchase') THEN 'Purchase'
+            WHEN se.entry_type IN ('Material Receipt', 'Purchase', 'Material Purchase') THEN 'Purchase'
             ELSE 'Other'
           END as entry_type,
           se.entry_type as original_entry_type,
@@ -43,12 +43,23 @@ class StockEntryModel {
           se.total_value,
           COALESCE(tw.warehouse_name, fw.warehouse_name) as warehouse_name,
           u.full_name as created_by_user,
-          COUNT(sei.id) as total_items
+          COUNT(sei.id) as total_items,
+          GROUP_CONCAT(
+            CONCAT_WS('|', 
+              COALESCE(sei.item_code, ''), 
+              COALESCE(i.name, ''), 
+              COALESCE(sei.qty, 0), 
+              COALESCE(sei.uom, ''), 
+              COALESCE(sei.valuation_rate, 0), 
+              COALESCE(sei.batch_no, '')
+            ) SEPARATOR ';;'
+          ) as items_details
         FROM stock_entries se
         LEFT JOIN warehouses fw ON se.from_warehouse_id = fw.id
         LEFT JOIN warehouses tw ON se.to_warehouse_id = tw.id
         LEFT JOIN users u ON se.created_by = u.user_id
         LEFT JOIN stock_entry_items sei ON se.id = sei.stock_entry_id
+        LEFT JOIN item i ON sei.item_code = i.item_code
         WHERE 1=1
       `
       const params = []
@@ -102,7 +113,7 @@ class StockEntryModel {
           CASE 
             WHEN se.entry_type = 'Material Transfer' THEN 'Transfer'
             WHEN se.entry_type = 'Material Issue' THEN 'Issue'
-            WHEN se.entry_type IN ('Material Receipt', 'Purchase') THEN 'Purchase'
+            WHEN se.entry_type IN ('Material Receipt', 'Purchase', 'Material Purchase') THEN 'Purchase'
             ELSE 'Other'
           END as entry_type_display,
           se.entry_type as original_entry_type,
@@ -419,7 +430,8 @@ class StockEntryModel {
           'Manufacturing Return': 'Manufacturing Return',
           'Repack': 'Repack',
           'Scrap Entry': 'Scrap Entry',
-          'Purchase': 'Purchase Receipt'
+          'Purchase': 'Purchase Receipt',
+          'Material Purchase': 'Purchase Receipt'
         }
         const transactionType = transactionTypeMap[entry.entry_type] || entry.entry_type
 
@@ -470,7 +482,7 @@ class StockEntryModel {
           }
 
           // Handle Inward movement
-          if (['Material Receipt', 'Material Transfer', 'Manufacturing Return', 'Repack', 'Purchase'].includes(entry.entry_type)) {
+          if (['Material Receipt', 'Material Transfer', 'Manufacturing Return', 'Repack', 'Purchase', 'Material Purchase'].includes(entry.entry_type)) {
             const toWarehouseId = entry.to_warehouse_id
             if (!toWarehouseId) throw new Error(`Target warehouse is required for ${entry.entry_type}`)
             
@@ -510,7 +522,7 @@ class StockEntryModel {
             })
           }
 
-          const movement_type = (entry.entry_type === 'Material Receipt' || entry.entry_type === 'Purchase') ? 'IN' : 
+          const movement_type = (entry.entry_type === 'Material Receipt' || entry.entry_type === 'Purchase' || entry.entry_type === 'Material Purchase') ? 'IN' : 
                                entry.entry_type === 'Material Issue' ? 'OUT' : 
                                entry.entry_type === 'Material Transfer' ? 'TRANSFER' : 
                                (entry.to_warehouse_id ? 'IN' : 'OUT')
@@ -679,8 +691,8 @@ class StockEntryModel {
           }
           const transactionType = transactionTypeMap[entry.entry_type] || entry.entry_type
 
-          // 1. Reverse Inward movement (Receipt, Transfer, Manufacturing Return, Repack)
-          if (['Material Receipt', 'Material Transfer', 'Manufacturing Return', 'Repack'].includes(entry.entry_type)) {
+          // 1. Reverse Inward movement (Receipt, Transfer, Manufacturing Return, Repack, Purchase)
+          if (['Material Receipt', 'Material Transfer', 'Manufacturing Return', 'Repack', 'Purchase', 'Material Purchase'].includes(entry.entry_type)) {
             const toWarehouseId = entry.to_warehouse_id
             if (toWarehouseId) {
               // Deduct from Target (Reverse of Addition)
@@ -801,7 +813,7 @@ class StockEntryModel {
   static async generateEntryNo(entryType) {
     try {
       const db = this.getDb()
-      const prefix = entryType.substring(0, 2).toUpperCase()
+      const prefix = 'SE'
       const date = new Date()
       const yearMonth = date.getFullYear() + String(date.getMonth() + 1).padStart(2, '0')
       

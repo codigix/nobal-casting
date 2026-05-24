@@ -595,6 +595,102 @@ class MastersController {
     }
   }
 
+  static async getProjectDetailedMaterialReport(req, res) {
+    try {
+      const { id } = req.params
+      const database = MastersController.getDb()
+      
+      // 1. Get allocated quantities per item
+      const [allocatedRows] = await database.query(`
+        SELECT 
+          item_code,
+          item_name,
+          SUM(qty) as allocated_qty
+        FROM (
+          SELECT 
+            prm.item_code,
+            prm.item_name,
+            prm.plan_to_request_qty as qty
+          FROM production_plan pp
+          JOIN production_plan_raw_material prm ON pp.plan_id = prm.plan_id
+          WHERE pp.sales_order_id = ?
+          
+          UNION ALL
+          
+          SELECT 
+            ma.item_code,
+            i.name as item_name,
+            ma.allocated_qty as qty
+          FROM material_allocation ma
+          JOIN work_order wo ON ma.work_order_id = wo.wo_id
+          JOIN item i ON ma.item_code = i.item_code
+          WHERE wo.sales_order_id = ?
+        ) combined
+        GROUP BY item_code, item_name
+      `, [id, id])
+
+      // 2. Get consumed quantities per item
+      const [consumedRows] = await database.query(`
+        SELECT 
+          mri.item_code,
+          SUM(mri.qty) as consumed_qty
+        FROM material_request mr
+        JOIN material_request_item mri ON mr.mr_id = mri.mr_id
+        WHERE (
+          mr.production_plan_id IN (SELECT plan_id FROM production_plan WHERE sales_order_id = ?)
+          OR 
+          mr.mr_id IN (
+            SELECT jc.mr_id FROM job_card jc 
+            JOIN work_order wo ON jc.work_order_id = wo.wo_id 
+            WHERE wo.sales_order_id = ? AND jc.mr_id IS NOT NULL
+          )
+        )
+        AND mr.purpose = 'material_issue'
+        AND mr.status IN ('received', 'completed')
+        GROUP BY mri.item_code
+      `, [id, id])
+
+      // 3. Merge data
+      const consumedMap = consumedRows.reduce((acc, row) => {
+        acc[row.item_code] = parseFloat(row.consumed_qty || 0)
+        return acc
+      }, {})
+
+      const detailedData = allocatedRows.map(row => {
+        const consumed = consumedMap[row.item_code] || 0
+        return {
+          item_code: row.item_code,
+          item_name: row.item_name,
+          allocated_qty: parseFloat(row.allocated_qty || 0),
+          consumed_qty: consumed,
+          remaining_qty: Math.max(0, parseFloat(row.allocated_qty || 0) - consumed)
+        }
+      })
+
+      // Also find items that were consumed but not allocated (if any)
+      const allocatedItemCodes = new Set(detailedData.map(d => d.item_code))
+      consumedRows.forEach(row => {
+        if (!allocatedItemCodes.has(row.item_code)) {
+            detailedData.push({
+                item_code: row.item_code,
+                item_name: 'Unknown (Not Allocated)',
+                allocated_qty: 0,
+                consumed_qty: parseFloat(row.consumed_qty || 0),
+                remaining_qty: 0
+            })
+        }
+      })
+
+      res.json({
+        success: true,
+        data: detailedData,
+        message: 'Project detailed material report fetched successfully'
+      })
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message })
+    }
+  }
+
   static async getDetailedProjectAnalysis(req, res) {
     try {
       const { id } = req.params
@@ -605,9 +701,20 @@ class MastersController {
         `SELECT sso.sales_order_id as id,
                 sso.project_name,
                 sso.items,
+                sso.bom_id,
+                sso.bom_name,
+                sso.bom_finished_goods,
+                sso.bom_raw_materials,
+                sso.bom_operations,
+                sso.quantity,
                 CONCAT(sso.sales_order_id, ' - SO') as name,
                 sso.status,
                 sso.order_amount as revenue,
+                sso.grand_total,
+                (SELECT COALESCE(SUM(si.amount * si.tax_rate / 100), 0) 
+                 FROM selling_invoice si 
+                 JOIN selling_delivery_note sdn ON si.delivery_note_id = sdn.delivery_note_id 
+                 WHERE sdn.sales_order_id = sso.sales_order_id) as total_tax,
                 COALESCE(DATEDIFF(sso.delivery_date, NOW()), 0) as daysLeft,
                 sso.delivery_date as dueDate,
                 sso.customer_id as customer,
@@ -649,12 +756,14 @@ class MastersController {
       // 3. Fetch Work Orders
       const [workOrders] = await database.query(
         `SELECT wo.*, i.name as item_name,
+                COALESCE(b.total_cost, 0) as bom_price,
                 COALESCE(
                   (SELECT accepted_quantity FROM job_card WHERE work_order_id = wo.wo_id ORDER BY operation_sequence DESC LIMIT 1),
                   0
                 ) as produced_qty
          FROM work_order wo 
          LEFT JOIN item i ON wo.item_code = i.item_code
+         LEFT JOIN bom b ON wo.bom_no = b.bom_id
          WHERE wo.sales_order_id = ?
          ORDER BY 
            CASE WHEN wo.wo_id LIKE '%-SA-%' THEN 0 ELSE 1 END,
@@ -663,16 +772,87 @@ class MastersController {
       )
       
       const woIds = workOrders.map(wo => wo.wo_id)
+      const bomNos = [...new Set(workOrders.map(wo => wo.bom_no).filter(Boolean))]
       let stages = []
       let entries = []
       let operations = []
       
+      // 3.5 Fetch Operations (Combined from Plan and Job Cards)
       if (productionPlan) {
+        // Fetch operations with Master hourly rate and Job Card progress
         const [planOps] = await database.query(
-          `SELECT * FROM production_plan_operations WHERE plan_id = ?`,
-          [productionPlan.plan_id]
+          `SELECT ppo.*, 
+                  o.hourly_rate as master_hourly_rate,
+                  (SELECT SUM(accepted_quantity) FROM job_card jc JOIN work_order wo ON jc.work_order_id = wo.wo_id WHERE wo.sales_order_id = ? AND jc.operation = ppo.operation_name) as done_qty,
+                  (SELECT SUM(planned_quantity) FROM job_card jc JOIN work_order wo ON jc.work_order_id = wo.wo_id WHERE wo.sales_order_id = ? AND jc.operation = ppo.operation_name) as total_jc_qty
+           FROM production_plan_operations ppo
+           LEFT JOIN operation o ON ppo.operation_name = o.operation_name
+           WHERE ppo.plan_id = ?`,
+          [id, id, productionPlan.plan_id]
         )
         operations = planOps
+      }
+
+      // Fallback: If no plan operations, fetch from Job Cards
+      if (operations.length === 0 && workOrders.length > 0) {
+        const [jcOps] = await database.query(
+          `SELECT DISTINCT jc.operation as operation_name,
+                  o.hourly_rate as master_hourly_rate,
+                  SUM(jc.accepted_quantity) as done_qty,
+                  SUM(jc.planned_quantity) as total_jc_qty
+           FROM job_card jc
+           JOIN work_order wo ON jc.work_order_id = wo.wo_id
+           LEFT JOIN operation o ON jc.operation = o.operation_name
+           WHERE wo.sales_order_id = ?
+           GROUP BY jc.operation, o.hourly_rate`,
+          [id]
+        )
+        operations = jcOps
+      }
+
+      // Enrich operations with BOM details and recalculate costs
+      if (operations.length > 0) {
+        const allBomIds = [...new Set([project.bom_id, ...bomNos].filter(Boolean))]
+        
+        for (let op of operations) {
+          // Fetch BOM operation details (cycle time, setup time)
+          if (allBomIds.length > 0) {
+            const [bomOps] = await database.query(
+              `SELECT bo.operation_time, bo.setup_time, bo.hourly_rate as bom_hourly_rate 
+               FROM bom_operation bo 
+               WHERE bo.operation_name = ? AND bo.bom_id IN (${allBomIds.map(() => '?').join(',')})
+               LIMIT 1`,
+              [op.operation_name, ...allBomIds]
+            )
+            
+            if (bomOps.length > 0) {
+              const bo = bomOps[0]
+              op.cycle_time = parseFloat(bo.operation_time || 0)
+              op.setup_time = parseFloat(bo.setup_time || 0)
+              
+              // Recalculate if planned values are 0 or missing
+              const currentHours = parseFloat(op.total_hours || 0)
+              if (currentHours === 0) {
+                const qty = parseFloat(op.total_jc_qty || (productionPlan ? productionPlan.total_quantity : project.quantity) || 0)
+                if (qty > 0) {
+                  const totalMinutes = op.setup_time + (op.cycle_time * qty)
+                  op.total_time_minutes = totalMinutes
+                  op.total_hours = totalMinutes / 60
+                  op.hourly_rate = parseFloat(op.hourly_rate || bo.bom_hourly_rate || op.master_hourly_rate || 0)
+                  op.total_cost = op.total_hours * op.hourly_rate
+                }
+              }
+            }
+          }
+
+          // Ensure hourly rate and cost are set from master if still 0
+          if (!op.hourly_rate || parseFloat(op.hourly_rate) === 0) {
+            op.hourly_rate = parseFloat(op.master_hourly_rate || 0)
+            if (parseFloat(op.total_cost || 0) === 0 && parseFloat(op.total_hours || 0) > 0) {
+              op.total_cost = op.total_hours * op.hourly_rate
+            }
+          }
+        }
       }
       
       if (woIds.length > 0) {
@@ -746,7 +926,16 @@ class MastersController {
             }
           }
 
-          const jcStatus = (jc.status || '').toLowerCase().replace(/\s+/g, '-').trim();
+          let jcStatus = (jc.status || '').toLowerCase().replace(/\s+/g, '-').trim();
+          
+          // If status is empty/null but production has started, consider it in-progress
+          if ((!jcStatus || jcStatus === 'open' || jcStatus === 'pending') && (parseFloat(jc.produced_quantity || 0) > 0 || parseFloat(jc.accepted_quantity || 0) > 0)) {
+            if (parseFloat(jc.accepted_quantity || 0) >= parseFloat(jc.planned_quantity || 0)) {
+              jcStatus = 'completed';
+            } else {
+              jcStatus = 'in-progress';
+            }
+          }
           
           if (!stage.jcStatuses) stage.jcStatuses = [];
           stage.jcStatuses.push(jcStatus);
@@ -754,7 +943,7 @@ class MastersController {
           // Determine aggregate status
           const hasInProgress = stage.jcStatuses.some(s => s === 'in-progress');
           const hasCompleted = stage.jcStatuses.some(s => s === 'completed');
-          const hasPending = stage.jcStatuses.some(s => s === 'pending' || s === 'draft' || s === 'ready');
+          const hasPending = stage.jcStatuses.some(s => s === 'pending' || s === 'draft' || s === 'ready' || s === 'open');
           const allCompleted = stage.jcStatuses.every(s => s === 'completed');
 
           if (hasInProgress || (hasCompleted && hasPending)) {
@@ -825,7 +1014,16 @@ class MastersController {
             }
           }
           
-          const jcStatus = (jc.status || '').toLowerCase().replace(/\s+/g, '-').trim();
+          let jcStatus = (jc.status || '').toLowerCase().replace(/\s+/g, '-').trim();
+          
+          // If status is empty/null but production has started, consider it in-progress
+          if ((!jcStatus || jcStatus === 'open' || jcStatus === 'pending') && (parseFloat(jc.produced_quantity || 0) > 0 || parseFloat(jc.accepted_quantity || 0) > 0)) {
+            if (parseFloat(jc.accepted_quantity || 0) >= parseFloat(jc.planned_quantity || 0)) {
+              jcStatus = 'completed';
+            } else {
+              jcStatus = 'in-progress';
+            }
+          }
           
           if (!stage.jcStatuses) stage.jcStatuses = [];
           stage.jcStatuses.push(jcStatus);
@@ -833,7 +1031,7 @@ class MastersController {
           // Determine aggregate status
           const hasInProgress = stage.jcStatuses.some(s => s === 'in-progress');
           const hasCompleted = stage.jcStatuses.some(s => s === 'completed');
-          const hasPending = stage.jcStatuses.some(s => s === 'pending' || s === 'draft' || s === 'ready');
+          const hasPending = stage.jcStatuses.some(s => s === 'pending' || s === 'draft' || s === 'ready' || s === 'open');
           const allCompleted = stage.jcStatuses.every(s => s === 'completed');
 
           if (hasInProgress || (hasCompleted && hasPending)) {
@@ -1008,6 +1206,122 @@ class MastersController {
           [productionPlan ? productionPlan.plan_id : null, id, id]
         )
         project.stock_movements = stockMovements;
+
+        // 4.9 Fetch BOM Costing (Planned Cost)
+        if (project.bom_id) {
+          const bomId = project.bom_id;
+          if (bomId) {
+            const [[bomHeader]] = await database.query(
+              `SELECT quantity FROM bom WHERE bom_id = ?`,
+              [bomId]
+            );
+            const bomQty = parseFloat(bomHeader?.quantity || 1);
+            const projectQty = parseFloat(project.quantity || 1);
+
+            const [bomLines] = await database.query(
+              `SELECT bl.*, 
+                COALESCE(
+                  NULLIF(i.valuation_rate, 0), 
+                  (SELECT poi.rate FROM purchase_order_item poi JOIN purchase_order po ON poi.po_no = po.po_no WHERE poi.item_code = bl.component_code ORDER BY po.created_at DESC LIMIT 1),
+                  NULLIF(bl.rate, 0), 
+                  0
+                ) as item_rate
+               FROM bom_line bl
+               LEFT JOIN item i ON bl.component_code = i.item_code
+               WHERE bl.bom_id = ?`,
+              [bomId]
+            );
+
+            const [bomRawMaterials] = await database.query(
+              `SELECT brm.*, 
+                COALESCE(
+                  NULLIF(i.valuation_rate, 0), 
+                  (SELECT poi.rate FROM purchase_order_item poi JOIN purchase_order po ON poi.po_no = po.po_no WHERE poi.item_code = brm.item_code ORDER BY po.created_at DESC LIMIT 1),
+                  NULLIF(brm.rate, 0), 
+                  0
+                ) as item_rate
+               FROM bom_raw_material brm
+               LEFT JOIN item i ON brm.item_code = i.item_code
+               WHERE brm.bom_id = ?`,
+              [bomId]
+            );
+            
+            const [bomOps] = await database.query(
+              `SELECT bo.*, 
+                COALESCE(NULLIF(bo.hourly_rate, 0), NULLIF(bo.operating_cost, 0), NULLIF(o.hourly_rate, 0), 0) as calculated_hourly_rate
+               FROM bom_operation bo
+               LEFT JOIN operation o ON bo.operation_name = o.operation_name
+               WHERE bo.bom_id = ?`,
+              [bomId]
+            );
+            
+            const lineCost = bomLines.reduce((sum, l) => sum + (parseFloat(l.quantity || 0) * parseFloat(l.item_rate || 0)), 0);
+            const rmCost = bomRawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.qty || 0) * parseFloat(rm.item_rate || 0)), 0);
+
+            project.bom_details = {
+              materials: [...bomLines, ...bomRawMaterials],
+              operations: bomOps,
+              material_cost: (lineCost + rmCost) * (projectQty / bomQty),
+              operation_cost: bomOps.reduce((sum, o) => sum + (parseFloat(o.operation_time || 0) / 60 * parseFloat(o.calculated_hourly_rate || 0)), 0) * (projectQty / bomQty)
+            };
+          }
+        }
+
+        // 4.10 Fetch Subcontract (Challan) Costing
+        const [subcontractCosts] = await database.query(
+          `SELECT ic.*, COALESCE(ic.vendor_name, s.name, ic.vendor_id) as supplier_name
+           FROM inward_challan ic
+           LEFT JOIN supplier s ON ic.vendor_id = s.supplier_id
+           WHERE ic.job_card_id IN (
+             SELECT job_card_id FROM job_card jc
+             JOIN work_order wo ON jc.work_order_id = wo.wo_id
+             WHERE wo.sales_order_id = ?
+           )`,
+          [id]
+        );
+        project.subcontract_costs = subcontractCosts;
+        project.total_subcontract_cost = subcontractCosts.reduce((sum, c) => sum + parseFloat(c.total_cost || 0), 0);
+
+        // 4.11 Fetch Downtime Details
+        const [downtimeDetails] = await database.query(
+          `SELECT de.*, mm.name as machine_name, jc.machine_id, de.log_date as entry_date
+           FROM downtime_entry de
+           JOIN job_card jc ON de.job_card_id = jc.job_card_id
+           LEFT JOIN machine_master mm ON jc.machine_id = mm.machine_id
+           WHERE de.job_card_id IN (
+             SELECT job_card_id FROM job_card jc2
+             JOIN work_order wo ON jc2.work_order_id = wo.wo_id
+             WHERE wo.sales_order_id = ?
+           )`,
+          [id]
+        );
+        project.downtime_details = downtimeDetails;
+        project.total_downtime_minutes = downtimeDetails.reduce((sum, d) => sum + parseFloat(d.duration_minutes || 0), 0);
+
+        // 4.12 Fetch Sales Order Items (Detailed Price)
+        // Since sales_order_item table doesn't exist, we use the items from the JSON column in selling_sales_order
+        try {
+          const items = rawProject.items ? (typeof rawProject.items === 'string' ? JSON.parse(rawProject.items) : rawProject.items) : [];
+          project.sales_order_items = items.map(item => ({
+            ...item,
+            item_name: item.item_name || item.name || item.item_code
+          }));
+        } catch (e) {
+          project.sales_order_items = [];
+        }
+
+        // 4.13 Fetch Outsourced Production Entries
+        const [outsourcedEntries] = await database.query(
+          `SELECT pe.*, jc.operation, ic.challan_number, COALESCE(ic.vendor_name, s.name, ic.vendor_id) as supplier_name
+           FROM production_entry pe
+           JOIN job_card jc ON pe.job_card_id = jc.job_card_id
+           JOIN work_order wo ON jc.work_order_id = wo.wo_id
+           LEFT JOIN inward_challan ic ON pe.job_card_id = ic.job_card_id
+           LEFT JOIN supplier s ON ic.vendor_id = s.supplier_id
+           WHERE wo.sales_order_id = ? AND (ic.id IS NOT NULL OR jc.notes LIKE '%outsourced%')`,
+          [id]
+        );
+        project.outsourced_entries = outsourcedEntries;
       }
       
       // 5. Fetch Material Readiness (Aggregated from material_allocation)
@@ -1019,13 +1333,29 @@ class MastersController {
            SUM(COALESCE(ma.consumed_qty, 0)) as consumed_qty, 
            MAX(ma.status) as status, 
            i.uom,
+           COALESCE(
+             (SELECT sl.valuation_rate FROM stock_ledger sl 
+              WHERE sl.item_code = ma.item_code AND sl.qty_out > 0 
+              AND sl.reference_name IN (SELECT job_card_id FROM job_card WHERE work_order_id IN (SELECT wo_id FROM work_order WHERE sales_order_id = ?))
+              ORDER BY sl.created_at DESC LIMIT 1),
+             NULLIF(i.valuation_rate, 0),
+             
+             (SELECT rate FROM bom_line WHERE bom_id = ? AND component_code = ma.item_code LIMIT 1),
+             (SELECT rate FROM bom_raw_material WHERE bom_id = ? AND item_code = ma.item_code LIMIT 1),
+             NULLIF((SELECT total_cost / quantity FROM bom WHERE item_code = ma.item_code AND status = 'Active' LIMIT 1), 0),
+             0
+           ) as rate,
+           (SELECT GROUP_CONCAT(DISTINCT sl.batch_no) FROM stock_ledger sl 
+            WHERE sl.item_code = ma.item_code AND sl.qty_out > 0 
+            AND sl.reference_name IN (SELECT job_card_id FROM job_card WHERE work_order_id IN (SELECT wo_id FROM work_order WHERE sales_order_id = ?))
+            AND sl.batch_no IS NOT NULL AND sl.batch_no != '') as batch_nos,
            (SELECT COALESCE(SUM(current_qty), 0) FROM stock_balance WHERE item_code = ma.item_code) as stock_qty
          FROM material_allocation ma
          JOIN work_order wo ON ma.work_order_id = wo.wo_id
          LEFT JOIN item i ON ma.item_code = i.item_code
          WHERE wo.sales_order_id = ?
-         GROUP BY ma.item_code, ma.item_name, i.uom`,
-        [id]
+         GROUP BY ma.item_code, ma.item_name, i.uom, i.valuation_rate`,
+        [id, project.bom_id, project.bom_id, id, id]
       )
 
       let finalMaterials = materials || []
@@ -1040,11 +1370,20 @@ class MastersController {
              0 as consumed_qty, 
              'Planned' as status, 
              i.uom,
+             COALESCE(
+               (SELECT sl.valuation_rate FROM stock_ledger sl 
+                WHERE sl.item_code = rm.item_code AND sl.qty_in > 0 
+                ORDER BY sl.created_at DESC LIMIT 1),
+               NULLIF(i.valuation_rate, 0),
+               
+               0
+             ) as rate,
+             NULL as batch_nos,
              (SELECT COALESCE(SUM(current_qty), 0) FROM stock_balance WHERE item_code = rm.item_code) as stock_qty
            FROM production_plan_raw_material rm
            LEFT JOIN item i ON rm.item_code = i.item_code
            WHERE rm.plan_id = ?
-           GROUP BY rm.item_code, rm.item_name, i.uom`,
+           GROUP BY rm.item_code, rm.item_name, i.uom, i.valuation_rate`,
           [productionPlan.plan_id]
         )
         finalMaterials = planMaterials
@@ -1060,21 +1399,100 @@ class MastersController {
              SUM(COALESCE(wi.consumed_qty, 0)) as consumed_qty, 
              'Work Order' as status, 
              i.uom,
+             COALESCE(NULLIF(i.valuation_rate, 0),  0) as rate,
+             NULL as batch_nos,
              (SELECT COALESCE(SUM(current_qty), 0) FROM stock_balance WHERE item_code = wi.item_code) as stock_qty
            FROM work_order_item wi
            JOIN work_order wo ON wi.wo_id = wo.wo_id
            LEFT JOIN item i ON wi.item_code = i.item_code
            WHERE wo.sales_order_id = ?
-           GROUP BY wi.item_code, i.name, i.uom`,
+           GROUP BY wi.item_code, i.name, i.uom, i.valuation_rate`,
           [id]
         )
         finalMaterials = woMaterials
       }
       
+      // 5.5 Calculate Loss Values
+      const [lossValuation] = await database.query(
+        `SELECT 
+           SUM(COALESCE(pe.quantity_rejected, 0) * COALESCE(NULLIF(i.valuation_rate, 0),  NULLIF(b.total_cost, 0), 0)) as rejection_value,
+           SUM(COALESCE(pe.scrap_quantity, 0) * COALESCE(NULLIF(i.valuation_rate, 0),  NULLIF(b.total_cost, 0), 0)) as scrap_value
+         FROM production_entry pe
+         JOIN work_order wo ON pe.work_order_id = wo.wo_id
+         LEFT JOIN item i ON wo.item_code = i.item_code
+         LEFT JOIN bom b ON wo.bom_no = b.bom_id
+         WHERE wo.sales_order_id = ?`,
+        [id]
+      );
+
+      // Backup check if production_entry is empty, use job_card
+      let rejectionValue = parseFloat(lossValuation[0]?.rejection_value || 0);
+      let scrapValue = parseFloat(lossValuation[0]?.scrap_value || 0);
+
+      if (rejectionValue === 0 && scrapValue === 0) {
+        const [jcLoss] = await database.query(
+          `SELECT 
+             SUM(COALESCE(jc.rejected_quantity, 0) * COALESCE(NULLIF(i.valuation_rate, 0),  NULLIF(b.total_cost, 0), 0)) as rejection_value,
+             SUM(COALESCE(jc.scrap_quantity, 0) * COALESCE(NULLIF(i.valuation_rate, 0),  NULLIF(b.total_cost, 0), 0)) as scrap_value
+           FROM job_card jc
+           JOIN work_order wo ON jc.work_order_id = wo.wo_id
+           LEFT JOIN item i ON wo.item_code = i.item_code
+           LEFT JOIN bom b ON wo.bom_no = b.bom_id
+           WHERE wo.sales_order_id = ?`,
+          [id]
+        );
+        rejectionValue = parseFloat(jcLoss[0]?.rejection_value || 0);
+        scrapValue = parseFloat(jcLoss[0]?.scrap_value || 0);
+      }
+      
+      project.loss_valuation = {
+        rejection_value: rejectionValue,
+        scrap_value: scrapValue,
+        total_loss_value: rejectionValue + scrapValue
+      };
+
       // 6. Calculate Global Metrics
       const totalPlannedTime = stages.reduce((acc, s) => acc + (parseFloat(s.planned_time) || 0), 0);
       const totalActualTime = stages.reduce((acc, s) => acc + (parseFloat(s.actual_time) || 0), 0);
       const efficiency = totalActualTime > 0 ? Math.round((totalPlannedTime / totalActualTime) * 100) : 100;
+
+      // Costing Aggregation
+      const materialCost = finalMaterials.reduce((sum, m) => sum + (parseFloat(m.consumed_qty || 0) * parseFloat(m.rate || 0)), 0);
+      const plannedMaterialCost = finalMaterials.reduce((sum, m) => sum + (parseFloat(m.required_qty || 0) * parseFloat(m.rate || 0)), 0);
+      
+      // Operation cost from time logs
+      const [timeLogs] = await database.query(
+        `SELECT tl.*, jc.hourly_rate
+         FROM time_log tl
+         JOIN job_card jc ON tl.job_card_id = jc.job_card_id
+         JOIN work_order wo ON jc.work_order_id = wo.wo_id
+         WHERE wo.sales_order_id = ?`,
+        [id]
+      );
+      const actualOperationCost = timeLogs.reduce((sum, log) => sum + (parseFloat(log.time_in_minutes || 0) / 60 * parseFloat(log.hourly_rate || 0)), 0);
+      
+      const totalActualCost = materialCost + actualOperationCost + (project.total_subcontract_cost || 0);
+      const totalPlannedCost = (project.bom_details?.material_cost || plannedMaterialCost) + (project.bom_details?.operation_cost || 0);
+
+      project.costing = {
+        sales_price: parseFloat(project.grand_total && parseFloat(project.grand_total) > 0 ? project.grand_total : (parseFloat(project.revenue || 0) + parseFloat(project.total_tax || 0))),
+        tax_amount: parseFloat(project.total_tax || 0),
+        net_sales: parseFloat(project.revenue || 0),
+        planned: {
+          materials: project.bom_details?.material_cost || plannedMaterialCost,
+          operations: project.bom_details?.operation_cost || 0,
+          total: totalPlannedCost
+        },
+        actual: {
+          materials: materialCost,
+          operations: actualOperationCost,
+          subcontract: project.total_subcontract_cost || 0,
+          total: totalActualCost
+        },
+        variance: totalActualCost - totalPlannedCost,
+        variance_percentage: totalPlannedCost > 0 ? ((totalActualCost - totalPlannedCost) / totalPlannedCost * 100) : 0,
+        estimated_profit: parseFloat(project.revenue || 0) - totalActualCost
+      };
 
       // Calculate progress based on average completion of stages
       const totalPlannedQty = stages.reduce((acc, s) => acc + (parseFloat(s.planned_qty) || 0), 0);
@@ -1138,6 +1556,7 @@ class MastersController {
                 sso.status, 
                 sso.order_amount as revenue,
                 sso.items,
+                sso.bom_id,
                 sso.bom_finished_goods,
                 COALESCE(DATEDIFF(sso.delivery_date, NOW()), 0) as daysLeft,
                 sso.delivery_date as dueDate,

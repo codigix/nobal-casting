@@ -32,6 +32,7 @@ import {
   Clock
 } from 'lucide-react'
 import * as productionService from '../../services/productionService'
+import { useAuth } from '../../hooks/AuthContext'
 import DataTable from '../../components/Table/DataTable'
 import { useToast } from '../../components/ToastContainer'
 import Card from '../../components/Card/Card'
@@ -123,6 +124,8 @@ const BOMTypeBadge = ({ type }) => {
 export default function BOM() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { user } = useAuth()
+  const isSystemAdmin = user?.department === 'admin'
   const toast = useToast()
   const [boms, setBOMs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -197,7 +200,7 @@ export default function BOM() {
       const allBOMs = allResponse.data || []
       const activeBOMs = allBOMs.filter(b => b.status === 'active').length
       const draftBOMs = allBOMs.filter(b => b.status === 'draft').length
-      const totalCost = allBOMs.reduce((sum, b) => sum + (parseFloat(b.total_cost) || 0), 0)
+      const totalCost = isSystemAdmin ? allBOMs.reduce((sum, b) => sum + (parseFloat(b.total_cost) || 0), 0) : 0
       
       setStats({
         totalBOMs: allBOMs.length,
@@ -297,7 +300,7 @@ export default function BOM() {
     return '⚙️'
   }
 
-  const columns = [
+  const columns = useMemo(() => [
     {
       key: 'item_code',
       label: 'BOM ID / Names',
@@ -328,21 +331,6 @@ export default function BOM() {
       label: 'BOM Type',
       render: (value, row) => <BOMTypeBadge type={getBOMType(row)} />
     },
-    // {
-    //   key: 'quantity',
-    //   label: 'Standard Batch',
-    //   render: (value, row) => (
-    //     <div className="flex flex-col">
-    //       <div className="flex items-center gap-1.5">
-    //         <span className="text-xs  text-slate-700">
-    //           {parseFloat(row.quantity || 0).toLocaleString()} 
-    //         </span>
-    //         <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-xs  rounded ">{row.uom}</span>
-    //       </div>
-    //       <span className="text-xs  text-slate-400 mt-1 ">Base Unit Qty</span>
-    //     </div>
-    //   )
-    // },
     {
       key: 'total_cost',
       label: 'Cost',
@@ -358,10 +346,6 @@ export default function BOM() {
               </span>
               <TrendingUp size={10} strokeWidth={3} />
             </div>
-            {/* <div className="flex items-center gap-1 mt-1">
-              <span className="text-xs  text-slate-400 ">Total Value:</span>
-              <span className="text-xs  text-slate-500">₹{cost.toLocaleString('en-IN')}</span>
-            </div> */}
           </div>
         )
       }
@@ -388,7 +372,10 @@ export default function BOM() {
         </div>
       )
     }
-  ]
+  ].filter(col => {
+    if (col.key === 'total_cost') return isSystemAdmin;
+    return true;
+  }), [isSystemAdmin])
 
   const renderActions = (row) => (
     <div className="flex items-center justify-end gap-1 pr-4">
@@ -471,7 +458,7 @@ export default function BOM() {
       </div>
 
       {/* High-Fidelity Stats Grid */}
-      <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className={`mb-4 grid gap-4 sm:grid-cols-2 ${isSystemAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
         <StatCard 
           label="Total BOM's" 
           value={stats.totalBOMs} 
@@ -494,57 +481,61 @@ export default function BOM() {
           color="amber" 
           subtitle="Pending validation"
         />
-        <StatCard 
-          label="Total Valuation" 
-          value={`₹${(stats.totalCost / 1000000).toFixed(2)}M`} 
-          icon={TrendingUp} 
-          color="cyan" 
-          subtitle=" manufacturing value"
-        />
+        {isSystemAdmin && (
+          <StatCard 
+            label="Total Valuation" 
+            value={`₹${(stats.totalCost / 1000000).toFixed(2)}M`} 
+            icon={TrendingUp} 
+            color="cyan" 
+            subtitle=" manufacturing value"
+          />
+        )}
       </div>
 
       {/* Strategic Intelligence Widgets */}
       {intelligence && !loading && boms.length > 0 && (
-        <div className="mb-8 grid gap-4 lg:grid-cols-3">
-          <Card className="bg-slate-900 border-slate-800 p-2 rounded lg:col-span-2 relative overflow-hidden group  shadow-indigo-900/10">
-            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity duration-700">
-              <TrendingUp size={120} className="text-indigo-400" />
-            </div>
-            <div className="relative z-0">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-indigo-500/20 rounded border border-indigo-400/30 text-indigo-400">
-                  <BarChart3 size={15} strokeWidth={2.5} />
+        <div className={`mb-8 grid gap-4 ${isSystemAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-1'}`}>
+          {isSystemAdmin && (
+            <Card className="bg-slate-900 border-slate-800 p-2 rounded lg:col-span-2 relative overflow-hidden group  shadow-indigo-900/10">
+              <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity duration-700">
+                <TrendingUp size={120} className="text-indigo-400" />
+              </div>
+              <div className="relative z-0">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-indigo-500/20 rounded border border-indigo-400/30 text-indigo-400">
+                    <BarChart3 size={15} strokeWidth={2.5} />
+                  </div>
+                  <h3 className="text-xs  text-indigo-400">Critical Cost Intelligence</h3>
                 </div>
-                <h3 className="text-xs  text-indigo-400">Critical Cost Intelligence</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {intelligence.top3.map((bom, idx) => {
+                    const unitCost = (parseFloat(bom.total_cost) || 0) / (parseFloat(bom.quantity) || 1)
+                    const maxUnitCost = (parseFloat(intelligence.top3[0].total_cost) || 1) / (parseFloat(intelligence.top3[0].quantity) || 1)
+                    return (
+                      <div key={bom.bom_id} className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs  text-indigo-500/50 px-2 py-0.5 rounded bg-white/5">0{idx + 1}</span>
+                          <p className="text-xs  text-slate-400 truncate ">{bom.product_name || 'Unnamed Spec'}</p>
+                        </div>
+                        <div className="text-lg  text-white  flex items-baseline gap-1">
+                          <span className="text-xs text-indigo-500">₹</span>
+                          {unitCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          <span className="text-xs text-slate-600  ml-1 ">/ {bom.uom || 'unit'}</span>
+                        </div>
+                        <div className="w-full bg-slate-800/50 h-1.5 rounded overflow-hidden border border-white/5">
+                          <div 
+                            className="bg-indigo-500 h-full rounded transition-all duration-1000 shadow-[0_0_12px_rgba(99,102,241,0.5)]" 
+                            style={{ width: `${(unitCost / maxUnitCost) * 100}%` }} 
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {intelligence.top3.map((bom, idx) => {
-                  const unitCost = (parseFloat(bom.total_cost) || 0) / (parseFloat(bom.quantity) || 1)
-                  const maxUnitCost = (parseFloat(intelligence.top3[0].total_cost) || 1) / (parseFloat(intelligence.top3[0].quantity) || 1)
-                  return (
-                    <div key={bom.bom_id} className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs  text-indigo-500/50 px-2 py-0.5 rounded bg-white/5">0{idx + 1}</span>
-                        <p className="text-xs  text-slate-400 truncate ">{bom.product_name || 'Unnamed Spec'}</p>
-                      </div>
-                      <div className="text-lg  text-white  flex items-baseline gap-1">
-                        <span className="text-xs text-indigo-500">₹</span>
-                        {unitCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                        <span className="text-xs text-slate-600  ml-1 ">/ {bom.uom || 'unit'}</span>
-                      </div>
-                      <div className="w-full bg-slate-800/50 h-1.5 rounded overflow-hidden border border-white/5">
-                        <div 
-                          className="bg-indigo-500 h-full rounded transition-all duration-1000 shadow-[0_0_12px_rgba(99,102,241,0.5)]" 
-                          style={{ width: `${(unitCost / maxUnitCost) * 100}%` }} 
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </Card>
+            </Card>
+          )}
           
           <Card className="bg-white border-slate-100 p-2 ">
             <div className="flex items-center gap-3 mb-3">

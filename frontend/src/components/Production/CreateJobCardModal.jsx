@@ -6,6 +6,8 @@ import api, {
   employeesAPI,
   schedulingAPI
 } from '../../services/api'
+import { useToast } from '../ToastContainer'
+import { useAuth } from '../../hooks/AuthContext'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
@@ -49,6 +51,8 @@ export default function CreateJobCardModal({
   allJobCards = [],
   allWorkstations = []
 }) {
+  const { user } = useAuth()
+  const isAdmin = user?.department === 'admin'
   const [loading, setLoading] = useState(false)
   const [fetchingData, setFetchingData] = useState(false)
   const [error, setError] = useState(null)

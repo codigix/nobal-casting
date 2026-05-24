@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { AlertCircle, Loader, Check, X } from 'lucide-react'
+import { useAuth } from '../../hooks/AuthContext'
 
 export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOrderId }) {
+  const { user } = useAuth()
+  const isAdmin = user?.department?.toLowerCase() === 'admin'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [plan, setPlan] = useState(null)
@@ -199,8 +202,12 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                             <th className="text-left py-2  text-gray-900">Item Name</th>
                             <th className="text-left py-2  text-gray-900">Group</th>
                             <th className="text-right py-2  text-gray-900">Total Qty</th>
-                            <th className="text-right py-2  text-gray-900">Rate</th>
-                            <th className="text-right py-2  text-gray-900">Amount</th>
+                            {isAdmin && (
+                              <>
+                                <th className="text-right py-2  text-gray-900">Rate</th>
+                                <th className="text-right py-2  text-gray-900">Amount</th>
+                              </>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
@@ -210,8 +217,12 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                               <td className="py-2 text-gray-700">{item.item_name}</td>
                               <td className="py-2 text-gray-600 text-xs">{item.item_group}</td>
                               <td className="py-2 text-right font-medium text-gray-900">{item.total_qty.toFixed(3)}</td>
-                              <td className="py-2 text-right text-gray-700">₹{item.rate.toFixed(2)}</td>
-                              <td className="py-2 text-right  text-green-700">₹{item.total_amount.toFixed(2)}</td>
+                              {isAdmin && (
+                                <>
+                                  <td className="py-2 text-right text-gray-700">₹{item.rate.toFixed(2)}</td>
+                                  <td className="py-2 text-right  text-green-700">₹{item.total_amount.toFixed(2)}</td>
+                                </>
+                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -231,8 +242,12 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                             <th className="text-left py-2  text-gray-900">Workstation</th>
                             <th className="text-right py-2  text-gray-900">Time (Minutes)</th>
                             <th className="text-right py-2  text-gray-900">Total Hours</th>
-                            <th className="text-right py-2  text-gray-900">Hourly Rate</th>
-                            <th className="text-right py-2  text-gray-900">Cost</th>
+                            {isAdmin && (
+                              <>
+                                <th className="text-right py-2  text-gray-900">Hourly Rate</th>
+                                <th className="text-right py-2  text-gray-900">Cost</th>
+                              </>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
@@ -242,8 +257,12 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                               <td className="py-2 text-gray-700">{item.workstation_type || '-'}</td>
                               <td className="py-2 text-right font-medium text-gray-900">{item.total_time.toFixed(1)}</td>
                               <td className="py-2 text-right  text-purple-700">{item.total_hours.toFixed(2)}</td>
-                              <td className="py-2 text-right text-gray-700">₹{item.hourly_rate.toFixed(2)}</td>
-                              <td className="py-2 text-right  text-purple-700">₹{item.total_cost.toFixed(2)}</td>
+                              {isAdmin && (
+                                <>
+                                  <td className="py-2 text-right text-gray-700">₹{item.hourly_rate.toFixed(2)}</td>
+                                  <td className="py-2 text-right  text-purple-700">₹{item.total_cost.toFixed(2)}</td>
+                                </>
+                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -264,7 +283,7 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                             <th className="text-right py-2  text-gray-900">Time per Unit (min)</th>
                             <th className="text-right py-2  text-gray-900">Total Time (min)</th>
                             <th className="text-right py-2  text-gray-900">Total Hours</th>
-                            <th className="text-right py-2  text-gray-900">Cost</th>
+                            {isAdmin && <th className="text-right py-2  text-gray-900">Cost</th>}
                           </tr>
                         </thead>
                         <tbody>
@@ -275,7 +294,7 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                               <td className="py-2 text-right text-gray-700">{item.operation_time_per_unit.toFixed(1)}</td>
                               <td className="py-2 text-right font-medium text-gray-900">{item.total_time.toFixed(1)}</td>
                               <td className="py-2 text-right  text-indigo-700">{(item.total_time / 60).toFixed(2)}</td>
-                              <td className="py-2 text-right  text-indigo-700">₹{item.total_cost.toFixed(2)}</td>
+                              {isAdmin && <td className="py-2 text-right  text-indigo-700">₹{item.total_cost.toFixed(2)}</td>}
                             </tr>
                           ))}
                         </tbody>

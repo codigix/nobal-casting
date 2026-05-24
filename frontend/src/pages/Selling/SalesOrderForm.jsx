@@ -226,8 +226,7 @@ export default function SalesOrderForm() {
     foundation: true,
     client: true,
     operational: true,
-    engineering: true,
-    taxation: true
+    engineering: true
   })
   const [activeSection, setActiveSection] = useState('foundation')
 
@@ -251,7 +250,7 @@ export default function SalesOrderForm() {
 
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ['foundation', 'client', 'operational', 'engineering', 'taxation']
+      const sections = ['foundation', 'client', 'operational', 'engineering']
       const scrollPosition = window.scrollY + 150
 
       for (const section of sections) {
@@ -1135,8 +1134,12 @@ export default function SalesOrderForm() {
                   <tr className="bg-slate-50/50 border-b border-slate-100">
                     <th className="p-2 text-xs  text-slate-600  font-thin">Item Intelligence</th>
                     <th className="p-2 text-xs  text-slate-600  font-thin text-right">Target Qty</th>
-                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Unit Rate</th>
-                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Total Valuation</th>
+                    {!isReadOnly && (
+                      <>
+                        <th className="p-2 text-xs  text-slate-600  font-thin text-right">Unit Rate</th>
+                        <th className="p-2 text-xs  text-slate-600  font-thin text-right">Total Valuation</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -1163,25 +1166,25 @@ export default function SalesOrderForm() {
                             </span>
                           </div>
                         </td>
-                        <td className="p-2 text-right">
-                          {isReadOnly ? (
-                            <span className="text-xs  text-slate-600">{formatCurrency(item.rate)}</span>
-                          ) : (
-                            <div className="flex items-center justify-end gap-2">
-                              <span className="text-xs  text-slate-300">₹</span>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={item.rate || 0}
-                                onChange={(e) => handleBomFinishedGoodEdit(idx, 'rate', e.target.value)}
-                                className="w-24 p-1 text-xs   text-right border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                              />
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-2 text-right">
-                          <span className="text-xs  text-blue-600">{formatCurrency(itemAmount)}</span>
-                        </td>
+                        {!isReadOnly && (
+                          <>
+                            <td className="p-2 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="text-xs  text-slate-300">₹</span>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={item.rate || 0}
+                                  onChange={(e) => handleBomFinishedGoodEdit(idx, 'rate', e.target.value)}
+                                  className="w-24 p-1 text-xs   text-right border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                />
+                              </div>
+                            </td>
+                            <td className="p-2 text-right">
+                              <span className="text-xs  text-blue-600">{formatCurrency(itemAmount)}</span>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     )
                   })}
@@ -1215,8 +1218,12 @@ export default function SalesOrderForm() {
                   <tr className="bg-slate-50/50 border-b border-slate-100">
                     <th className="p-2 text-xs  text-slate-600  font-thin">Assembly Identifier</th>
                     <th className="p-2 text-xs  text-slate-600  font-thin text-right">Required Qty</th>
-                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Node Rate</th>
-                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Extension</th>
+                    {!isReadOnly && (
+                      <>
+                        <th className="p-2 text-xs  text-slate-600  font-thin text-right">Node Rate</th>
+                        <th className="p-2 text-xs  text-slate-600  font-thin text-right">Extension</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -1241,12 +1248,16 @@ export default function SalesOrderForm() {
                             {formatQty(multipliedQty)}
                           </span>
                         </td>
-                        <td className="p-4 text-right">
-                          <span className="text-xs  text-slate-600">{formatCurrency(item.rate)}</span>
-                        </td>
-                        <td className="p-4 text-right">
-                          <span className="text-xs  text-amber-600">{formatCurrency(itemAmount)}</span>
-                        </td>
+                        {!isReadOnly && (
+                          <>
+                            <td className="p-4 text-right">
+                              <span className="text-xs  text-slate-600">{formatCurrency(item.rate)}</span>
+                            </td>
+                            <td className="p-4 text-right">
+                              <span className="text-xs  text-amber-600">{formatCurrency(itemAmount)}</span>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     )
                   })}
@@ -1294,8 +1305,12 @@ export default function SalesOrderForm() {
                     <th className="p-2 text-xs  text-slate-600  font-thin">Resource Matrix</th>
                     <th className="p-2 text-xs  text-slate-600  font-thin">Metadata</th>
                     <th className="p-2 text-xs  text-slate-600  font-thin text-right">Consolidated Qty</th>
-                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Spot Rate</th>
-                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Cost Extension</th>
+                    {!isReadOnly && (
+                      <>
+                        <th className="p-2 text-xs  text-slate-600  font-thin text-right">Spot Rate</th>
+                        <th className="p-2 text-xs  text-slate-600  font-thin text-right">Cost Extension</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -1332,12 +1347,16 @@ export default function SalesOrderForm() {
                             <span className="text-[9px]  text-emerald-600  mt-1">{material.uom || material.unit || '-'}</span>
                           </div>
                         </td>
-                        <td className="p-4 text-right">
-                          <span className="text-xs  text-slate-600">{formatCurrency(material.rate)}</span>
-                        </td>
-                        <td className="p-4 text-right">
-                          <span className="text-xs  text-emerald-700">{formatCurrency(itemAmount)}</span>
-                        </td>
+                        {!isReadOnly && (
+                          <>
+                            <td className="p-4 text-right">
+                              <span className="text-xs  text-slate-600">{formatCurrency(material.rate)}</span>
+                            </td>
+                            <td className="p-4 text-right">
+                              <span className="text-xs  text-emerald-700">{formatCurrency(itemAmount)}</span>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     )
                   })}
@@ -1377,8 +1396,12 @@ export default function SalesOrderForm() {
                   <tr className="bg-slate-50/50 border-b border-slate-100">
                     <th className="p-2 text-xs  text-slate-600  font-thin">Operation Protocol</th>
                     <th className="p-2 text-xs  text-slate-600  font-thin text-right">Temporal Data</th>
-                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Resource Rate</th>
-                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Total Overhead</th>
+                    {!isReadOnly && (
+                      <>
+                        <th className="p-2 text-xs  text-slate-600  font-thin text-right">Resource Rate</th>
+                        <th className="p-2 text-xs  text-slate-600  font-thin text-right">Total Overhead</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -1409,25 +1432,25 @@ export default function SalesOrderForm() {
                             </span>
                           </div>
                         </td>
-                        <td className="p-4 text-right">
-                          {isReadOnly ? (
-                            <span className="text-xs  text-slate-600">{formatCurrency(hourlyRate)}/hr</span>
-                          ) : (
-                            <div className="flex items-center justify-end gap-2">
-                              <span className="text-xs  text-slate-300">₹</span>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={op.hourly_rate || 0}
-                                onChange={(e) => handleBomOperationEdit(idx, 'hourly_rate', e.target.value)}
-                                className="w-24 p-1 text-xs   text-right border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                              />
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-4 text-right">
-                          <span className="text-xs  text-indigo-700">{formatCurrency(opTotalCost)}</span>
-                        </td>
+                        {!isReadOnly && (
+                          <>
+                            <td className="p-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="text-xs  text-slate-300">₹</span>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={op.hourly_rate || 0}
+                                  onChange={(e) => handleBomOperationEdit(idx, 'hourly_rate', e.target.value)}
+                                  className="w-24 p-1 text-xs   text-right border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                />
+                              </div>
+                            </td>
+                            <td className="p-4 text-right">
+                              <span className="text-xs  text-indigo-700">{formatCurrency(opTotalCost)}</span>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     )
                   })}
@@ -1442,6 +1465,7 @@ export default function SalesOrderForm() {
 
 
   const renderCostBreakdown = () => {
+    if (isReadOnly) return null;
     const qty = parseFloat(formData.qty) || 1
     const profitMarginPct = parseFloat(formData.profit_margin_percentage) || 0
     const fgUnitCost = bomFinishedGoods.reduce((sum, item) => sum + (parseFloat(item.rate) || 0), 0)
@@ -1507,22 +1531,9 @@ export default function SalesOrderForm() {
             )}
 
             <div className="flex justify-between items-center pt-2">
-              <span className="text-[11px]  text-slate-500  text-right">Taxable Protocol Value</span>
+              <span className="text-[11px]  text-slate-500  text-right">Order Subtotal</span>
               <span className="text-xs   text-slate-900">{formatCurrency(costWithProfit)}</span>
             </div>
-
-            {(cgstRate + sgstRate) > 0 && (
-              <div className="flex justify-between items-center bg-blue-50/50 p-2 rounded border border-blue-100/50 group/tax transition-all hover:bg-blue-50">
-                <div className="flex flex-col">
-                  <span className="text-xs  text-blue-600 ">Applied Taxation</span>
-                  <span className="text-[9px] text-blue-500  ">{cgstRate}% CGST + {sgstRate}% SGST</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CreditCard size={14} className="text-blue-400" />
-                  <span className="text-xs   text-blue-700">+{formatCurrency(gstAmount)}</span>
-                </div>
-              </div>
-            )}
 
             <div className="mt-3 pt-4 border-t-2 border-slate-900 relative">
               <div className="absolute -top-1 right-0 w-24 h-1 bg-blue-600"></div>
@@ -1569,7 +1580,7 @@ export default function SalesOrderForm() {
   return (
     <div className="min-h-screen bg-slate-50 p-2 pb-3">
       {/* 1. Global Command Header */}
-      <div className="sticky top-0 z-[40] bg-white/80 backdrop-blur-xl border-b border-slate-200/60 transition-all duration-300">
+      <div className="sticky top-0 z-[100] bg-white/80 backdrop-blur-xl border-b border-slate-200/60 transition-all duration-300">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="h-20 flex items-center justify-between">
             <div className="flex items-center gap-6">
@@ -1647,7 +1658,7 @@ export default function SalesOrderForm() {
       <div className="w-full mt-8 px-4">
         <div className="max-w-7xl mx-auto space-y-2">
           {/* 2. Horizontal Navigation & Metrics Bar */}
-          <div className="sticky top-[80px] z-30 bg-white/80 backdrop-blur-md border border-slate-200/60 rounded p-2  flex items-center justify-between gap-4 overflow-x-auto no-scrollbar">
+          <div className="sticky top-[80px] z-[90] bg-white/80 backdrop-blur-md border border-slate-200/60 rounded p-2  flex items-center justify-between gap-4 overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-2">
               <NavItem 
                 label="01 Foundation" 
@@ -1681,28 +1692,22 @@ export default function SalesOrderForm() {
                 onClick={scrollToSection}
                 themeColor="amber"
               />
-              <NavItem 
-                label="05 Revenue" 
-                icon={CreditCard} 
-                section="taxation" 
-                isActive={activeSection === 'taxation'} 
-                onClick={scrollToSection}
-                themeColor="rose"
-              />
             </div>
 
             {/* Quick Metrics Integrated */}
-            <div className="hidden lg:flex items-center gap-4 bg-slate-900 p-2 rounded shrink-0  shadow-slate-900/20">
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded  bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px]  text-slate-400  ">Order Valuation</span>
-                </div>
-                <div className="text-sm  text-white ">
-                  {formatCurrency(calculateBomGrandTotal())}
+            {!isReadOnly && (
+              <div className="hidden lg:flex items-center gap-4 bg-slate-900 p-2 rounded shrink-0  shadow-slate-900/20">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded  bg-emerald-500 animate-pulse" />
+                    <span className="text-[10px]  text-slate-400  ">Order Valuation</span>
+                  </div>
+                  <div className="text-sm  text-white ">
+                    {formatCurrency(calculateBomGrandTotal())}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* 3. High-Fidelity Content Area */}
@@ -1898,79 +1903,6 @@ export default function SalesOrderForm() {
 
                   <div className="">
                     {renderBOMSections()}
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            {/* E. Taxation Section */}
-            <Card className="!p-0 border-slate-200/60 bg-white group relative z-[10]">
-              <SectionHeader 
-                title="05 Taxation & Revenue" 
-                icon={CreditCard} 
-                subtitle="GST Configuration & Margins" 
-                isExpanded={expandedSections.taxation}
-                onToggle={() => toggleSection('taxation')}
-                id="taxation"
-                themeColor="rose"
-              />
-              
-              {expandedSections.taxation && (
-                <div className="p-4 space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
-                  {isReadOnly ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      <InfoRow label="CGST Rate" value={`${formData.cgst_rate}%`} icon={DollarSign} color="rose" />
-                      <InfoRow label="SGST Rate" value={`${formData.sgst_rate}%`} icon={DollarSign} color="rose" />
-                      <InfoRow label="Profit Margin" value={`${formData.profit_margin_percentage}%`} icon={TrendingDown} color="rose" />
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                      <FieldWrapper label="CGST Rate (%)">
-                        <div className="relative">
-                          <input
-                            className="w-full p-2 text-xs  border border-slate-200 rounded  focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 bg-white transition-all outline-none"
-                            type="number"
-                            name="cgst_rate"
-                            value={formData.cgst_rate || 0}
-                            onChange={handleChange}
-                            step="0.01"
-                          />
-                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 ">%</span>
-                        </div>
-                      </FieldWrapper>
-
-                      <FieldWrapper label="SGST Rate (%)">
-                        <div className="relative">
-                          <input
-                            className="w-full p-2 text-xs  border border-slate-200 rounded  focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 bg-white transition-all outline-none"
-                            type="number"
-                            name="sgst_rate"
-                            value={formData.sgst_rate || 0}
-                            onChange={handleChange}
-                            step="0.01"
-                          />
-                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 ">%</span>
-                        </div>
-                      </FieldWrapper>
-
-                      <FieldWrapper label="Profit Margin (%)">
-                        <div className="relative">
-                          <input
-                            className="w-full p-2 text-xs  border border-slate-200 rounded  focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 bg-white transition-all outline-none text-emerald-600"
-                            type="number"
-                            name="profit_margin_percentage"
-                            value={formData.profit_margin_percentage || 0}
-                            onChange={handleChange}
-                            step="0.01"
-                          />
-                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-400 ">%</span>
-                        </div>
-                      </FieldWrapper>
-                    </div>
-                  )}
-
-                  <div className=" border-t border-slate-100">
-                    {renderCostBreakdown()}
                   </div>
                 </div>
               )}

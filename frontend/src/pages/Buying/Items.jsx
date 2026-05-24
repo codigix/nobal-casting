@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import { useToast } from '../../components/ToastContainer'
+import { useAuth } from '../../hooks/AuthContext'
 import DataTable from '../../components/Table/DataTable'
 import Badge from '../../components/Badge/Badge'
 import Button from '../../components/Button/Button'
@@ -18,6 +19,8 @@ import Card from '../../components/Card/Card'
 export default function Items() {
   const navigate = useNavigate()
   const toast = useToast()
+  const { user } = useAuth()
+  const isAdmin = user?.department === 'admin'
   const [items, setItems] = useState([])
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
@@ -27,9 +30,11 @@ export default function Items() {
   const [activeGroup, setActiveGroup] = useState('All')
   const [searchTerm, setSearchTerm] = useState('')
   const [showColumnMenu, setShowColumnMenu] = useState(false)
-  const [visibleColumns, setVisibleColumns] = useState(new Set([
-    'item_details', 'item_group', 'stock', 'valuation_rate', 'gst_rate'
-  ]))
+  const [visibleColumns, setVisibleColumns] = useState(new Set(
+    isAdmin 
+      ? ['item_details', 'item_group', 'stock', 'valuation_rate', 'gst_rate']
+      : ['item_details', 'item_group', 'stock', 'gst_rate']
+  ))
 
   const fetchInitialData = useCallback(async () => {
     setLoading(true)
@@ -177,7 +182,10 @@ export default function Items() {
         </div>
       )
     }
-  ], [])
+  ].filter(col => {
+    if (col.key === 'valuation_rate') return isAdmin;
+    return true;
+  }), [isAdmin])
 
   const StatCard = ({ label, value, icon: Icon, color, onClick, isActive, description }) => {
     const colorMap = {
@@ -347,7 +355,7 @@ export default function Items() {
                       <button onClick={() => setShowColumnMenu(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
                     </div>
                     <div className="space-y-1">
-                      {['item_details', 'item_group', 'stock', 'valuation_rate', 'gst_rate'].map(col => (
+                      {['item_details', 'item_group', 'stock', 'valuation_rate', 'gst_rate'].filter(col => col !== 'valuation_rate' || isAdmin).map(col => (
                         <label key={col} className="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded  cursor-pointer transition-colors">
                           <input
                             type="checkbox"

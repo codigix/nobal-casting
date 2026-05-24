@@ -119,8 +119,41 @@ class ProductionAnalyticsController {
       // 6. Material Readiness
       let materialReadiness = []
       if (plan) {
+        // Fetch consumed quantities from work order items related to this project
+        const [consumedData] = await db.execute(
+          `SELECT item_code, SUM(consumed_qty) as total_consumed
+           FROM work_order_item 
+           WHERE wo_id IN (SELECT wo_id FROM work_order WHERE sales_order_id = ?)
+           GROUP BY item_code`,
+          [soId]
+        )
+        
+        const consumedMap = consumedData.reduce((acc, row) => {
+          acc[row.item_code] = parseFloat(row.total_consumed || 0)
+          return acc
+        }, {})
+
+        // Fetch batch numbers from stock ledger related to this project
+        const [batchData] = await db.execute(
+          `SELECT item_code, GROUP_CONCAT(DISTINCT batch_no SEPARATOR ', ') as batch_nos
+           FROM stock_ledger
+           WHERE (
+             (reference_doctype = 'Work Order' AND reference_name IN (SELECT wo_id FROM work_order WHERE sales_order_id = ?))
+             OR 
+             (reference_doctype = 'Job Card' AND reference_name IN (SELECT job_card_id FROM job_card WHERE work_order_id IN (SELECT wo_id FROM work_order WHERE sales_order_id = ?)))
+           )
+           AND batch_no IS NOT NULL AND batch_no != ''
+           GROUP BY item_code`,
+          [soId, soId]
+        )
+
+        const batchMap = batchData.reduce((acc, row) => {
+          acc[row.item_code] = row.batch_nos
+          return acc
+        }, {})
+
         const [materials] = await db.execute(
-          `SELECT prm.*, i.name as item_name, i.uom, i.lead_time_days,
+          `SELECT prm.*, i.name as item_name, i.uom, i.lead_time_days, i.valuation_rate as item_rate,
                   (SELECT SUM(available_qty) FROM stock_balance WHERE item_code = prm.item_code) as current_stock
            FROM production_plan_raw_material prm
            LEFT JOIN item i ON prm.item_code = i.item_code
@@ -128,16 +161,27 @@ class ProductionAnalyticsController {
           [plan.plan_id]
         )
         
-        materialReadiness = materials.map(m => ({
-          item_code: m.item_code,
-          item_name: m.item_name,
-          uom: m.uom || 'Nos',
-          lead_time: m.lead_time_days || 0,
-          required_qty: parseFloat(m.plan_to_request_qty || m.qty_as_per_bom || 0),
-          available_qty: parseFloat(m.current_stock || 0),
-          shortage: Math.max(0, parseFloat(m.plan_to_request_qty || m.qty_as_per_bom || 0) - parseFloat(m.current_stock || 0)),
-          is_ready: parseFloat(m.current_stock || 0) >= parseFloat(m.plan_to_request_qty || m.qty_as_per_bom || 0)
-        }))
+        materialReadiness = materials.map(m => {
+          const required = parseFloat(m.plan_to_request_qty || m.qty_as_per_bom || 0)
+          const consumed = consumedMap[m.item_code] || 0
+          const available = parseFloat(m.current_stock || 0)
+          const rate = parseFloat(m.rate) || parseFloat(m.item_rate) || 0
+          
+          return {
+            item_code: m.item_code,
+            item_name: m.item_name,
+            uom: m.uom || 'Nos',
+            lead_time: m.lead_time_days || 0,
+            required_qty: required,
+            consumed_qty: consumed,
+            rate: rate,
+            stock_qty: available, // Frontend expects stock_qty
+            available_qty: available,
+            batch_nos: batchMap[m.item_code] || null,
+            shortage: (required - consumed) > available,
+            is_ready: (available + consumed) >= required
+          }
+        })
       }
 
       // 7. Overall Metrics

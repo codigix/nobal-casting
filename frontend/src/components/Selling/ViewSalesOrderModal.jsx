@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import api, { salesOrdersAPI } from '../../services/api'
+import { useAuth } from '../../hooks/AuthContext'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
@@ -11,6 +12,8 @@ import {
 } from 'lucide-react'
 
 export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
+  const { user } = useAuth()
+  const isAdmin = user?.department?.toLowerCase() === 'admin'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [order, setOrder] = useState(null)
@@ -136,44 +139,46 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
               </div>
             </div>
 
-            <div className="bg-blue-600 p-5 rounded   shadow-blue-200 text-white">
-              <div className="flex items-center gap-2 mb-4 opacity-90">
-                <Calculator size={18} />
-                <span className="text-xs   tracking-wider">Financial Summary</span>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm opacity-80">
-                  <span>Subtotal</span>
-                  <span>₹{parseFloat(order.subtotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            {isAdmin && (
+              <div className="bg-blue-600 p-5 rounded   shadow-blue-200 text-white">
+                <div className="flex items-center gap-2 mb-4 opacity-90">
+                  <Calculator size={18} />
+                  <span className="text-xs   tracking-wider">Financial Summary</span>
                 </div>
                 
-                {order.discount_amount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="opacity-80">Discount</span>
-                    <span className="text-orange-200 font-medium">
-                      -₹{parseFloat(order.discount_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </span>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm opacity-80">
+                    <span>Subtotal</span>
+                    <span>₹{parseFloat(order.subtotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
-                )}
+                  
+                  {order.discount_amount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="opacity-80">Discount</span>
+                      <span className="text-orange-200 font-medium">
+                        -₹{parseFloat(order.discount_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
 
-                {order.tax_amount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="opacity-80 text-xs">Tax ({order.tax_rate}%)</span>
-                    <span className="text-green-200 font-medium">
-                      +₹{parseFloat(order.tax_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                )}
+                  {order.tax_amount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="opacity-80 text-xs">Tax ({order.tax_rate}%)</span>
+                      <span className="text-green-200 font-medium">
+                        +₹{parseFloat(order.tax_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
 
-                <div className="pt-3 border-t border-blue-500 mt-2 flex justify-between items-center">
-                  <span className="text-xs    opacity-90">Grand Total</span>
-                  <div className="text-2xl ">
-                    ₹{parseFloat(order.total_value || order.order_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  <div className="pt-3 border-t border-blue-500 mt-2 flex justify-between items-center">
+                    <span className="text-xs    opacity-90">Grand Total</span>
+                    <div className="text-2xl ">
+                      ₹{parseFloat(order.total_value || order.order_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Right Panel - Items & Terms */}
@@ -192,8 +197,12 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
                     <tr>
                       <th className="px-6 py-3 font-semibold text-left  tracking-wider text-[10px]">Product / Spec</th>
                       <th className="px-6 py-3 font-semibold text-center  tracking-wider text-[10px]">Qty</th>
-                      <th className="px-6 py-3 font-semibold text-right  tracking-wider text-[10px]">Rate</th>
-                      <th className="px-6 py-3 font-semibold text-right  tracking-wider text-[10px]">Total</th>
+                      {isAdmin && (
+                        <>
+                          <th className="px-6 py-3 font-semibold text-right  tracking-wider text-[10px]">Rate</th>
+                          <th className="px-6 py-3 font-semibold text-right  tracking-wider text-[10px]">Total</th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -212,16 +221,20 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
                         <td className="p-2  text-center">
                           <span className="px-2 py-1 bg-slate-100 rounded-md  text-slate-700">{item.qty}</span>
                         </td>
-                        <td className="p-2  text-right font-medium text-slate-600">
-                          ₹{parseFloat(item.rate || 0).toFixed(2)}
-                        </td>
-                        <td className="p-2  text-right  text-blue-600">
-                          ₹{(item.qty * item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </td>
+                        {isAdmin && (
+                          <>
+                            <td className="p-2  text-right font-medium text-slate-600">
+                              ₹{parseFloat(item.rate || 0).toFixed(2)}
+                            </td>
+                            <td className="p-2  text-right  text-blue-600">
+                              ₹{(item.qty * item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan="4" className="px-6 py-10 text-center text-slate-400 italic">
+                        <td colSpan={isAdmin ? 4 : 2} className="px-6 py-10 text-center text-slate-400 italic">
                           No items found in this sales order.
                         </td>
                       </tr>

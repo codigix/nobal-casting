@@ -25,6 +25,11 @@ export const getProjectMaterialReport = async () => {
   return response.data
 }
 
+export const getProjectDetailedMaterialReport = async (id) => {
+  const response = await api.get(`/masters/project-material-report/${id}`)
+  return response.data
+}
+
 export const getProjectStats = async () => {
   const response = await api.get('/masters/project-stats')
   return response.data

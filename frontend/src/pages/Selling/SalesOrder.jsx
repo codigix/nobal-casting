@@ -11,9 +11,12 @@ import ViewSalesOrderModal from '../../components/Selling/ViewSalesOrderModal'
 import ProductionPlanGenerationModal from '../../components/Production/ProductionPlanGenerationModal'
 import CreateInvoiceModal from '../../components/Selling/CreateInvoiceModal'
 import api from '../../services/api'
+import { useAuth } from '../../hooks/AuthContext'
 import './Selling.css'
 
 export default function SalesOrder() {
+  const { user } = useAuth()
+  const isAdmin = user?.department?.toLowerCase() === 'admin'
   const navigate = useNavigate()
   const [orders, setOrders] = useState([])
   const [filteredOrders, setFilteredOrders] = useState([])
@@ -425,7 +428,7 @@ export default function SalesOrder() {
             className="inline-flex items-center gap-2 rounded  bg-slate-900 p-2 text-xs  text-white shadow  shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95"
           >
             <Plus size={15} />
-            Ceate Sales Order
+            Create Sales Order
           </button>
         </div>
       </div>
@@ -433,28 +436,30 @@ export default function SalesOrder() {
       {/* Redesigned Stats Cards */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Value Card */}
-        <div className="bg-white rounded border border-slate-200 p-2 ">
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-6 h-6 rounded  bg-blue-50 flex items-center justify-center text-blue-600">
-              <DollarSign size={20} />
+        {isAdmin && (
+          <div className="bg-white rounded border border-slate-200 p-2 ">
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-6 h-6 rounded  bg-blue-50 flex items-center justify-center text-blue-600">
+                <DollarSign size={20} />
+              </div>
+              <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded ">
+                <TrendingUp size={12} />
+                {stats.growth}%
+              </div>
             </div>
-            <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded ">
-              <TrendingUp size={12} />
-              {stats.growth}%
+            <div>
+              <p className="text-slate-500 text-[10px] ">Total Pipeline Value</p>
+              <div className="flex items-baseline gap-1.5 mt-1">
+                <span className="text-xl  text-slate-900">₹{(stats.total_value / 100000).toFixed(2)}L</span>
+                <span className="text-[10px] font-medium text-slate-400">INR</span>
+              </div>
+              <div className=" flex items-center justify-between text-[10px] border-t border-slate-50 pt-3">
+                <span className="text-slate-400 font-medium">Fulfillment Rate</span>
+                <span className=" text-blue-600">{stats.fulfillment_rate}%</span>
+              </div>
             </div>
           </div>
-          <div>
-            <p className="text-slate-500 text-[10px] ">Total Pipeline Value</p>
-            <div className="flex items-baseline gap-1.5 mt-1">
-              <span className="text-xl  text-slate-900">₹{(stats.total_value / 100000).toFixed(2)}L</span>
-              <span className="text-[10px] font-medium text-slate-400">INR</span>
-            </div>
-            <div className=" flex items-center justify-between text-[10px] border-t border-slate-50 pt-3">
-              <span className="text-slate-400 font-medium">Fulfillment Rate</span>
-              <span className=" text-blue-600">{stats.fulfillment_rate}%</span>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Active Fulfillment Card */}
         <div className="bg-white rounded border border-slate-200 p-2">

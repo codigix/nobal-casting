@@ -7,6 +7,8 @@ import api, {
   suppliersAPI
 } from '../../services/api'
 
+import { useToast } from '../ToastContainer'
+import { useAuth } from '../../hooks/AuthContext'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
@@ -91,6 +93,8 @@ export default function EditJobCardModal({
   allJobCards = [],
   allWorkstations = []
 }) {
+  const { user } = useAuth()
+  const isAdmin = user?.department === 'admin'
   const [loading, setLoading] = useState(false)
   const [fetchingData, setFetchingData] = useState(false)
   const [error, setError] = useState(null)
@@ -537,19 +541,21 @@ export default function EditJobCardModal({
                       </option>
                     ))}
                   </select>
-                  <div className="mt-2">
-                    <label className="block text-[10px] text-amber-600 mb-0.5">
-                      Vendor Rate per Unit
-                    </label>
-                    <input
-                      type="number"
-                      name="vendor_rate_per_unit"
-                      value={formData.vendor_rate_per_unit}
-                      onChange={handleInputChange}
-                      className="w-full p-1.5 bg-white border border-amber-100 rounded text-xs text-amber-800"
-                      placeholder="0.00"
-                    />
-                  </div>
+                  {isAdmin && (
+                    <div className="mt-2">
+                      <label className="block text-[10px] text-amber-600 mb-0.5">
+                        Vendor Rate per Unit
+                      </label>
+                      <input
+                        type="number"
+                        name="vendor_rate_per_unit"
+                        value={formData.vendor_rate_per_unit}
+                        onChange={handleInputChange}
+                        className="w-full p-1.5 bg-white border border-amber-100 rounded text-xs text-amber-800"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>

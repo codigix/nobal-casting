@@ -35,7 +35,7 @@ export default function StockEntries() {
 
   // Default visible columns
   const [visibleColumns, setVisibleColumns] = useState(new Set([
-    'entry_no', 'entry_type', 'warehouse_transition', 'status', 'entry_date', 'total_items'
+    'entry_no', 'entry_type', 'warehouse_transition', 'status', 'entry_date', 'item_name', 'batch_no', 'qty', 'valuation_rate'
   ]))
 
   const [formData, setFormData] = useState({
@@ -51,6 +51,7 @@ export default function StockEntries() {
   })
 
   const [entryItems, setEntryItems] = useState([])
+  const [availableQty, setAvailableQty] = useState(null)
   const [newItem, setNewItem] = useState({
     item_code: '',
     qty: 1,
@@ -65,6 +66,15 @@ export default function StockEntries() {
     fetchWarehouses()
     fetchItems()
   }, [])
+
+  const generateBatchNo = (itemCode) => {
+    const date = new Date()
+    const dateStr = date.getFullYear().toString().slice(-2) + 
+                    String(date.getMonth() + 1).padStart(2, '0') + 
+                    String(date.getDate()).padStart(2, '0')
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
+    return `BTH-${itemCode}-${dateStr}-${random}`
+  }
 
   useEffect(() => {
     if (!formModal.isOpen) {
@@ -121,8 +131,58 @@ export default function StockEntries() {
 
   const handleAddItem = () => {
     if (newItem.item_code && newItem.qty > 0) {
-      setEntryItems([...entryItems, { ...newItem, _key: `manual_${Date.now()}` }])
+      const selectedItem = items.find(i => i.item_code === newItem.item_code)
+      setEntryItems([...entryItems, { 
+        ...newItem, 
+        item_name: selectedItem?.name || selectedItem?.item_name || '',
+        _key: `manual_${Date.now()}` 
+      }])
       setNewItem({ item_code: '', qty: 1, valuation_rate: 0, uom: 'Kg', batch_no: '' })
+    }
+  }
+
+  const handleItemChange = async (itemCode) => {
+    const selectedItem = items.find(item => item.item_code === itemCode)
+    if (selectedItem) {
+      // Auto-generate batch no for Receipt/Purchase types
+      let autoBatchNo = ''
+      if (['Material Receipt', 'Purchase', 'Material Purchase', 'Manufacturing Return'].includes(formData.entry_type)) {
+        autoBatchNo = generateBatchNo(itemCode)
+      }
+
+      setNewItem({
+        ...newItem,
+        item_code: itemCode,
+        uom: selectedItem.uom || 'Kg',
+        valuation_rate: parseFloat(selectedItem.valuation_rate || selectedItem.last_purchase_rate || 0),
+        batch_no: autoBatchNo
+      })
+
+      // Fetch available quantity if from_warehouse is selected
+      if (formData.from_warehouse_id) {
+        try {
+          const response = await api.get('/stock/stock-balance', {
+            params: {
+              itemCode: itemCode,
+              warehouseId: formData.from_warehouse_id
+            }
+          })
+          const balanceData = response.data.data
+          if (balanceData && balanceData.length > 0) {
+            setAvailableQty(balanceData[0].available_qty)
+          } else {
+            setAvailableQty(0)
+          }
+        } catch (err) {
+          console.error('Failed to fetch available quantity:', err)
+          setAvailableQty(null)
+        }
+      } else {
+        setAvailableQty(null)
+      }
+    } else {
+      setNewItem({ ...newItem, item_code: itemCode })
+      setAvailableQty(null)
     }
   }
 
@@ -274,7 +334,6 @@ export default function StockEntries() {
       render: (value, row) => (
         <div className="flex flex-col">
           <span className=" text-neutral-900 dark:text-white font-medium">{value}</span>
-          <span className="text-[10px] text-neutral-500">ID: {row.entry_id}</span>
         </div>
       )
     },
@@ -282,12 +341,12 @@ export default function StockEntries() {
       key: 'entry_type',
       label: 'Type & Purpose',
       render: (value, row) => row ? (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1.5">
-            {getTypeIcon(row.entry_type)}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2.5">
+            
             <span className="font-medium text-xs">{row.entry_type}</span>
           </div>
-          {row.purpose && <span className="text-[10px] text-neutral-500 italic truncate max-w-[150px]">{row.purpose}</span>}
+          {row.purpose && <span className="text-xs text-neutral-500 italic truncate">{row.purpose}</span>}
         </div>
       ) : '-'
     },
@@ -323,10 +382,8 @@ export default function StockEntries() {
 
           return (
             <div className="flex items-center gap-2 text-xs">
-              <span className={sourceColor}>
-                {sourceLabel}
-              </span>
-              <span className="text-neutral-400">→</span>
+              
+              
               <span className={destWarehouse ? "text-neutral-900 dark:text-white font-medium" : "text-neutral-400"}>
                 {destWarehouse || 'Warehouse'}
               </span>
@@ -378,9 +435,72 @@ export default function StockEntries() {
       render: (value) => value ? new Date(value).toLocaleDateString() : '-'
     },
     {
-      key: 'total_items',
-      label: 'Items',
-      render: (value) => <span className="font-medium">{value || 0}</span>
+      key: 'item_name',
+      label: 'Item(s)',
+      render: (value, row) => {
+        if (!row.items_details) return <span className="text-neutral-400">-</span>
+        const itemsArr = row.items_details.split(';;').map(str => str.split('|'))
+        return (
+          <div className="flex flex-col gap-1">
+            {itemsArr.map(([code, name], idx) => (
+              <div key={idx} className="text-[10px] font-medium text-neutral-900 dark:text-white truncate" title={name || code}>
+                {name || code}
+              </div>
+            ))}
+          </div>
+        )
+      }
+    },
+    {
+      key: 'batch_no',
+      label: 'Batch No',
+      render: (value, row) => {
+        if (!row.items_details) return <span className="text-neutral-400">-</span>
+        const itemsArr = row.items_details.split(';;').map(str => str.split('|'))
+        return (
+          <div className="flex flex-col gap-1">
+            {itemsArr.map(([, , , , , batch], idx) => (
+              <div key={idx} className="text-[10px] font-mono text-neutral-500 bg-neutral-50 dark:bg-neutral-800/50 px-1 rounded-xs border border-neutral-100 dark:border-neutral-800/50">
+                {batch || 'No Batch'}
+              </div>
+            ))}
+          </div>
+        )
+      }
+    },
+    {
+      key: 'qty',
+      label: 'Quantity',
+      render: (value, row) => {
+        if (!row.items_details) return <span className="text-neutral-400">-</span>
+        const itemsArr = row.items_details.split(';;').map(str => str.split('|'))
+        return (
+          <div className="flex flex-col gap-1">
+            {itemsArr.map(([, , qty, uom], idx) => (
+              <div key={idx} className="text-[10px] font-bold text-amber-600 text-right">
+                {qty} {uom}
+              </div>
+            ))}
+          </div>
+        )
+      }
+    },
+    {
+      key: 'valuation_rate',
+      label: 'Price (Rate)',
+      render: (value, row) => {
+        if (!row.items_details) return <span className="text-neutral-400">-</span>
+        const itemsArr = row.items_details.split(';;').map(str => str.split('|'))
+        return (
+          <div className="flex flex-col gap-1">
+            {itemsArr.map(([, , , , rate], idx) => (
+              <div key={idx} className="text-[10px] text-neutral-500 text-right font-medium">
+                ₹{Number(rate).toLocaleString()}
+              </div>
+            ))}
+          </div>
+        )
+      }
     }
   ], [warehouses])
 
@@ -440,46 +560,46 @@ export default function StockEntries() {
             })
             formModal.open()
           }}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-blue-100 dark:border-blue-900/40 rounded-xs transition-all"
+          className="flex items-center gap-2.5 px-2.5 py-1.5 text-[11px] font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-blue-100 dark:border-blue-900/40 rounded-xs transition-all"
           title="Edit"
           disabled={row.status !== 'Draft'}
         >
           <Edit2 size={14} />
-          <span>Edit</span>
+          
         </button>
 
         {row.status === 'Draft' && (
           <button
             onClick={() => handleSubmitEntry(row.id || row.entry_id)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 border border-green-100 dark:border-green-900/40 rounded-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2.5 px-2.5 py-1.5 text-[11px] font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 border border-green-100 dark:border-green-900/40 rounded-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             title="Submit"
             disabled={loading}
           >
             {loading ? <Loader size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-            <span>{loading ? 'Submitting...' : 'Submit'}</span>
+            
           </button>
         )}
 
         {row.status === 'Submitted' && (
           <button
             onClick={() => handleCancelEntry(row.id || row.entry_id)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 border border-orange-100 dark:border-orange-900/40 rounded-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2.5 px-2.5 py-1.5 text-[11px] font-medium text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 border border-orange-100 dark:border-orange-900/40 rounded-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             title="Cancel (Reverse Stock)"
             disabled={loading}
           >
             {loading ? <Loader size={14} className="animate-spin" /> : <RotateCcw size={14} />}
-            <span>{loading ? 'Cancelling...' : 'Cancel'}</span>
+           
           </button>
         )}
 
         <button
           onClick={() => handleDelete(row.id || row.entry_id)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-neutral-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 border border-neutral-100 rounded-xs transition-all"
+          className="flex items-center gap-2.5 px-2.5 py-1.5 text-[11px] font-medium text-neutral-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 border border-neutral-100 rounded-xs transition-all"
           title="Delete"
           disabled={row.status !== 'Draft'}
         >
           <Trash2 size={14} />
-          <span>Delete</span>
+          <span></span>
         </button>
       </div>
     )
@@ -521,8 +641,8 @@ export default function StockEntries() {
                   <Activity size={20} className="text-amber-500" />
                 </div>
               </div>
-              <div className="mt-2 flex items-center gap-1">
-                <span className="text-[10px] text-neutral-500">Across {Object.keys(statistics.by_type).length} types</span>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-xs text-neutral-500">Across {Object.keys(statistics.by_type).length} types</span>
               </div>
             </div>
 
@@ -536,8 +656,8 @@ export default function StockEntries() {
                   <TrendingUp size={20} className="text-blue-500" />
                 </div>
               </div>
-              <div className="mt-2 flex items-center gap-1">
-                <span className="text-[10px] text-neutral-500">Items moved</span>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-xs text-neutral-500">Items moved</span>
               </div>
             </div>
 
@@ -551,8 +671,8 @@ export default function StockEntries() {
                   <Database size={20} className="text-green-500" />
                 </div>
               </div>
-              <div className="mt-2 flex items-center gap-1">
-                <span className="text-[10px] text-neutral-500">Total transaction value</span>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-xs text-neutral-500">Total transaction value</span>
               </div>
             </div>
 
@@ -566,8 +686,8 @@ export default function StockEntries() {
                   <Tag size={20} className="text-orange-500" />
                 </div>
               </div>
-              <div className="mt-2 flex items-center gap-1">
-                <span className="text-[10px] text-neutral-500">Requires submission</span>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-xs text-neutral-500">Requires submission</span>
               </div>
             </div>
           </div>
@@ -589,30 +709,28 @@ export default function StockEntries() {
             </div>
           }
         >
-          <form id="manual-entry-form" onSubmit={handleSubmit} className="space-y-2 py-2">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-              <div className="col-span-2">
+          <form id="manual-entry-form" onSubmit={handleSubmit} className="space-y-4 py-2">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-x-8 gap-y-4">
+              {/* Left Column */}
+              
                 <SearchableSelect
                   label="Entry Type"
                   value={formData.entry_type}
-                  onChange={(val) => setFormData({ ...formData, entry_type: val })}
+                  onChange={(val) => setFormData({ ...formData, entry_type: val, purpose: val })}
                   required
                   options={[
-                    { value: "Material Transfer", label: "Transfer" },
-                    { value: "Material Receipt", label: "Purchase" },
-                    { value: "Purchase", label: "Purchase" },
-                    { value: "Material Issue", label: "Issue" },
+                    { value: "Material Transfer", label: "Material Transfer" },
+                    { value: "Material Receipt", label: "Material Receipt" },
+                    { value: "Material Purchase", label: "Material Purchase" },
+                    { value: "Material Issue", label: "Material Issue" },
                     { value: "Manufacturing Return", label: "Manufacturing Return" },
-                    { value: "Repack", label: "Repack" },
                     { value: "Scrap Entry", label: "Scrap Entry" },
                   ]}
                   placeholder="Select Type"
                   containerClassName="bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700"
                 />
-              </div>
-              {!['Purchase', 'Material Receipt'].includes(formData.entry_type) && (
-                <div className="col-span-1">
+
+                {!['Material Receipt', 'Purchase', 'Material Purchase'].includes(formData.entry_type) && (
                   <SearchableSelect
                     label="From Warehouse"
                     value={formData.from_warehouse_id}
@@ -622,27 +740,93 @@ export default function StockEntries() {
                       label: wh.warehouse_name
                     }))}
                     placeholder="Select Source Warehouse"
+                    required={!['Material Receipt', 'Purchase', 'Material Purchase'].includes(formData.entry_type)}
                     containerClassName="bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700"
                   />
-                </div>
-              )}
-              <div className={['Purchase', 'Material Receipt'].includes(formData.entry_type) ? "col-span-2" : "col-span-1"}>
+                )}
+
                 <SearchableSelect
-                  label={['Purchase', 'Material Receipt'].includes(formData.entry_type) ? 'Store Warehouse' : 'To Warehouse'}
-                  value={formData.to_warehouse_id}
-                  onChange={(val) => setFormData({ ...formData, to_warehouse_id: val })}
-                  required={['Material Receipt', 'Purchase'].includes(formData.entry_type)}
-                  options={warehouses.map(wh => ({
-                    value: String(wh.id),
-                    label: wh.warehouse_name
-                  }))}
-                  placeholder={['Purchase', 'Material Receipt'].includes(formData.entry_type) ? 'Select Store Warehouse' : 'Select Destination Warehouse'}
+                  label="Purpose"
+                  value={formData.purpose}
+                  onChange={(val) => setFormData({ ...formData, purpose: val })}
+                  options={[
+                    { value: "Material Transfer", label: "Material Transfer" },
+                    { value: "Material Receipt", label: "Material Receipt" },
+                    { value: "Material Issue", label: "Material Issue" },
+                    { value: "Manufacturing", label: "Manufacturing" },
+                    { value: "Purchase", label: "Purchase" },
+                    { value: "Scrap", label: "Scrap" },
+                    { value: "Internal Transfer", label: "Internal Transfer" },
+                  ]}
+                  placeholder="Select Purpose"
                   containerClassName="bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700"
                 />
+
+                <div className="">
+                  <label className="block text-xs text-slate-400 mb-1">Reference Doc</label>
+                  <input
+                    type="text"
+                    name="reference_doctype"
+                    value={formData.reference_doctype}
+                    onChange={handleChange}
+                    placeholder="e.g. Sales Order"
+                    className="w-full p-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  />
+                </div>
+            
+
+              {/* Right Column */}
+              
+                <div className="">
+                  <label className="block text-xs text-slate-400 mb-1">Entry Date *</label>
+                  <input
+                    type="date"
+                    name="entry_date"
+                    value={formData.entry_date}
+                    onChange={handleChange}
+                    className="w-full p-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                    required
+                  />
+                </div>
+
+                {!['Material Issue', 'Scrap Entry'].includes(formData.entry_type) && (
+                  <SearchableSelect
+                    label="To Warehouse"
+                    value={formData.to_warehouse_id}
+                    onChange={(val) => setFormData({ ...formData, to_warehouse_id: val })}
+                    options={warehouses.map(wh => ({
+                      value: String(wh.id),
+                      label: wh.warehouse_name
+                    }))}
+                    placeholder="Select Destination Warehouse"
+                    required={!['Material Issue', 'Scrap Entry'].includes(formData.entry_type)}
+                    containerClassName="bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700"
+                  />
+                )}
+
+                <div className="">
+                  <label className="block text-xs text-slate-400 mb-1">Reference Name</label>
+                  <input
+                    type="text"
+                    name="reference_name"
+                    value={formData.reference_name}
+                    onChange={handleChange}
+                    placeholder="e.g. SO-001"
+                    className="w-full p-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  />
+                </div>
               </div>
+           
+            <div className="">
+              <label className="block text-xs text-slate-400 mb-1">Remarks</label>
+              <textarea
+                name="remarks"
+                value={formData.remarks}
+                onChange={handleChange}
+                placeholder="Enter any additional information..."
+                className="w-full p-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 h-16"
+              />
             </div>
-
-
 
             <Card className="border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20">
               <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">
@@ -652,14 +836,13 @@ export default function StockEntries() {
                 </h4>
               </div>
               <div className="p-3 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px]  text-neutral-400 ">Item Code</label>
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+                  <div className="col-span-2">
+                    <label className="text-xs  text-neutral-400 ">Item Code</label>
 
                     <SearchableSelect
-
                       value={newItem.item_code}
-                      onChange={(val) => setNewItem({ ...newItem, item_code: val })}
+                      onChange={handleItemChange}
                       options={items.map(item => ({
                         value: item.item_code,
                         label: `${item.name || item.item_name} (${item.item_code})`
@@ -669,38 +852,40 @@ export default function StockEntries() {
                       containerClassName="bg-white dark:bg-neutral-800 text-xs border-neutral-200 dark:border-neutral-700"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px]  text-neutral-400 ">Quantity *</label>
+                  <div className="col-span-1">
+                    <label className="text-xs  text-neutral-400 ">
+                      Quantity * {availableQty !== null && <span className="text-amber-600">(Avail: {availableQty})</span>}
+                    </label>
                     <input
                       type="number"
                       min="1"
                       value={newItem.qty}
                       onChange={(e) => setNewItem({ ...newItem, qty: parseFloat(e.target.value) })}
-                      className="w-full p-1 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
+                      className="w-full p-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px]  text-neutral-400 ">UOM</label>
+                  <div className="col-span-1">
+                    <label className="text-xs  text-neutral-400 ">UOM</label>
                     <input
                       type="text"
                       value={newItem.uom}
                       onChange={(e) => setNewItem({ ...newItem, uom: e.target.value })}
                       placeholder="Kg"
-                      className="w-full p-1 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
+                      className="w-full p-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px]  text-neutral-400 ">Batch No</label>
+                  <div className="col-span-1">
+                    <label className="text-xs  text-neutral-400 ">Batch No</label>
                     <input
                       type="text"
                       value={newItem.batch_no}
                       onChange={(e) => setNewItem({ ...newItem, batch_no: e.target.value })}
                       placeholder="Optional"
-                      className="w-full p-1 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
+                      className="w-full p-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px]  text-neutral-400 ">Valuation Rate (₹)</label>
+                  <div className="col-span-1">
+                    <label className="text-xs  text-neutral-400 ">Valuation Rate (₹)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -708,7 +893,7 @@ export default function StockEntries() {
                       value={newItem.valuation_rate}
                       onChange={(e) => setNewItem({ ...newItem, valuation_rate: parseFloat(e.target.value) })}
                       placeholder="0.00"
-                      className="w-full p-1 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
+                      className="w-full p-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800"
                     />
                   </div>
                   <div className="flex items-end">
@@ -725,6 +910,7 @@ export default function StockEntries() {
                       <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
                         <tr>
                           <th className="px-3 py-2 text-left  text-neutral-500 ">Item</th>
+                          <th className="px-3 py-2 text-left  text-neutral-500 ">Batch No</th>
                           <th className="px-3 py-2 text-right  text-neutral-500 ">Qty</th>
                           <th className="px-3 py-2 text-left  text-neutral-500 ">UOM</th>
                           <th className="px-3 py-2 text-right  text-neutral-500 ">Rate</th>
@@ -735,9 +921,10 @@ export default function StockEntries() {
                         {entryItems.map(item => (
                           <tr key={item._key || Math.random()} className="hover:bg-neutral-50 dark:hover:bg-neutral-700/50">
                             <td className="px-3 py-2">
-                              <div className="font-medium text-neutral-900 dark:text-white">{item.item_code}</div>
-                              {item.batch_no && <div className="text-[9px] text-neutral-400">Batch: {item.batch_no}</div>}
+                              <div className="font-medium text-neutral-900 dark:text-white">{item.item_name || item.item_code}</div>
+                              <div className="text-xs text-neutral-500">{item.item_code}</div>
                             </td>
+                            <td className="px-3 py-2 text-neutral-600 dark:text-neutral-400 font-mono text-xs">{item.batch_no || '-'}</td>
                             <td className="px-3 py-2 text-right ">{item.qty}</td>
                             <td className="px-3 py-2 text-neutral-500">{item.uom}</td>
                             <td className="px-3 py-2 text-right">₹{Number(item.valuation_rate).toFixed(2)}</td>
@@ -745,7 +932,7 @@ export default function StockEntries() {
                               <button
                                 type="button"
                                 onClick={() => handleRemoveItem(item._key)}
-                                className="p-1 text-neutral-400 hover:text-red-600 transition-colors"
+                                className="p-2 text-neutral-400 hover:text-red-600 transition-colors"
                               >
                                 <Trash2 size={12} />
                               </button>
@@ -789,7 +976,7 @@ export default function StockEntries() {
             {/* Command Center Filter Bar */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-3 px-4 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
               <div className="relative flex-1 group max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-amber-500 transition-colors" size={14} />
+                <Search className="absolute left-3 top-2/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-amber-500 transition-colors" size={14} />
                 <input
                   type="text"
                   placeholder="Search by ID, No, or warehouse..."
@@ -803,7 +990,7 @@ export default function StockEntries() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xs">
+                <div className="flex items-center gap-2.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xs">
                   <Filter size={12} className="text-neutral-400" />
                   <select
                     value={typeFilter}
@@ -821,7 +1008,7 @@ export default function StockEntries() {
                   </select>
                 </div>
 
-                <div className="flex items-center gap-1.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xs">
+                <div className="flex items-center gap-2.5 px-2 py-1.5 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xs">
                   <Warehouse size={12} className="text-neutral-400" />
                   <select
                     value={warehouseFilter}
@@ -843,7 +1030,7 @@ export default function StockEntries() {
                 {(searchTerm || typeFilter || warehouseFilter) && (
                   <button
                     onClick={handleClearFilters}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xs transition-colors"
+                    className="flex items-center gap-2.5 px-2.5 py-1.5 text-[11px] font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xs transition-colors"
                     title="Clear Filters"
                   >
                     <RotateCcw size={12} />
@@ -853,17 +1040,17 @@ export default function StockEntries() {
 
                 <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-800 mx-1" />
 
-                <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xs">
+                <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-2 rounded-xs">
                   <button
                     onClick={() => setViewMode('table')}
-                    className={`p-1.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-white dark:bg-neutral-700   text-amber-600' : 'text-neutral-500 hover:text-neutral-700'}`}
+                    className={`p-2.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-white dark:bg-neutral-700   text-amber-600' : 'text-neutral-500 hover:text-neutral-700'}`}
                     title="Table View"
                   >
                     <ListIcon size={14} />
                   </button>
                   <button
                     onClick={() => setViewMode('card')}
-                    className={`p-1.5 rounded-xs transition-all ${viewMode === 'card' ? 'bg-white dark:bg-neutral-700   text-amber-600' : 'text-neutral-500 hover:text-neutral-700'}`}
+                    className={`p-2.5 rounded-xs transition-all ${viewMode === 'card' ? 'bg-white dark:bg-neutral-700   text-amber-600' : 'text-neutral-500 hover:text-neutral-700'}`}
                     title="Card View"
                   >
                     <LayoutGrid size={14} />
@@ -883,7 +1070,7 @@ export default function StockEntries() {
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setShowColumnMenu(false)} />
                       <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs shadow  z-20 py-2">
-                        <div className="px-3 py-1 text-[10px]  text-neutral-400  tracking-wider border-b border-neutral-100 dark:border-neutral-700 mb-1 flex justify-between">
+                        <div className="px-3 py-1 text-xs  text-neutral-400  tracking-wider border-b border-neutral-100 dark:border-neutral-700 mb-1 flex justify-between">
                           <span>Visible Columns</span>
                           <div className="flex gap-2">
                             <button onClick={() => setVisibleColumns(new Set(columns.map(c => c.key)))} className="text-amber-600 hover:underline">All</button>
@@ -892,7 +1079,7 @@ export default function StockEntries() {
                         </div>
                         <div className="max-h-64 overflow-y-auto">
                           {columns.map(col => (
-                            <label key={col.key} className="flex items-center p-1 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors">
+                            <label key={col.key} className="flex items-center p-2 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors">
                               <input
                                 type="checkbox"
                                 checked={visibleColumns.has(col.key)}
@@ -910,7 +1097,7 @@ export default function StockEntries() {
 
                 <button
                   onClick={fetchEntries}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-blue-600 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs transition-all  "
+                  className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-blue-600 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs transition-all  "
                   title="Refresh Data"
                 >
                   <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
@@ -951,7 +1138,7 @@ export default function StockEntries() {
                               </div>
                               <div>
                                 <h3 className="text-sm  text-neutral-900 dark:text-white">{entry.entry_no}</h3>
-                                <p className="text-[10px] text-neutral-500   tracking-wider">{entry.entry_type}</p>
+                                <p className="text-xs text-neutral-500   tracking-wider">{entry.entry_type}</p>
                               </div>
                             </div>
                             <Badge variant={entry.status === 'Submitted' ? 'success' : entry.status === 'Cancelled' ? 'danger' : 'warning'}>
@@ -960,33 +1147,65 @@ export default function StockEntries() {
                           </div>
 
                           <div className="space-y-2.5 mb-4">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <div className="flex items-center gap-1.5 text-neutral-500">
-                                <Calendar size={12} />
-                                <span>{new Date(entry.entry_date).toLocaleDateString()}</span>
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center justify-between text-[11px]">
+                                <div className="flex items-center gap-2.5 text-neutral-500">
+                                  <Calendar size={12} />
+                                  <span>{new Date(entry.entry_date).toLocaleDateString()}</span>
+                                </div>
+                                <div className=" text-neutral-700 dark:text-neutral-300 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-xs font-bold">
+                                  {entry.total_items} Items
+                                </div>
                               </div>
-                              <div className=" text-neutral-700 dark:text-neutral-300 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-xs">
-                                {entry.total_items} Items
-                              </div>
+
+                              {entry.items_details && (
+                                <div className="flex flex-col gap-1.5 mt-1 max-h-[150px] overflow-y-auto pr-1">
+                                  {entry.items_details.split(';;').map((str, idx) => {
+                                    const [code, name, qty, uom, rate, batch] = str.split('|')
+                                    return (
+                                      <div key={idx} className="bg-neutral-50 dark:bg-neutral-800/50 p-2 rounded-xs border border-neutral-100 dark:border-neutral-800/40">
+                                        <div className="flex justify-between items-start gap-2">
+                                          <div className="flex flex-col flex-1 truncate">
+                                            <span className="text-[10px] font-bold text-neutral-800 dark:text-neutral-200 truncate">
+                                              {name || code}
+                                            </span>
+                                            <span className="text-[9px] text-neutral-500 font-mono">
+                                              {batch ? `Batch: ${batch}` : 'No Batch'}
+                                            </span>
+                                          </div>
+                                          <div className="flex flex-col items-end whitespace-nowrap">
+                                            <span className="text-[10px] font-bold text-amber-600">
+                                              {qty} {uom}
+                                            </span>
+                                            <span className="text-[9px] text-neutral-400">
+                                              ₹{Number(rate).toLocaleString()}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
                             </div>
 
                             <div className="bg-neutral-50 dark:bg-neutral-800/50 p-2 rounded-xs border border-neutral-100 dark:border-neutral-800">
                               <div className="flex items-center gap-2 mb-1.5">
                                 <div className="w-1.5 h-1.5 rounded  bg-neutral-300" />
-                                <span className="text-[10px] text-neutral-500 truncate flex-1 font-medium">
+                                <span className="text-xs text-neutral-500 truncate flex-1 font-medium">
                                   {entry.from_warehouse_name || 'No Source'}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded  bg-amber-500" />
-                                <span className="text-[10px] text-neutral-900 dark:text-neutral-100 truncate flex-1 ">
+                                <span className="text-xs text-neutral-900 dark:text-neutral-100 truncate flex-1 ">
                                   {entry.to_warehouse_name || 'No Destination'}
                                 </span>
                               </div>
                             </div>
 
                             {entry.purpose && (
-                              <p className="text-[10px] text-neutral-500 italic line-clamp-2 leading-relaxed">
+                              <p className="text-xs text-neutral-500 italic line-clamp-2 leading-relaxed">
                                 "{entry.purpose}"
                               </p>
                             )}
@@ -997,7 +1216,7 @@ export default function StockEntries() {
                               <>
                                 <button
                                   onClick={() => handleSubmitEntry(entry.id || entry.entry_id)}
-                                  className="flex-1 flex items-center justify-center gap-1 py-2 text-[10px] text-white bg-green-600 hover:bg-green-700 rounded-xs transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="flex-1 flex items-center justify-center gap-2 py-2 text-xs text-white bg-green-600 hover:bg-green-700 rounded-xs transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={loading}
                                 >
                                   {loading ? <Loader size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
@@ -1005,7 +1224,7 @@ export default function StockEntries() {
                                 </button>
                                 <button
                                   onClick={() => handleDelete(entry.id || entry.entry_id)}
-                                  className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-medium text-neutral-400 hover:text-red-600 bg-neutral-50 hover:bg-red-50 rounded-xs transition-all border border-neutral-100 hover:border-red-100"
+                                  className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-neutral-400 hover:text-red-600 bg-neutral-50 hover:bg-red-50 rounded-xs transition-all border border-neutral-100 hover:border-red-100"
                                   disabled={loading}
                                 >
                                   <Trash2 size={12} />
@@ -1015,14 +1234,14 @@ export default function StockEntries() {
                             ) : entry.status === 'Submitted' ? (
                               <button
                                 onClick={() => handleCancelEntry(entry.id || entry.entry_id)}
-                                className="flex-1 flex items-center justify-center gap-1 py-2 text-[10px] text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xs transition-all border border-orange-100 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex-1 flex items-center justify-center gap-2 py-2 text-xs text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xs transition-all border border-orange-100 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                 disabled={loading}
                               >
                                 {loading ? <Loader size={12} className="animate-spin" /> : <RotateCcw size={12} />}
                                 {loading ? 'CANCELLING...' : 'CANCEL & REVERSE'}
                               </button>
                             ) : (
-                              <div className="flex-1 text-center py-2 text-[10px]  text-neutral-400 bg-neutral-50 rounded-xs border border-neutral-100 italic ">
+                              <div className="flex-1 text-center py-2 text-xs  text-neutral-400 bg-neutral-50 rounded-xs border border-neutral-100 italic ">
                                 Cancelled
                               </div>
                             )}
@@ -1037,15 +1256,15 @@ export default function StockEntries() {
                       <div className="text-[11px] text-neutral-500 font-medium">
                         Showing <span className="text-neutral-900 dark:text-white ">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-neutral-900 dark:text-white ">{Math.min(currentPage * itemsPerPage, filteredEntries.length)}</span> of <span className="text-neutral-900 dark:text-white ">{filteredEntries.length}</span> entries
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                           disabled={currentPage === 1}
-                          className="p-1 border border-neutral-200 dark:border-neutral-700 rounded-xs text-[11px]  text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                          className="p-2 border border-neutral-200 dark:border-neutral-700 rounded-xs text-[11px]  text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         >
                           Previous
                         </button>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2">
                           {[...Array(totalPages)].map((_, i) => {
                             const page = i + 1;
                             if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
@@ -1067,7 +1286,7 @@ export default function StockEntries() {
                         <button
                           onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                           disabled={currentPage === totalPages}
-                          className="p-1 border border-neutral-200 dark:border-neutral-700 rounded-xs text-[11px]  text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                          className="p-2 border border-neutral-200 dark:border-neutral-700 rounded-xs text-[11px]  text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         >
                           Next
                         </button>

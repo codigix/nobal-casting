@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AlertCircle, Plus, Trash2, X, ChevronRight, Save, RotateCcw, ChevronDown, ChevronUp, Check, FileText, Settings, Database, Layers, TrendingDown, Package, Users, DollarSign, AlertTriangle, Activity, ArrowLeft } from 'lucide-react'
+import { useAuth } from '../../hooks/AuthContext'
 import * as productionService from '../../services/productionService'
 import { suppliersAPI } from '../../services/api'
 import SearchableSelect from '../../components/SearchableSelect'
@@ -118,6 +119,8 @@ const StatusBadge = ({ status }) => {
 }
 
 export default function BOMForm() {
+  const { user } = useAuth()
+  const isAdmin = user?.department?.toLowerCase() === 'admin'
   const { id } = useParams()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -1512,14 +1515,16 @@ export default function BOMForm() {
                     onClick={scrollToSection}
                     themeColor="rose"
                   />
-                  <NavItem
-                    label="BOM Cost"
-                    icon={TrendingDown}
-                    section="costing"
-                    isActive={activeSection === 'costing'}
-                    onClick={scrollToSection}
-                    themeColor="cyan"
-                  />
+                  {isAdmin && (
+                    <NavItem
+                      label="BOM Cost"
+                      icon={TrendingDown}
+                      section="costing"
+                      isActive={activeSection === 'costing'}
+                      onClick={scrollToSection}
+                      themeColor="cyan"
+                    />
+                  )}
                 </div>
 
                 <button
@@ -1614,7 +1619,7 @@ export default function BOMForm() {
                         </FieldWrapper>
                         </div>
 
-                        <div className='col-span-3'>
+                        <div className='col-span-2'>
                           <FieldWrapper label="Quantity" required>
                           <div className="rounded  border border-slate-200 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all bg-white">
                             <input
@@ -1629,7 +1634,7 @@ export default function BOMForm() {
                           </div>
                         </FieldWrapper>
                         </div>
-                        <div className='col-span-3'>
+                        <div className='col-span-2'>
                           <FieldWrapper label="UOM">
                           <div className=" border-l border-slate-100 bg-slate-50/50">
                             <SearchableSelect
@@ -1658,55 +1663,8 @@ export default function BOMForm() {
                             </div>
                           </FieldWrapper>
                         </div>
-
-
-                        <div className='col-span-2'>
-                          <FieldWrapper label="Item Valuation Rate (₹)">
-                          <div className="relative group/input">
-                            <input
-                              type="number"
-                              name="valuation_rate_value"
-                              value={formData.valuation_rate_value}
-                              onChange={handleInputChange}
-                              step="0.01"
-                              className="w-full rounded border border-slate-200 bg-slate-50 p-2 text-xs focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all focus:outline-none"
-                            />
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-300 group-focus-within/input:text-blue-500 transition-colors">INR</div>
-                          </div>
-                        </FieldWrapper>
-                        </div>
-
-                        <div className='col-span-2'>
-                          <FieldWrapper label="Selling Rate (₹)">
-                          <div className="relative group/input">
-                            <input
-                              type="number"
-                              name="selling_rate"
-                              value={formData.selling_rate}
-                              onChange={handleInputChange}
-                              step="0.01"
-                              className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
-                            />
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2  text-xs    text-slate-300    group-focus-within/input:text-emerald-500 transition-colors">INR</div>
-                          </div>
-                        </FieldWrapper>
-                        </div>
-
-                        <div className='col-span-2'>
-                          <FieldWrapper label="Total Target Value (₹)">
-                          <div className="relative group/input">
-                            <input
-                              type="text"
-                              readOnly
-                              value={(parseFloat(formData.quantity || 0) * parseFloat(formData.selling_rate || 0)).toLocaleString()}
-                              className="w-full rounded border border-slate-100 bg-slate-50  p-2 text-xs    text-slate-500 cursor-not-allowed outline-none font-medium"
-                            />
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2  text-xs    text-slate-300">AUTO</div>
-                          </div>
-                        </FieldWrapper>
-                        </div>
-
-                        <div className="flex col-span-12 items-center gap-2 pt-4">
+<div class="col-span-3">
+  <div className="flex col-span-12 items-center gap-2 pt-4">
                           <label className="flex items-center gap-4 cursor-pointer group">
                             <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.is_active ? 'bg-emerald-500  shadow-emerald-100' : 'bg-slate-200'}`}>
                               <input
@@ -1733,6 +1691,59 @@ export default function BOMForm() {
                             <span className=" text-xs    text-slate-500    group-hover:text-slate-900 transition-colors">Default</span>
                           </label>
                         </div>
+</div>
+
+                        {isAdmin && (
+                          <>
+                            <div className='col-span-2'>
+                              <FieldWrapper label="Item Valuation Rate (₹)">
+                              <div className="relative group/input">
+                                <input
+                                  type="number"
+                                  name="valuation_rate_value"
+                                  value={formData.valuation_rate_value}
+                                  onChange={handleInputChange}
+                                  step="0.01"
+                                  className="w-full rounded border border-slate-200 bg-slate-50 p-2 text-xs focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all focus:outline-none"
+                                />
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-300 group-focus-within/input:text-blue-500 transition-colors">INR</div>
+                              </div>
+                            </FieldWrapper>
+                            </div>
+
+                            <div className='col-span-2'>
+                              <FieldWrapper label="Selling Rate (₹)">
+                              <div className="relative group/input">
+                                <input
+                                  type="number"
+                                  name="selling_rate"
+                                  value={formData.selling_rate}
+                                  onChange={handleInputChange}
+                                  step="0.01"
+                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
+                                />
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2  text-xs    text-slate-300    group-focus-within/input:text-emerald-500 transition-colors">INR</div>
+                              </div>
+                            </FieldWrapper>
+                            </div>
+
+                            <div className='col-span-2'>
+                              <FieldWrapper label="Total Target Value (₹)">
+                              <div className="relative group/input">
+                                <input
+                                  type="text"
+                                  readOnly
+                                  value={(parseFloat(formData.quantity || 0) * parseFloat(formData.selling_rate || 0)).toLocaleString()}
+                                  className="w-full rounded border border-slate-100 bg-slate-50  p-2 text-xs    text-slate-500 cursor-not-allowed outline-none font-medium"
+                                />
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2  text-xs    text-slate-300">AUTO</div>
+                              </div>
+                            </FieldWrapper>
+                            </div>
+                          </>
+                        )}
+
+                        
                       </div>
                     </div>
                   )}
@@ -1882,7 +1893,7 @@ export default function BOMForm() {
                     id="components"
                     title="Components & Sub-Assemblies"
                     icon={Layers}
-                    subtitle={`${bomLines.length} Strategic Items • Total: ₹${totalComponentCost.toLocaleString()}`}
+                    subtitle={isAdmin ? `${bomLines.length} Strategic Items • Total: ₹${totalComponentCost.toLocaleString()}` : `${bomLines.length} Strategic Items`}
                     isExpanded={expandedSections.components}
                     onToggle={() => toggleSection('components')}
                     themeColor="indigo"
@@ -1956,18 +1967,20 @@ export default function BOMForm() {
                             </FieldWrapper>
                           </div>
 
-                          <div className="md:col-span-2">
-                            <FieldWrapper label="Valuation (₹)">
-                              <input
-                                type="number"
-                                value={newLine.rate}
-                                onChange={(e) => setNewLine({ ...newLine, rate: e.target.value })}
-                                onKeyDown={handleKeyDown}
-                                step="0.01"
-                                className="w-full bg-white border border-slate-200 rounded p-2 text-xs focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
-                              />
-                            </FieldWrapper>
-                          </div>
+                          {isAdmin && (
+                            <div className="md:col-span-2">
+                              <FieldWrapper label="Valuation (₹)">
+                                <input
+                                  type="number"
+                                  value={newLine.rate}
+                                  onChange={(e) => setNewLine({ ...newLine, rate: e.target.value })}
+                                  onKeyDown={handleKeyDown}
+                                  step="0.01"
+                                  className="w-full bg-white border border-slate-200 rounded p-2 text-xs focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
+                                />
+                              </FieldWrapper>
+                            </div>
+                          )}
 
 
 
@@ -1992,9 +2005,13 @@ export default function BOMForm() {
                                 <th className="p-2   text-xs    text-slate-400  w-16 text-center">#</th>
                                 <th className="p-2   text-xs    text-slate-400 ">Component Specification</th>
                                 <th className="p-2   text-xs    text-slate-400  text-right">Qty</th>
-                                <th className="p-2   text-xs    text-slate-400  text-right">Valuation</th>
-                                <th className="p-2   text-xs    text-slate-400  text-right">Selling Price</th>
-                                <th className="p-2   text-xs    text-slate-400  text-right">Value</th>
+                                {isAdmin && (
+                                  <>
+                                    <th className="p-2   text-xs    text-slate-400  text-right">Valuation</th>
+                                    <th className="p-2   text-xs    text-slate-400  text-right">Selling Price</th>
+                                    <th className="p-2   text-xs    text-slate-400  text-right">Value</th>
+                                  </>
+                                )}
                                 <th className="p-2   text-xs    text-slate-400  text-center w-32">Actions</th>
                               </tr>
                             </thead>
@@ -2031,24 +2048,27 @@ export default function BOMForm() {
                                         <div className="text-xs   text-slate-700">{parseFloat(line.qty || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className=" text-xs    text-slate-400 ml-1.5   ">{line.uom}</span></div>
                                       )}
                                     </td>
-                                    <td className="p-2  text-right">
-                                      {isEditing ? (
-                                        <input type="number" value={data.rate || ''} onChange={(e) => setEditingRowData({ ...data, rate: e.target.value })} className="w-24 bg-white border border-indigo-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-indigo-500/10 outline-none  " />
-                                      ) : (
-                                        <div className="text-xs   text-slate-500 italic">₹{parseFloat(line.rate || 0).toLocaleString()}</div>
-
-                                      )}
-                                    </td>
-                                    <td className="p-2  text-right">
-                                      {isEditing ? (
-                                        <input type="number" value={data.selling_price || ''} onChange={(e) => setEditingRowData({ ...data, selling_price: e.target.value })} className="w-24 bg-white border border-indigo-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-indigo-500/10 outline-none  " />
-                                      ) : (
-                                        <div className="text-xs   text-slate-500 italic">₹{parseFloat(line.selling_price || 0).toLocaleString()}</div>
-                                      )}
-                                    </td>
-                                    <td className="p-2  text-right">
-                                      <span className="  text-indigo-600 text-xs ">₹{parseFloat(isEditing ? (parseFloat(data.qty || 0) * parseFloat(data.rate || 0)) : (line.amount || 0)).toLocaleString()}</span>
-                                    </td>
+                                    {isAdmin && (
+                                      <>
+                                        <td className="p-2  text-right">
+                                          {isEditing ? (
+                                            <input type="number" value={data.rate || ''} onChange={(e) => setEditingRowData({ ...data, rate: e.target.value })} className="w-24 bg-white border border-indigo-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-indigo-500/10 outline-none  " />
+                                          ) : (
+                                            <div className="text-xs   text-slate-500 italic">₹{parseFloat(line.rate || 0).toLocaleString()}</div>
+                                          )}
+                                        </td>
+                                        <td className="p-2  text-right">
+                                          {isEditing ? (
+                                            <input type="number" value={data.selling_price || ''} onChange={(e) => setEditingRowData({ ...data, selling_price: e.target.value })} className="w-24 bg-white border border-indigo-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-indigo-500/10 outline-none  " />
+                                          ) : (
+                                            <div className="text-xs   text-slate-500 italic">₹{parseFloat(line.selling_price || 0).toLocaleString()}</div>
+                                          )}
+                                        </td>
+                                        <td className="p-2  text-right">
+                                          <span className="  text-indigo-600 text-xs ">₹{parseFloat(isEditing ? (parseFloat(data.qty || 0) * parseFloat(data.rate || 0)) : (line.amount || 0)).toLocaleString()}</span>
+                                        </td>
+                                      </>
+                                    )}
                                     <td className="p-2 ">
                                       <div className="flex items-center justify-center gap-2">
                                         {isEditing ? (
@@ -2083,17 +2103,19 @@ export default function BOMForm() {
                                 )
                               })}
                             </tbody>
-                            <tfoot>
-                              <tr className="bg-indigo-50/30 border-t border-indigo-100/30">
-                                <td colSpan="5" className="p-2 text-right  text-xs    text-indigo-900/50  ">Aggregate Component Value</td>
-                                <td className="p-2 text-right">
-                                  <span className="p-2 bg-indigo-600 text-white rounded    text-xs   shadow-indigo-100">
-                                    ₹{totalComponentCost.toLocaleString()}
-                                  </span>
-                                </td>
-                                <td></td>
-                              </tr>
-                            </tfoot>
+                            {isAdmin && (
+                              <tfoot>
+                                <tr className="bg-indigo-50/30 border-t border-indigo-100/30">
+                                  <td colSpan="5" className="p-2 text-right  text-xs    text-indigo-900/50  ">Aggregate Component Value</td>
+                                  <td className="p-2 text-right">
+                                    <span className="p-2 bg-indigo-600 text-white rounded    text-xs   shadow-indigo-100">
+                                      ₹{totalComponentCost.toLocaleString()}
+                                    </span>
+                                  </td>
+                                  <td></td>
+                                </tr>
+                              </tfoot>
+                            )}
                           </table>
                         </div>
                       ) : (
@@ -2115,7 +2137,7 @@ export default function BOMForm() {
                     id="raw_materials"
                     title="Materials "
                     icon={Database}
-                    subtitle={`${rawMaterials.length}  Assets • Total Material Cost: ₹${rawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.amount) || 0), 0).toLocaleString()}`}
+                    subtitle={isAdmin ? `${rawMaterials.length}  Assets • Total Material Cost: ₹${rawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.amount) || 0), 0).toLocaleString()}` : `${rawMaterials.length}  Assets`}
                     isExpanded={expandedSections.raw_materials}
                     onToggle={() => toggleSection('raw_materials')}
                     themeColor="amber"
@@ -2138,10 +2160,12 @@ export default function BOMForm() {
                                     <div className=" text-xs    text-slate-400 group-hover/item:text-amber-600 transition-colors   ">{consumption.item_code}</div>
                                     <div className="text-sm   text-slate-900">{consumption.qty_required.toFixed(2)} <span className=" text-xs    text-slate-400   ">{consumption.uom}</span></div>
                                   </div>
-                                  <div className="text-right">
-                                    <div className="text-sm   text-amber-600">₹{consumption.cost.toLocaleString()}</div>
-                                    <div className="text-[9px]   text-slate-400  mt-1">Est. Value</div>
-                                  </div>
+                                  {isAdmin && (
+                                    <div className="text-right">
+                                      <div className="text-sm   text-amber-600">₹{consumption.cost.toLocaleString()}</div>
+                                      <div className="text-[9px]   text-slate-400  mt-1">Est. Value</div>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -2235,29 +2259,33 @@ export default function BOMForm() {
                               </FieldWrapper>
                             </div>
 
-                            <div className="md:col-span-2">
-                              <FieldWrapper label="Rate (₹)">
-                                <input
-                                  type="number"
-                                  value={newRawMaterial.rate}
-                                  onChange={(e) => handleNewRawMaterialChange('rate', e.target.value)}
-                                  onKeyDown={handleKeyDown}
-                                  step="0.01"
-                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all focus:outline-none  "
-                                />
-                              </FieldWrapper>
-                            </div>
+                            {isAdmin && (
+                              <>
+                                <div className="md:col-span-2">
+                                  <FieldWrapper label="Rate (₹)">
+                                    <input
+                                      type="number"
+                                      value={newRawMaterial.rate}
+                                      onChange={(e) => handleNewRawMaterialChange('rate', e.target.value)}
+                                      onKeyDown={handleKeyDown}
+                                      step="0.01"
+                                      className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all focus:outline-none  "
+                                    />
+                                  </FieldWrapper>
+                                </div>
 
-                            <div className="md:col-span-2">
-                              <FieldWrapper label="Amount (₹)">
-                                <input
-                                  type="number"
-                                  value={newRawMaterial.amount}
-                                  readOnly
-                                  className="w-full rounded border border-slate-100 bg-slate-50  p-2 text-xs    text-slate-500 cursor-not-allowed outline-none font-medium"
-                                />
-                              </FieldWrapper>
-                            </div>
+                                <div className="md:col-span-2">
+                                  <FieldWrapper label="Amount (₹)">
+                                    <input
+                                      type="number"
+                                      value={newRawMaterial.amount}
+                                      readOnly
+                                      className="w-full rounded border border-slate-100 bg-slate-50  p-2 text-xs    text-slate-500 cursor-not-allowed outline-none font-medium"
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                              </>
+                            )}
 
                             
                             <div className="md:col-span-3 flex items-end">
@@ -2309,10 +2337,12 @@ export default function BOMForm() {
                                         </div>
                                       </div>
                                       <div className="flex items-center gap-8">
-                                        <div className="text-right hidden sm:block">
-                                          <div className="text-sm   text-amber-600">₹{groupCost.toLocaleString()}</div>
-                                          <div className="text-[8px]   text-slate-400  mt-1">Sub-Total Value</div>
-                                        </div>
+                                        {isAdmin && (
+                                          <div className="text-right hidden sm:block">
+                                            <div className="text-sm   text-amber-600">₹{groupCost.toLocaleString()}</div>
+                                            <div className="text-[8px]   text-slate-400  mt-1">Sub-Total Value</div>
+                                          </div>
+                                        )}
                                         <div className={`w-6 h-6 rounded  flex items-center justify-center transition-all duration-500 ${isExpanded ? 'bg-amber-600 text-white rotate-180 shadow-lg' : 'bg-slate-100 text-slate-300'}`}>
                                           <ChevronDown size={20} />
                                         </div>
@@ -2328,9 +2358,13 @@ export default function BOMForm() {
                                                 <th className="p-2 text-xs   text-slate-400 ">Asset Index</th>
                                                 <th className="p-2 text-xs   text-slate-400 ">Neural Node</th>
                                                 <th className="p-2 text-xs   text-slate-400  text-right">Quantity</th>
-                                                <th className="p-2 text-xs   text-slate-400  text-right">Valuation</th>
-                                                <th className="p-2 text-xs   text-slate-400  text-right">Selling Price</th>
-                                                <th className="p-2 text-xs   text-slate-400  text-right">Sub-Total</th>
+                                                {isAdmin && (
+                                                  <>
+                                                    <th className="p-2 text-xs   text-slate-400  text-right">Valuation</th>
+                                                    <th className="p-2 text-xs   text-slate-400  text-right">Selling Price</th>
+                                                    <th className="p-2 text-xs   text-slate-400  text-right">Sub-Total</th>
+                                                  </>
+                                                )}
                                                 <th className="p-2 text-xs   text-slate-400  text-center w-32">Control</th>
                                               </tr>
                                             </thead>
@@ -2361,23 +2395,27 @@ export default function BOMForm() {
                                                         <div className="text-xs   text-slate-900">{material.qty} <span className="text-[9px]   text-slate-400  ml-1  ">{material.uom}</span></div>
                                                       )}
                                                     </td>
-                                                    <td className="p-2  text-right">
-                                                      {isEditing ? (
-                                                        <input type="number" value={data.rate || ''} onChange={(e) => setEditingRowData({ ...data, rate: e.target.value })} className="w-28 bg-white border border-amber-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-amber-500/10 outline-none  " />
-                                                      ) : (
-                                                        <div className="text-xs   text-slate-700">₹{parseFloat(material.rate).toLocaleString()}</div>
-                                                      )}
-                                                    </td>
-                                                    <td className="p-2  text-right">
-                                                      {isEditing ? (
-                                                        <input type="number" value={data.selling_price || ''} onChange={(e) => setEditingRowData({ ...data, selling_price: e.target.value })} className="w-28 bg-white border border-amber-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-amber-500/10 outline-none  " />
-                                                      ) : (
-                                                        <div className="text-xs   text-slate-700">₹{parseFloat(material.selling_price || 0).toLocaleString()}</div>
-                                                      )}
-                                                    </td>
-                                                    <td className="p-2  text-right">
-                                                      <div className="text-xs   text-amber-600">₹{parseFloat(isEditing ? (parseFloat(data.qty || 0) * parseFloat(data.rate || 0)) : (material.amount || 0)).toLocaleString()}</div>
-                                                    </td>
+                                                    {isAdmin && (
+                                                      <>
+                                                        <td className="p-2  text-right">
+                                                          {isEditing ? (
+                                                            <input type="number" value={data.rate || ''} onChange={(e) => setEditingRowData({ ...data, rate: e.target.value })} className="w-28 bg-white border border-amber-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-amber-500/10 outline-none  " />
+                                                          ) : (
+                                                            <div className="text-xs   text-slate-700">₹{parseFloat(material.rate).toLocaleString()}</div>
+                                                          )}
+                                                        </td>
+                                                        <td className="p-2  text-right">
+                                                          {isEditing ? (
+                                                            <input type="number" value={data.selling_price || ''} onChange={(e) => setEditingRowData({ ...data, selling_price: e.target.value })} className="w-28 bg-white border border-amber-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-amber-500/10 outline-none  " />
+                                                          ) : (
+                                                            <div className="text-xs   text-slate-700">₹{parseFloat(material.selling_price || 0).toLocaleString()}</div>
+                                                          )}
+                                                        </td>
+                                                        <td className="p-2  text-right">
+                                                          <div className="text-xs   text-amber-600">₹{parseFloat(isEditing ? (parseFloat(data.qty || 0) * parseFloat(data.rate || 0)) : (material.amount || 0)).toLocaleString()}</div>
+                                                        </td>
+                                                      </>
+                                                    )}
                                                     <td className="p-2 ">
                                                       <div className="flex items-center justify-center gap-2">
                                                         {isEditing ? (
@@ -2451,7 +2489,7 @@ export default function BOMForm() {
                     id="operations"
                     title="Operations "
                     icon={Settings}
-                    subtitle={`${operations.length} Operation Selected • Total Operation Cost: ₹${operations.reduce((sum, op) => sum + (parseFloat(op.operating_cost) || 0), 0).toLocaleString()}`}
+                    subtitle={isAdmin ? `${operations.length} Operation Selected • Total Operation Cost: ₹${operations.reduce((sum, op) => sum + (parseFloat(op.operating_cost) || 0), 0).toLocaleString()}` : `${operations.length} Operation Selected`}
                     isExpanded={expandedSections.operations}
                     onToggle={() => toggleSection('operations')}
                     themeColor="emerald"
@@ -2489,7 +2527,7 @@ export default function BOMForm() {
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-3">
+                            <div className="md:col-span-2">
                               <FieldWrapper label="Execution Mode">
                                 <select
                                   value={newOperation.execution_mode}
@@ -2529,7 +2567,7 @@ export default function BOMForm() {
                                     />
                                   </FieldWrapper>
                                 </div>
-                                <div className="md:col-span-3">
+                                <div className="md:col-span-2">
                                   <FieldWrapper label="Cycle Time (min)">
                                     <input
                                       type="number"
@@ -2559,31 +2597,35 @@ export default function BOMForm() {
                                     />
                                   </FieldWrapper>
                                 </div>
-                                <div className="md:col-span-2">
-                                  <FieldWrapper label="Hourly Rate (₹)">
-                                    <input
-                                      type="number"
-                                      value={newOperation.hourly_rate}
-                                      onChange={(e) => {
-                                        const val = e.target.value
-                                        const cost = calculateOperationCost(newOperation.operation_time, newOperation.setup_time, val)
-                                        setNewOperation({ ...newOperation, hourly_rate: val, operating_cost: cost.toFixed(2) })
-                                      }}
-                                      onKeyDown={handleKeyDown}
-                                      className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
-                                    />
-                                  </FieldWrapper>
-                                </div>
-                                <div className="md:col-span-2">
-                                  <FieldWrapper label="Cost (₹)">
-                                    <input
-                                      type="number"
-                                      value={newOperation.operating_cost}
-                                      readOnly
-                                      className="w-full rounded border border-slate-200 bg-slate-50  p-2 text-xs focus:outline-none "
-                                    />
-                                  </FieldWrapper>
-                                </div>
+                                {isAdmin && (
+                                  <>
+                                    <div className="md:col-span-2">
+                                      <FieldWrapper label="Hourly Rate (₹)">
+                                        <input
+                                          type="number"
+                                          value={newOperation.hourly_rate}
+                                          onChange={(e) => {
+                                            const val = e.target.value
+                                            const cost = calculateOperationCost(newOperation.operation_time, newOperation.setup_time, val)
+                                            setNewOperation({ ...newOperation, hourly_rate: val, operating_cost: cost.toFixed(2) })
+                                          }}
+                                          onKeyDown={handleKeyDown}
+                                          className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
+                                        />
+                                      </FieldWrapper>
+                                    </div>
+                                    <div className="md:col-span-2">
+                                      <FieldWrapper label="Cost (₹)">
+                                        <input
+                                          type="number"
+                                          value={newOperation.operating_cost}
+                                          readOnly
+                                          className="w-full rounded border border-slate-200 bg-slate-50  p-2 text-xs focus:outline-none "
+                                        />
+                                      </FieldWrapper>
+                                    </div>
+                                  </>
+                                )}
                               </>
                             ) : newOperation.execution_mode === 'DISPATCH' ? (
                               <>
@@ -2615,16 +2657,18 @@ export default function BOMForm() {
                                     />
                                   </FieldWrapper>
                                 </div>
-                                <div className="md:col-span-3">
-                                  <FieldWrapper label="Cost (₹)">
-                                    <input
-                                      type="number"
-                                      value={newOperation.operating_cost}
-                                      readOnly
-                                      className="w-full rounded border border-slate-200 bg-slate-50  p-2 text-xs focus:outline-none "
-                                    />
-                                  </FieldWrapper>
-                                </div>
+                                {isAdmin && (
+                                  <div className="md:col-span-3">
+                                    <FieldWrapper label="Cost (₹)">
+                                      <input
+                                        type="number"
+                                        value={newOperation.operating_cost}
+                                        readOnly
+                                        className="w-full rounded border border-slate-200 bg-slate-50  p-2 text-xs focus:outline-none "
+                                      />
+                                    </FieldWrapper>
+                                  </div>
+                                )}
                               </>
                             ) : (
                               <>
@@ -2642,27 +2686,31 @@ export default function BOMForm() {
                                     />
                                   </FieldWrapper>
                                 </div>
-                                <div className="md:col-span-3">
-                                  <FieldWrapper label="Vendor Rate / Unit (₹)">
-                                    <input
-                                      type="number"
-                                      value={newOperation.vendor_rate_per_unit}
-                                      onChange={(e) => {
-                                        const val = e.target.value
-                                        const cost = calculateOperationCost(
-                                          newOperation.operation_time, 
-                                          newOperation.setup_time, 
-                                          newOperation.hourly_rate,
-                                          newOperation.execution_mode,
-                                          val
-                                        )
-                                        setNewOperation({ ...newOperation, vendor_rate_per_unit: val, operating_cost: cost.toFixed(2) })
-                                      }}
-                                      onKeyDown={handleKeyDown}
-                                      className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
-                                    />
-                                  </FieldWrapper>
-                                </div>
+                                {isAdmin && (
+                                  <>
+                                    <div className="md:col-span-3">
+                                      <FieldWrapper label="Vendor Rate / Unit (₹)">
+                                        <input
+                                          type="number"
+                                          value={newOperation.vendor_rate_per_unit}
+                                          onChange={(e) => {
+                                            const val = e.target.value
+                                            const cost = calculateOperationCost(
+                                              newOperation.operation_time, 
+                                              newOperation.setup_time, 
+                                              newOperation.hourly_rate,
+                                              newOperation.execution_mode,
+                                              val
+                                            )
+                                            setNewOperation({ ...newOperation, vendor_rate_per_unit: val, operating_cost: cost.toFixed(2) })
+                                          }}
+                                          onKeyDown={handleKeyDown}
+                                          className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
+                                        />
+                                      </FieldWrapper>
+                                    </div>
+                                  </>
+                                )}
                                 <div className="md:col-span-3">
                                   <FieldWrapper label="Subcontract Warehouse">
                                     <SearchableSelect
@@ -2677,16 +2725,18 @@ export default function BOMForm() {
                                     />
                                   </FieldWrapper>
                                 </div>
-                                <div className="md:col-span-3">
-                                  <FieldWrapper label="Cost (₹)">
-                                    <input
-                                      type="number"
-                                      value={newOperation.operating_cost}
-                                      readOnly
-                                      className="w-full rounded border border-slate-200 bg-slate-50  p-2 text-xs focus:outline-none "
-                                    />
-                                  </FieldWrapper>
-                                </div>
+                                {isAdmin && (
+                                  <div className="md:col-span-3">
+                                    <FieldWrapper label="Cost (₹)">
+                                      <input
+                                        type="number"
+                                        value={newOperation.operating_cost}
+                                        readOnly
+                                        className="w-full rounded border border-slate-200 bg-slate-50  p-2 text-xs focus:outline-none "
+                                      />
+                                    </FieldWrapper>
+                                  </div>
+                                )}
                               </>
                             )}
                            
@@ -2717,8 +2767,12 @@ export default function BOMForm() {
                                     )}
                                     <th className="p-2 text-xs   text-slate-400  text-right">Cycle (min)</th>
                                     <th className="p-2 text-xs   text-slate-400  text-right">Setup (min)</th>
-                                    <th className="p-2 text-xs   text-slate-400  text-right">Rate (₹)</th>
-                                    <th className="p-2 text-xs   text-slate-400  text-right">Cost (₹)</th>
+                                    {isAdmin && (
+                                      <>
+                                        <th className="p-2 text-xs   text-slate-400  text-right">Rate (₹)</th>
+                                        <th className="p-2 text-xs   text-slate-400  text-right">Cost (₹)</th>
+                                      </>
+                                    )}
                                     <th className="p-2 text-xs   text-slate-400 ">Warehouse</th>
                                     <th className="p-2 text-xs   text-slate-400  text-center w-12">Del</th>
                                   </tr>
@@ -2750,17 +2804,21 @@ export default function BOMForm() {
                                       <td className="p-2  text-right">
                                         <div className="text-xs   text-slate-900">{op.execution_mode === 'OUTSOURCE' || op.execution_mode === 'DISPATCH' ? '-' : parseFloat(op.setup_time || 0).toFixed(2)}</div>
                                       </td>
-                                      <td className="p-2  text-right">
-                                        <div className="text-xs   text-slate-700">
-                                          ₹{op.execution_mode === 'OUTSOURCE' 
-                                            ? parseFloat(op.vendor_rate_per_unit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })
-                                            : op.execution_mode === 'DISPATCH' ? '0.00'
-                                            : parseFloat(op.hourly_rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </div>
-                                      </td>
-                                      <td className="p-2  text-right">
-                                        <div className="text-xs   text-slate-900  bg-slate-100 rounded px-2 py-0.5 inline-block min-w-[60px]">₹{parseFloat(op.operating_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                                      </td>
+                                      {isAdmin && (
+                                        <>
+                                          <td className="p-2  text-right">
+                                            <div className="text-xs   text-slate-700">
+                                              ₹{op.execution_mode === 'OUTSOURCE' 
+                                                ? parseFloat(op.vendor_rate_per_unit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })
+                                                : op.execution_mode === 'DISPATCH' ? '0.00'
+                                                : parseFloat(op.hourly_rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </div>
+                                          </td>
+                                          <td className="p-2  text-right">
+                                            <div className="text-xs   text-slate-900  bg-slate-100 rounded px-2 py-0.5 inline-block min-w-[60px]">₹{parseFloat(op.operating_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                          </td>
+                                        </>
+                                      )}
                                       <td className="p-2 ">
                                         <div className="text-xs   text-slate-700 italic max-w-[120px] truncate">
                                           {op.execution_mode === 'DISPATCH' 
@@ -2802,7 +2860,7 @@ export default function BOMForm() {
                     id="scrap"
                     title="Loss Mitigation"
                     icon={Trash2}
-                    subtitle={`${scrapItems.length} Strategic Nodes • Recovery Valuation: ₹${totalScrapLossCost.toLocaleString()}`}
+                    subtitle={isAdmin ? `${scrapItems.length} Strategic Nodes • Recovery Valuation: ₹${totalScrapLossCost.toLocaleString()}` : `${scrapItems.length} Strategic Nodes`}
                     isExpanded={expandedSections.scrap}
                     onToggle={() => toggleSection('scrap')}
                     themeColor="rose"
@@ -2843,18 +2901,20 @@ export default function BOMForm() {
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-2">
-                              <FieldWrapper label="Recovery (₹)">
-                                <input
-                                  type="number"
-                                  name="rate"
-                                  value={newScrapItem.rate}
-                                  onChange={(e) => setNewScrapItem({ ...newScrapItem, rate: e.target.value })}
-                                  onKeyDown={handleKeyDown}
-                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all focus:outline-none  "
-                                />
-                              </FieldWrapper>
-                            </div>
+                            {isAdmin && (
+                              <div className="md:col-span-2">
+                                <FieldWrapper label="Recovery (₹)">
+                                  <input
+                                    type="number"
+                                    name="rate"
+                                    value={newScrapItem.rate}
+                                    onChange={(e) => setNewScrapItem({ ...newScrapItem, rate: e.target.value })}
+                                    onKeyDown={handleKeyDown}
+                                    className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all focus:outline-none  "
+                                  />
+                                </FieldWrapper>
+                              </div>
+                            )}
                             <div className="md:col-span-3 flex items-end">
                               <button
                                 type="button"
@@ -2877,8 +2937,12 @@ export default function BOMForm() {
                                     <th className="p-2 text-xs   text-slate-400  w-20">Index</th>
                                     <th className="p-2 text-xs   text-slate-400 ">Loss Item</th>
                                     <th className="p-2 text-xs   text-slate-400  text-right">Quantity</th>
-                                    <th className="p-2 text-xs   text-slate-400  text-right">Recovery Rate</th>
-                                    <th className="p-2 text-xs   text-slate-400  text-right">Credit Value</th>
+                                    {isAdmin && (
+                                      <>
+                                        <th className="p-2 text-xs   text-slate-400  text-right">Recovery Rate</th>
+                                        <th className="p-2 text-xs   text-slate-400  text-right">Credit Value</th>
+                                      </>
+                                    )}
                                     <th className="p-2 text-xs   text-slate-400  text-center w-32">Control</th>
                                   </tr>
                                 </thead>
@@ -2895,12 +2959,16 @@ export default function BOMForm() {
                                       <td className="p-2  text-right">
                                         <span className="text-xs   text-slate-900">{parseFloat(item.input_quantity || 0).toFixed(2)}</span>
                                       </td>
-                                      <td className="p-2  text-right">
-                                        <div className="text-xs   text-slate-700">₹{parseFloat(item.rate || 0).toLocaleString()}</div>
-                                      </td>
-                                      <td className="p-2  text-right">
-                                        <div className="text-xs   text-rose-600">₹{(parseFloat(item.input_quantity || 0) * parseFloat(item.rate || 0)).toLocaleString()}</div>
-                                      </td>
+                                      {isAdmin && (
+                                        <>
+                                          <td className="p-2  text-right">
+                                            <div className="text-xs   text-slate-700">₹{parseFloat(item.rate || 0).toLocaleString()}</div>
+                                          </td>
+                                          <td className="p-2  text-right">
+                                            <div className="text-xs   text-rose-600">₹{(parseFloat(item.input_quantity || 0) * parseFloat(item.rate || 0)).toLocaleString()}</div>
+                                          </td>
+                                        </>
+                                      )}
                                       <td className="p-2  text-center">
                                         <button
                                           type="button"
@@ -2929,163 +2997,166 @@ export default function BOMForm() {
                     </div>
                   )}
                 </Card>
-                <Card className="bg-white border-slate-200 rounded  mb-4   shadow-slate-200/50 mt-3">
-                  <SectionHeader
-                    id="costing"
-                    title="Manufacturing Costing Intelligence"
-                    icon={TrendingDown}
-                    subtitle={`Strategic Valuation • Total Production Cost: ₹${totalBOMCost.toLocaleString()}`}
-                    isExpanded={true}
-                    onToggle={() => { }}
-                    themeColor="cyan"
-                  />
-                  <div className="p-6">
-                    {/* Primary Metrics High-Fidelity Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                      <div className="relative group bg-blue-50/40 rounded p-2 border border-blue-100/50 transition-all hover: hover:shadow-blue-100/20">
-                        <div className="flex items-center gap-2 relative z-0">
-                          <div className="p-2 bg-white  shadow-blue-100/50 text-blue-600 rounded  group-hover:scale-110 transition-transform duration-500">
-                            <Package size={14} />
-                          </div>
-                          <div>
-                            <p className="text-xs  text-blue-400    mb-1">Material Valuation</p>
-                            <h4 className="text-xl  text-slate-800 ">₹{materialCost.toLocaleString()}</h4>
-                            <p className="text-xs  text-blue-600/60 mt-1 ">Net Raw Consumption</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="relative group bg-emerald-50/40 rounded p-2 border border-emerald-100/50 transition-all hover: hover:shadow-emerald-100/20">
-                        <div className="flex items-center gap-2 relative z-0">
-                          <div className="p-2 bg-white  shadow-emerald-100/50 text-emerald-600 rounded  group-hover:scale-110 transition-transform duration-500">
-                            <Users size={14} />
-                          </div>
-                          <div>
-                            <p className="text-xs  text-emerald-400    mb-1">Labour & Ops</p>
-                            <h4 className="text-xl  text-slate-800 ">₹{labourCost.toLocaleString()}</h4>
-                            <p className="text-xs  text-emerald-600/60 mt-1 ">Process Intelligence</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="relative group bg-cyan-50/40 rounded p-2 border border-cyan-100/50 transition-all hover: hover:shadow-cyan-100/20">
-                        <div className="flex items-center gap-2 relative z-0">
-                          <div className="p-2 bg-white  shadow-cyan-100/50 text-cyan-600 rounded  group-hover:scale-110 transition-transform duration-500">
-                            <TrendingDown size={14} />
-                          </div>
-                          <div>
-                            <p className="text-xs  text-cyan-400    mb-1">Strategic Total</p>
-                            <h4 className="text-xl  text-slate-800 ">₹{totalBOMCost.toLocaleString()}</h4>
-                            <p className="text-xs  text-cyan-600/60 mt-1 ">Per {formData.quantity} {formData.uom} Batch</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Detailed Breakdown Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 px-2">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-1 h-4 bg-blue-500 rounded" />
-                          <h5 className="text-xs  text-slate-400 ">Material Resource Breakdown</h5>
-                        </div>
-                        <div className="space-y-3 bg-slate-50/50 rounded p-2 border border-slate-100">
-                          <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
-                            <span className="text-xs  text-slate-500 group-hover:text-slate-800">Primary Components Cost</span>
-                            <span className="text-sm  text-slate-900">₹{totalComponentCost.toLocaleString()}</span>
-                          </div>
-                          <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
-                            <span className="text-xs  text-slate-500 group-hover:text-slate-800">Raw Materials Valuation</span>
-                            <span className="text-sm  text-slate-900">₹{totalRawMaterialCost.toLocaleString()}</span>
-                          </div>
-                          <div className="flex items-center justify-between  p-2 rounded  bg-rose-50/50 border border-rose-100/50 group">
-                            <span className="text-xs  text-rose-600">Scrap Recovery (Deduction)</span>
-                            <span className="text-sm  text-rose-600">-₹{totalScrapLossCost.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-1 h-4 bg-emerald-500 rounded" />
-                          <h5 className="text-xs  text-slate-400 ">Operational Efficiency</h5>
-                        </div>
-                        <div className="space-y-3 bg-slate-50/50 rounded p-2 border border-slate-100">
-                          <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
-                            <span className="text-xs  text-slate-500 group-hover:text-slate-800">Production Process Cost</span>
-                            <span className="text-sm  text-slate-900">₹{totalOperationCost.toLocaleString()}</span>
-                          </div>
-                          <div className="flex items-center justify-between  p-2 rounded  bg-amber-50/50 border border-amber-100/50 group">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs  text-amber-700">Total Material Loss</span>
-                              <AlertTriangle size={12} className="text-amber-500" />
+                {isAdmin && (
+                  <Card className="bg-white border-slate-200 rounded  mb-4   shadow-slate-200/50 mt-3">
+                    <SectionHeader
+                      id="costing"
+                      title="Manufacturing Costing Intelligence"
+                      icon={TrendingDown}
+                      subtitle={`Strategic Valuation • Total Production Cost: ₹${totalBOMCost.toLocaleString()}`}
+                      isExpanded={true}
+                      onToggle={() => { }}
+                      themeColor="cyan"
+                    />
+                    <div className="p-6">
+                      {/* Primary Metrics High-Fidelity Row */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                        <div className="relative group bg-blue-50/40 rounded p-2 border border-blue-100/50 transition-all hover: hover:shadow-blue-100/20">
+                          <div className="flex items-center gap-2 relative z-0">
+                            <div className="p-2 bg-white  shadow-blue-100/50 text-blue-600 rounded  group-hover:scale-110 transition-transform duration-500">
+                              <Package size={14} />
                             </div>
-                            <span className="text-sm  text-amber-700">{totalScrapQty.toFixed(2)} {formData.uom}</span>
+                            <div>
+                              <p className="text-xs  text-blue-400    mb-1">Material Valuation</p>
+                              <h4 className="text-xl  text-slate-800 ">₹{materialCost.toLocaleString()}</h4>
+                              <p className="text-xs  text-blue-600/60 mt-1 ">Net Raw Consumption</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="relative group bg-emerald-50/40 rounded p-2 border border-emerald-100/50 transition-all hover: hover:shadow-emerald-100/20">
+                          <div className="flex items-center gap-2 relative z-0">
+                            <div className="p-2 bg-white  shadow-emerald-100/50 text-emerald-600 rounded  group-hover:scale-110 transition-transform duration-500">
+                              <Users size={14} />
+                            </div>
+                            <div>
+                              <p className="text-xs  text-emerald-400    mb-1">Labour & Ops</p>
+                              <h4 className="text-xl  text-slate-800 ">₹{labourCost.toLocaleString()}</h4>
+                              <p className="text-xs  text-emerald-600/60 mt-1 ">Process Intelligence</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="relative group bg-cyan-50/40 rounded p-2 border border-cyan-100/50 transition-all hover: hover:shadow-cyan-100/20">
+                          <div className="flex items-center gap-2 relative z-0">
+                            <div className="p-2 bg-white  shadow-cyan-100/50 text-cyan-600 rounded  group-hover:scale-110 transition-transform duration-500">
+                              <TrendingDown size={14} />
+                            </div>
+                            <div>
+                              <p className="text-xs  text-cyan-400    mb-1">Strategic Total</p>
+                              <h4 className="text-xl  text-slate-800 ">₹{totalBOMCost.toLocaleString()}</h4>
+                              <p className="text-xs  text-cyan-600/60 mt-1 ">Per {formData.quantity} {formData.uom} Batch</p>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Prominent Unit Cost Strategic Footer */}
-                    <div className="mt-5 flex flex-col md:flex-row items-center justify-between bg-slate-900 rounded p-2   shadow-slate-300 text-white gap-2 relative">
-                      <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Layers size={80} className="text-indigo-400" />
-                      </div>
-                      <div className="flex items-center gap-2 relative z-0">
-                        <div className="w-6 h-6 bg-indigo-500/20 backdrop-blur-xl rounded flex items-center justify-center border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-700">
-                          <Layers size={36} className="text-indigo-400" />
+                      {/* Detailed Breakdown Grid */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 px-2">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-1 h-4 bg-blue-500 rounded" />
+                            <h5 className="text-xs  text-slate-400 ">Material Resource Breakdown</h5>
+                          </div>
+                          <div className="space-y-3 bg-slate-50/50 rounded p-2 border border-slate-100">
+                            <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
+                              <span className="text-xs  text-slate-500 group-hover:text-slate-800">Primary Components Cost</span>
+                              <span className="text-sm  text-slate-900">₹{totalComponentCost.toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
+                              <span className="text-xs  text-slate-500 group-hover:text-slate-800">Raw Materials Valuation</span>
+                              <span className="text-sm  text-slate-900">₹{totalRawMaterialCost.toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center justify-between  p-2 rounded  bg-rose-50/50 border border-rose-100/50 group">
+                              <span className="text-xs  text-rose-600">Scrap Recovery (Deduction)</span>
+                              <span className="text-sm  text-rose-600">-₹{totalScrapLossCost.toLocaleString()}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs  text-indigo-400 mb-2">Net Formulation Cost</p>
-                          <p className="text-sm font-medium text-slate-400 leading-relaxed">Intelligence based on batch size of <span className="text-white ">{formData.quantity} {formData.uom}</span></p>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-1 h-4 bg-emerald-500 rounded" />
+                            <h5 className="text-xs  text-slate-400 ">Operational Efficiency</h5>
+                          </div>
+                          <div className="space-y-3 bg-slate-50/50 rounded p-2 border border-slate-100">
+                            <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
+                              <span className="text-xs  text-slate-500 group-hover:text-slate-800">Production Process Cost</span>
+                              <span className="text-sm  text-slate-900">₹{totalOperationCost.toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center justify-between  p-2 rounded  bg-amber-50/50 border border-amber-100/50 group">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs  text-amber-700">Total Material Loss</span>
+                                <AlertTriangle size={12} className="text-amber-500" />
+                              </div>
+                              <span className="text-sm  text-amber-700">{totalScrapQty.toFixed(2)} {formData.uom}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-center md:text-right relative z-0">
-                        <h3 className="text-xl  text-white er mb-2">
-                          <span className="text-xl  text-indigo-500 mr-2">₹</span>
-                          {(formData.quantity && formData.quantity !== '0' ? (totalBOMCost / parseFloat(formData.quantity)) : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </h3>
-                        <p className="text-xs  text-slate-500 ">Estimated Strategic Cost / {formData.uom}</p>
+
+                      {/* Prominent Unit Cost Strategic Footer */}
+                      <div className="mt-5 flex flex-col md:flex-row items-center justify-between bg-slate-900 rounded p-2   shadow-slate-300 text-white gap-2 relative">
+                        <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                          <Layers size={80} className="text-indigo-400" />
+                        </div>
+                        <div className="flex items-center gap-2 relative z-0">
+                          <div className="w-6 h-6 bg-indigo-500/20 backdrop-blur-xl rounded flex items-center justify-center border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-700">
+                            <Layers size={36} className="text-indigo-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs  text-indigo-400 mb-2">Net Formulation Cost</p>
+                            <p className="text-sm font-medium text-slate-400 leading-relaxed">Intelligence based on batch size of <span className="text-white ">{formData.quantity} {formData.uom}</span></p>
+                          </div>
+                        </div>
+                        <div className="text-center md:text-right relative z-0">
+                          <h3 className="text-xl  text-white er mb-2">
+                            <span className="text-xl  text-indigo-500 mr-2">₹</span>
+                            {(formData.quantity && formData.quantity !== '0' ? (totalBOMCost / parseFloat(formData.quantity)) : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </h3>
+                          <p className="text-xs  text-slate-500 ">Estimated Strategic Cost / {formData.uom}</p>
+                        </div>
                       </div>
+                    </div>
+                  </Card>
+                )}
+
+                <div className="flex items-center justify-between bg-slate-50 rounded p-2 border border-slate-200/50 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className=" p-2bg-white rounded  text-slate-400 border border-slate-100">
+                      <AlertCircle size={20} />
+                    </div>
+                    <div>
+                      <p className="text-xs  text-slate-700">Final Verification</p>
+                      <p className="text-xs text-slate-400 font-medium text-xs">Ensure all specifications meet manufacturing standards</p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between bg-slate-50 rounded p-2 border border-slate-200/50 mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className=" p-2bg-white rounded  text-slate-400 border border-slate-100">
-                        <AlertCircle size={20} />
-                      </div>
-                      <div>
-                        <p className="text-xs  text-slate-700">Final Verification</p>
-                        <p className="text-xs text-slate-400 font-medium text-xs">Ensure all specifications meet manufacturing standards</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <button
-                        type="button"
-                        onClick={() => navigate('/manufacturing/bom')}
-                        className="inline-flex items-center gap-2 rounded bg-white p-2 text-xs  text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all active:scale-95  "
-                      >
-                        <RotateCcw size={18} />
-                        Discard
-                      </button>
-                      <button
-                        type="submit"
-                        form="bom-form"
-                        disabled={loading}
-                        className="inline-flex items-center gap-2 rounded bg-indigo-600 p-2 text-xs  text-white  shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        {loading ? (
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded animate-spin" />
-                        ) : (
-                          <>
-                            <Save size={18} />
-                            {id ? 'Commit Changes' : 'Initialize Formulation'}
-                          </>
-                        )}
-                      </button>
-                    </div>
+                  <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/manufacturing/bom')}
+                      className="inline-flex items-center gap-2 rounded bg-white p-2 text-xs  text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all active:scale-95  "
+                    >
+                      <RotateCcw size={18} />
+                      Discard
+                    </button>
+                    <button
+                      type="submit"
+                      form="bom-form"
+                      disabled={loading}
+                      className="inline-flex items-center gap-2 rounded bg-indigo-600 p-2 text-xs  text-white  shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {loading ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded animate-spin" />
+                      ) : (
+                        <>
+                          <Save size={18} />
+                          {id ? 'Commit Changes' : 'Initialize Formulation'}
+                        </>
+                      )}
+                    </button>
                   </div>
-                </Card>
+                </div>
               </div> {/* END OF space-y-2 */}
 
             </div>

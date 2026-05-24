@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from '../../hooks/AuthContext'
 import {
   Save, X, AlertCircle, CheckCircle, Factory,
   Boxes, Edit2, Settings, Calendar,
@@ -75,6 +76,8 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
 
 export default function WorkOrderForm() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isAdmin = user?.department?.toLowerCase() === 'admin'
   const { id } = useParams()
   const searchParams = new URLSearchParams(window.location.search)
   const isReadOnly = searchParams.get('readonly') === 'true'
@@ -1547,7 +1550,7 @@ export default function WorkOrderForm() {
                             <th className="p-2  text-xs  text-slate-400  ">Phase</th>
                             <th className="p-2  text-xs  text-slate-400  ">Assignment</th>
                             <th className="p-2  text-xs  text-slate-400  text-center">Status</th>
-                            <th className="p-2  text-xs  text-slate-400  text-right">Time & Cost</th>
+                            <th className="p-2  text-xs  text-slate-400  text-right">{isAdmin ? 'Time & Cost' : 'Time'}</th>
                             <th className="p-2  text-xs  text-slate-400  text-right">Progress</th>
                             {!isReadOnly && <th className="p-2  w-10"></th>}
                           </tr>
@@ -1600,7 +1603,7 @@ export default function WorkOrderForm() {
                                 <td className="p-2  text-right">
                                   <div className="flex flex-col items-end gap-0.5">
                                     <span className="text-xs text-slate-900 font-medium">{jc.operation_time || 0}m</span>
-                                    <span className="text-xs text-slate-400">₹{parseFloat(jc.operating_cost || 0).toLocaleString()}</span>
+                                    {isAdmin && <span className="text-xs text-slate-400">₹{parseFloat(jc.operating_cost || 0).toLocaleString()}</span>}
                                   </div>
                                 </td>
                                 <td className="p-2  text-right">
@@ -1677,7 +1680,7 @@ export default function WorkOrderForm() {
                             <th className="p-2 text-xs text-slate-400">Mode</th>
                             <th className="p-2 text-xs text-slate-400">Workstation/Vendor</th>
                             <th className="p-2 text-xs text-slate-400 text-right">Time (Mins)</th>
-                            <th className="p-2 text-xs text-slate-400 text-right">Cost</th>
+                            {isAdmin && <th className="p-2 text-xs text-slate-400 text-right">Cost</th>}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -1693,7 +1696,7 @@ export default function WorkOrderForm() {
                                 {op.execution_mode === 'OUTSOURCE' ? (op.vendor_name || 'No Vendor Assigned') : getWorkstationName(op.workstation)}
                               </td>
                               <td className="p-2 text-xs text-slate-900 text-right">{op.execution_mode === 'OUTSOURCE' ? '-' : op.operation_time}</td>
-                              <td className="p-2 text-xs text-slate-900 text-right">₹{parseFloat(op.operating_cost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              {isAdmin && <td className="p-2 text-xs text-slate-900 text-right">₹{parseFloat(op.operating_cost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>}
                             </tr>
                           ))}
                         </tbody>

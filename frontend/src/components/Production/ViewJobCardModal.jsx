@@ -7,6 +7,7 @@ import Modal from '../Modal'
 import DataTable from '../Table/DataTable'
 import * as productionService from '../../services/productionService'
 import { useToast } from '../ToastContainer'
+import { useAuth } from '../../hooks/AuthContext'
 
 const parseUTCDate = (dateStr) => {
   if (!dateStr) return null;
@@ -43,6 +44,8 @@ const formatToLocalDisplay = (dateStr) => {
 
 export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId }) {
   const toast = useToast()
+  const { user } = useAuth()
+  const isAdmin = user?.department === 'admin'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [jobCard, setJobCard] = useState(null)
@@ -529,28 +532,30 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
               </div>
             </div>
 
-            <div className="bg-white rounded p-2 border border-gray-100   space-y-2">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="bg-emerald-50 p-2 rounded  text-emerald-600">
-                  <TrendingUp size={18} />
+            {isAdmin && (
+              <div className="bg-white rounded p-2 border border-gray-100   space-y-2">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="bg-emerald-50 p-2 rounded  text-emerald-600">
+                    <TrendingUp size={18} />
+                  </div>
+                  <h4 className="text-xs  text-gray-900 ">Costing Details</h4>
                 </div>
-                <h4 className="text-xs  text-gray-900 ">Costing Details</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-2 bg-gray-50 rounded  border border-gray-100">
+                    <p className="text-xs   text-gray-400  mb-1">Hourly Rate</p>
+                    <p className="text-xs  text-gray-900 ">
+                      ₹{parseFloat(jobCard?.hourly_rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div className="p-2 bg-gray-50 rounded  border border-gray-100">
+                    <p className="text-xs   text-gray-400  mb-1">Actual Cost</p>
+                    <p className="text-xs  text-gray-900 ">
+                      ₹{parseFloat(jobCard?.operating_cost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-2 bg-gray-50 rounded  border border-gray-100">
-                  <p className="text-xs   text-gray-400  mb-1">Hourly Rate</p>
-                  <p className="text-xs  text-gray-900 ">
-                    ₹{parseFloat(jobCard?.hourly_rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div className="p-2 bg-gray-50 rounded  border border-gray-100">
-                  <p className="text-xs   text-gray-400  mb-1">Actual Cost</p>
-                  <p className="text-xs  text-gray-900 ">
-                    ₹{parseFloat(jobCard?.operating_cost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
-            </div>
+            )}
 
             {dependencies.length > 0 && (
               <div className="bg-white rounded p-3 border border-slate-100 space-y-3 shadow-sm">

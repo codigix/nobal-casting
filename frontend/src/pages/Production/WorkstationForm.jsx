@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import * as productionService from '../../services/productionService'
 import { useToast } from '../../components/ToastContainer'
+import { useAuth } from '../../hooks/AuthContext'
 
 const fieldDescriptions = {
   name: 'Unique identifier for the workstation (e.g., WS-001, ASSEMBLY-A1)',
@@ -30,6 +31,8 @@ export default function WorkstationForm() {
   const { id } = useParams()
   const location = useLocation()
   const toast = useToast()
+  const { user } = useAuth()
+  const isAdmin = user?.department?.toLowerCase() === 'admin'
   
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(!!id)
@@ -332,18 +335,20 @@ export default function WorkstationForm() {
                       className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs  text-slate-700"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs  text-slate-500  ml-1">Rate / Hour (₹)</label>
-                    <input 
-                      type="number"
-                      name="rate_per_hour"
-                      value={formData.rate_per_hour}
-                      onChange={handleInputChange}
-                      min="0"
-                      step="0.01"
-                      className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs  text-slate-700"
-                    />
-                  </div>
+                  {isAdmin && (
+                    <div className="space-y-2">
+                      <label className="text-xs  text-slate-500  ml-1">Rate / Hour (₹)</label>
+                      <input 
+                        type="number"
+                        name="rate_per_hour"
+                        value={formData.rate_per_hour}
+                        onChange={handleInputChange}
+                        min="0"
+                        step="0.01"
+                        className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs  text-slate-700"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <label className="text-xs  text-slate-500  ml-1">Target Utilization %</label>
                     <input 

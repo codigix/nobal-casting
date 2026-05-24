@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
+import { useAuth } from '../../hooks/AuthContext'
 import Button from '../../components/Button/Button'
 import Alert from '../../components/Alert/Alert'
 import Card from '../../components/Card/Card'
@@ -17,6 +18,8 @@ const TABS = [
 export default function ItemForm() {
   const { item_code } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isAdmin = user?.department === 'admin'
   const isEditMode = item_code && item_code !== 'new'
 
   const [activeTab, setActiveTab] = useState('details')
@@ -1066,30 +1069,34 @@ export default function ItemForm() {
             placeholder="Select valuation method"
           />
         </div>
-        <div className="form-group">
-          <label>Valuation Rate</label>
-          <input
-            type="number"
-            name="valuation_rate"
-            className='p-2  border border-gray-300 rounded bg-white'
-            value={formData.valuation_rate}
-            onChange={handleChange}
-            placeholder="0.00"
-            step="0.01"
-          />
-        </div>
-        <div className="form-group">
-          <label>Selling Rate</label>
-          <input
-            type="number"
-            name="selling_rate"
-            className='p-2  border border-gray-300 rounded bg-white'
-            value={formData.selling_rate}
-            onChange={handleChange}
-            placeholder="0.00"
-            step="0.01"
-          />
-        </div>
+        {isAdmin && (
+          <>
+            <div className="form-group">
+              <label>Valuation Rate</label>
+              <input
+                type="number"
+                name="valuation_rate"
+                className='p-2  border border-gray-300 rounded bg-white'
+                value={formData.valuation_rate}
+                onChange={handleChange}
+                placeholder="0.00"
+                step="0.01"
+              />
+            </div>
+            <div className="form-group">
+              <label>Selling Rate</label>
+              <input
+                type="number"
+                name="selling_rate"
+                className='p-2  border border-gray-300 rounded bg-white'
+                value={formData.selling_rate}
+                onChange={handleChange}
+                placeholder="0.00"
+                step="0.01"
+              />
+            </div>
+          </>
+        )}
         <div className="form-group">
           <label>No. of Cavity (for mould items)</label>
           <input
@@ -1892,30 +1899,34 @@ export default function ItemForm() {
 
   const renderAccountingTab = () => (
     <div className="form-section">
-      <div className="form-row">
-        <div className="form-group">
-          <label>Opening Stock</label>
-          <input
-            type="number"
-            name="opening_stock"
-            value={formData.opening_stock}
-            onChange={handleChange}
-            placeholder="0"
-            step="0.01"
-          />
-        </div>
-        <div className="form-group">
-          <label>Valuation Rate</label>
-          <input
-            type="number"
-            name="valuation_rate"
-            value={formData.valuation_rate}
-            onChange={handleChange}
-            placeholder="0.00"
-            step="0.01"
-          />
-        </div>
+      {isAdmin && (
         <div className="form-row">
+          <div className="form-group">
+            <label>Opening Stock</label>
+            <input
+              type="number"
+              name="opening_stock"
+              value={formData.opening_stock}
+              onChange={handleChange}
+              placeholder="0"
+              step="0.01"
+            />
+          </div>
+          <div className="form-group">
+            <label>Valuation Rate</label>
+            <input
+              type="number"
+              name="valuation_rate"
+              value={formData.valuation_rate}
+              onChange={handleChange}
+              placeholder="0.00"
+              step="0.01"
+            />
+          </div>
+        </div>
+      )}
+      <div className="form-row">
+        {isAdmin && (
           <div className="form-group">
             <label>Valuation Method</label>
             <SearchableSelect
@@ -1924,35 +1935,36 @@ export default function ItemForm() {
               options={valuationMethods}
               placeholder="Select valuation method"
             />
-
           </div>
+        )}
 
-          <div className="form-group">
-            <label>Shelf Life In Days</label>
-            <input
-              type="number"
-              name="shelf_life_in_days"
-              value={formData.shelf_life_in_days}
-              onChange={handleChange}
-              placeholder="Days"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="form-row">
         <div className="form-group">
-          <label>Standard Selling Rate</label>
+          <label>Shelf Life In Days</label>
           <input
             type="number"
-            name="standard_selling_rate"
-            value={formData.standard_selling_rate}
+            name="shelf_life_in_days"
+            value={formData.shelf_life_in_days}
             onChange={handleChange}
-            placeholder="0.00"
-            step="0.01"
+            placeholder="Days"
           />
         </div>
       </div>
+
+      {isAdmin && (
+        <div className="form-row">
+          <div className="form-group">
+            <label>Standard Selling Rate</label>
+            <input
+              type="number"
+              name="standard_selling_rate"
+              value={formData.standard_selling_rate}
+              onChange={handleChange}
+              placeholder="0.00"
+              step="0.01"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 

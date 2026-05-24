@@ -6,12 +6,15 @@ import {
   ArrowLeft, Info, Gauge, ClipboardCheck, Zap
 } from 'lucide-react'
 import * as productionService from '../../services/productionService'
+import { useAuth } from '../../hooks/AuthContext'
 import { useToast } from '../../components/ToastContainer'
 
 export default function OperationFormRedesign() {
   const navigate = useNavigate()
   const { id } = useParams()
   const location = useLocation()
+  const { user } = useAuth()
+  const isAdmin = user?.department === 'admin'
   const toast = useToast()
   
   const [loading, setLoading] = useState(false)
@@ -275,19 +278,21 @@ export default function OperationFormRedesign() {
                       <option value="DISPATCH">Dispatch</option>
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs  text-slate-500  ml-1">Hourly Rate (₹)</label>
-                    <input 
-                      type="number"
-                      name="hourly_rate"
-                      value={formData.hourly_rate}
-                      onChange={handleInputChange}
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                      className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs font-medium text-slate-700"
-                    />
-                  </div>
+                  {isAdmin && (
+                    <div className="space-y-2">
+                      <label className="text-xs  text-slate-500  ml-1">Hourly Rate (₹)</label>
+                      <input 
+                        type="number"
+                        name="hourly_rate"
+                        value={formData.hourly_rate}
+                        onChange={handleInputChange}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs font-medium text-slate-700"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2 relative">

@@ -58,7 +58,7 @@ export const createStockEntry = async (req, res) => {
       }
     }
 
-    if (['Material Receipt', 'Purchase'].includes(entry_type)) {
+    if (['Material Receipt', 'Purchase', 'Material Purchase'].includes(entry_type)) {
       if (!to_warehouse_id) {
         return res.status(400).json({ success: false, error: `Destination warehouse required for ${entry_type}` })
       }
@@ -82,7 +82,7 @@ export const createStockEntry = async (req, res) => {
       items
     })
 
-    const isAutoSubmitEntry = reference_doctype === 'GRN' || entry_type === 'Material Receipt'
+    const isAutoSubmitEntry = reference_doctype === 'GRN' || entry_type === 'Material Receipt' || entry_type === 'Material Purchase'
     
     if (isAutoSubmitEntry && entry.id) {
       try {

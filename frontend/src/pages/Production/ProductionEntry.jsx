@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../hooks/AuthContext'
 import {
   Plus, Trash2, Clock, AlertCircle, ArrowLeft, CheckCircle,
   Activity, CheckCircle2, Calendar, Layout, ChevronRight, Settings, Info, FileText,
@@ -1065,6 +1066,8 @@ const calculateTotalAccepted = (logs, rejs) => {
 export default function ProductionEntry() {
   const { jobCardId } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isAdmin = user?.department === 'admin'
   const toast = useToast()
 
   const [jobCardData, setJobCardData] = useState(null)
@@ -2120,7 +2123,10 @@ export default function ProductionEntry() {
         );
       }
     }
-  ], [editingRowKey, editFormData, operators])
+  ].filter(col => {
+    if (col.key === 'operation_cost' || col.key === 'cost_variance') return isAdmin;
+    return true;
+  }), [editingRowKey, editFormData, operators, isAdmin])
 
   const [timeLogForm, setTimeLogForm] = useState({
     employee_id: '',
@@ -4095,24 +4101,33 @@ export default function ProductionEntry() {
 
   const downloadReport = () => {
     const data = generateDailyReport();
-    const headers = ['Date', 'Shift', 'Operator', 'Expected Mins', 'Actual Mins', 'Variance', 'Produced', 'Accepted', 'Rejected', 'Scrap', 'Downtime (min)', 'Operation Cost', 'Cost Variance'];
+    const headers = ['Date', 'Shift', 'Operator', 'Expected Mins', 'Actual Mins', 'Variance', 'Produced', 'Accepted', 'Rejected', 'Scrap', 'Downtime (min)'];
+    if (isAdmin) {
+      headers.push('Operation Cost', 'Cost Variance');
+    }
+
     const csvContent = [
       headers.join(','),
-      ...data.map(row => [
-        row.date.split('-').reverse().join('-'),
-        row.shift,
-        `"${row.operator_name || 'N/A'}"`,
-        (row.expected_mins || 0).toFixed(2),
-        (row.total_mins || 0).toFixed(2),
-        (row.variance_mins || 0).toFixed(2),
-        row.produced.toFixed(2),
-        row.accepted.toFixed(2),
-        row.rejected.toFixed(2),
-        row.scrap.toFixed(2),
-        row.downtime.toFixed(0),
-        (row.operation_cost || 0).toFixed(2),
-        (row.cost_variance || 0).toFixed(2)
-      ].join(','))
+      ...data.map(row => {
+        const line = [
+          row.date.split('-').reverse().join('-'),
+          row.shift,
+          `"${row.operator_name || 'N/A'}"`,
+          (row.expected_mins || 0).toFixed(2),
+          (row.total_mins || 0).toFixed(2),
+          (row.variance_mins || 0).toFixed(2),
+          row.produced.toFixed(2),
+          row.accepted.toFixed(2),
+          row.rejected.toFixed(2),
+          row.scrap.toFixed(2),
+          row.downtime.toFixed(0)
+        ];
+        if (isAdmin) {
+          line.push((row.operation_cost || 0).toFixed(2));
+          line.push((row.cost_variance || 0).toFixed(2));
+        }
+        return line.join(',');
+      })
     ].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -5074,7 +5089,7 @@ export default function ProductionEntry() {
                     const costVariance = totalVariance * (parseFloat(jobCardData?.hourly_rate || 0) / 60);
 
                     return (
-                      <div className="mt-6 grid grid-cols-1 md:grid-cols-5 gap-2 p-2 bg-slate-50 rounded border border-slate-100">
+                      <div className={`mt-6 grid grid-cols-1 ${isAdmin ? 'md:grid-cols-5' : 'md:grid-cols-3'} gap-2 p-2 bg-slate-50 rounded border border-slate-100`}>
                         <div className="flex flex-col gap-1">
                           <span className="text-xs text-slate-400   ">Total Expected Time</span>
                           <div className="flex items-baseline gap-1.5">
@@ -5102,22 +5117,26 @@ export default function ProductionEntry() {
                             <span className="text-xs text-slate-400">({((totalVariance / (totalExpected || 1)) * 100).toFixed(1)}%)</span>
                           </div>
                         </div>
-                        <div className="flex flex-col gap-1 border-l border-slate-200 pl-4">
-                          <span className="text-xs text-amber-500   ">Total Operation Cost</span>
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="text-lg  text-amber-600">
-                              ₹{totalOpCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1 border-l border-slate-200 pl-4">
-                          <span className={`text-xs ${costVariance > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>{costVariance > 0 ? 'Cost Increase' : 'Cost Saving'}</span>
-                          <div className="flex items-baseline gap-1.5">
-                            <span className={`text-lg ${costVariance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                              {costVariance > 0 ? '+' : ''}₹{Math.abs(costVariance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </div>
-                        </div>
+                        {isAdmin && (
+                          <>
+                            <div className="flex flex-col gap-1 border-l border-slate-200 pl-4">
+                              <span className="text-xs text-amber-500   ">Total Operation Cost</span>
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="text-lg  text-amber-600">
+                                  ₹{totalOpCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-1 border-l border-slate-200 pl-4">
+                              <span className={`text-xs ${costVariance > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>{costVariance > 0 ? 'Cost Increase' : 'Cost Saving'}</span>
+                              <div className="flex items-baseline gap-1.5">
+                                <span className={`text-lg ${costVariance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                  {costVariance > 0 ? '+' : ''}₹{Math.abs(costVariance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </div>
                     );
                   })()}

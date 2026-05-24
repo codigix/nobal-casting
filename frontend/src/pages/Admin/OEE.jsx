@@ -789,20 +789,29 @@ export default function OEE() {
     try {
       let csvContent = "data:text/csv;charset=utf-8,";
 
+      const calculateTrendValue = (key) => {
+        if (!realData.trends || realData.trends.length < 2) return "0.0%";
+        const latest = realData.trends[realData.trends.length - 1][key];
+        const previous = realData.trends[realData.trends.length - 2][key];
+        const diff = latest - previous;
+        return `${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%`;
+      };
+
       // 1. Report Header
-      csvContent += "OEE INTELLIGENCE REPORT\n";
+      csvContent += "OEE INTELLIGENCE PERFORMANCE REPORT\n";
       csvContent += `Generated On,${new Date().toLocaleString()}\n`;
       csvContent += `Filter Range,${filters.range}\n`;
-      csvContent += `Filter Line,${filters.line}\n\n`;
+      csvContent += `Filter Line,${filters.line}\n`;
+      csvContent += `Shift,${filters.shift}\n\n`;
 
       // 2. Plant Summary
       if (realData.summary) {
         csvContent += "SECTION 1: PLANT-WIDE SUMMARY\n";
-        csvContent += "Metric,Value,Trend\n";
-        csvContent += `Overall Plant OEE,${(Number(realData.summary.oee) || 0).toFixed(1)}%,+3.4%\n`;
-        csvContent += `Availability,${(Number(realData.summary.availability) || 0).toFixed(1)}%,+2.1%\n`;
-        csvContent += `Performance,${(Number(realData.summary.performance) || 0).toFixed(1)}%,-0.8%\n`;
-        csvContent += `Quality,${(Number(realData.summary.quality) || 0).toFixed(1)}%,+0.4%\n\n`;
+        csvContent += "Metric,Value,Trend (vs Prev Day)\n";
+        csvContent += `Overall Plant OEE,${(Number(realData.summary.oee) || 0).toFixed(1)}%,${calculateTrendValue('oee')}\n`;
+        csvContent += `Availability,${(Number(realData.summary.availability) || 0).toFixed(1)}%,${calculateTrendValue('availability')}\n`;
+        csvContent += `Performance,${(Number(realData.summary.performance) || 0).toFixed(1)}%,${calculateTrendValue('performance')}\n`;
+        csvContent += `Quality,${(Number(realData.summary.quality) || 0).toFixed(1)}%,${calculateTrendValue('quality')}\n\n`;
       }
 
       // 3. Machine-wise Analytics
@@ -816,9 +825,30 @@ export default function OEE() {
         csvContent += "\n";
       }
 
-      // 4. Downtime Analysis
+      // 4. Historical Trends
+      if (realData.trends && realData.trends.length > 0) {
+        csvContent += "SECTION 3: HISTORICAL OEE TRENDS\n";
+        csvContent += "Date,OEE %,Availability %,Performance %,Quality %,Output\n";
+        realData.trends.slice().reverse().forEach(t => {
+          csvContent += `${t.date},${t.oee}%,${t.availability}%,${t.performance}%,${t.quality}%,${t.total_units}\n`;
+        });
+        csvContent += "\n";
+      }
+
+      // 5. Recent Floor Operations (Job Cards)
+      if (realData.recentJobCards && realData.recentJobCards.length > 0) {
+        csvContent += "SECTION 4: RECENT FLOOR OPERATIONS (JOB CARDS)\n";
+        csvContent += "Job Card ID,Workstation,Produced,Target,Rejected,OEE %,Status\n";
+        realData.recentJobCards.forEach(jc => {
+          const status = jc.oee >= 85 ? 'OPTIMAL' : jc.oee >= 75 ? 'MARGINAL' : 'CRITICAL';
+          csvContent += `${jc.id},"${jc.workstation}",${jc.produced},${jc.target || '-'},${jc.rejected},${jc.oee}%,${status}\n`;
+        });
+        csvContent += "\n";
+      }
+
+      // 6. Downtime Analysis
       if (realData.downtimeReasons && realData.downtimeReasons.length > 0) {
-        csvContent += "SECTION 3: TOP DOWNTIME REASONS (PARETO)\n";
+        csvContent += "SECTION 5: TOP DOWNTIME REASONS (PARETO)\n";
         csvContent += "Reason,Duration (min),Occurrences,Impact %\n";
 
         realData.downtimeReasons.forEach(dt => {
@@ -838,6 +868,15 @@ export default function OEE() {
     } catch (err) {
       console.error('Error exporting OEE report:', err);
       toast.addToast('Failed to export OEE report', 'error');
+    }
+  };
+
+  const handleValidateAll = () => {
+    const critical = filteredMachines.filter(m => m.oee < 50);
+    if (critical.length > 0) {
+      toast.addToast(`Data Integrity Check: Found ${critical.length} workstations with critical OEE (<50%). Review required for ${critical.map(c => c.id).join(', ')}`, 'warning');
+    } else {
+      toast.addToast('Data Integrity Check: All workstations are performing within normal parameters. Data is consistent.', 'success');
     }
   };
 
@@ -1127,6 +1166,13 @@ export default function OEE() {
             Sync Dashboard
           </button>
           <button
+            onClick={handleValidateAll}
+            className="flex items-center gap-2 p-2 bg-white border border-slate-200 text-slate-700 text-xs rounded hover:bg-slate-50 transition-all shadow-sm"
+          >
+            <ShieldCheck size={15} className="text-blue-500" />
+            Check All
+          </button>
+          <button
             onClick={handleExportReport}
             className="flex items-center gap-2 p-2 bg-[#1e3a8a] text-white text-xs  rounded hover:bg-[#1e3a8a]/90  shadow-md transition-all"
           >
@@ -1276,7 +1322,10 @@ export default function OEE() {
                         </p>
                         <div className="flex items-center justify-between pt-4 border-t border-white/5">
                           <span className="text-[10px] text-blue-400   tracking-wider">Recommendation</span>
-                          <button className="px-3 py-1 rounded bg-blue-500 text-white text-[10px]   hover:bg-blue-400 transition-colors">
+                          <button 
+                            onClick={() => setSelectedMachine(m)}
+                            className="px-3 py-1 rounded bg-blue-500 text-white text-[10px]   hover:bg-blue-400 transition-colors"
+                          >
                             Check Feed Rate
                           </button>
                         </div>

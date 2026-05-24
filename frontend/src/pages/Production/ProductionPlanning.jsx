@@ -37,6 +37,7 @@ import {
   Download
 } from 'lucide-react'
 import { useToast } from '../../components/ToastContainer'
+import { useAuth } from '../../hooks/AuthContext'
 import Card from '../../components/Card/Card'
 
 const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
@@ -322,6 +323,8 @@ const collectAllOperations = async (bomId, plannedQty = 1, token, workstations =
 
 export default function ProductionPlanning() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isAdmin = user?.department === 'admin'
   const toast = useToast()
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1685,8 +1688,12 @@ Create Production Plan            </button>
                           <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider">Workstation</th>
                           <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider text-right">Time (m/u)</th>
                           <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider text-right">Planned (hrs)</th>
-                          <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider text-right">Rate/Hr</th>
-                          <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider text-right">Total Cost</th>
+                          {isAdmin && (
+                            <>
+                              <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider text-right">Rate/Hr</th>
+                              <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider text-right">Total Cost</th>
+                            </>
+                          )}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -1724,7 +1731,7 @@ Create Production Plan            </button>
                               <React.Fragment key={idx}>
                                 {isNewGroup && (
                                   <tr className="bg-slate-50/50">
-                                    <td colSpan="6" className="p-2 py-1 text-[10px]  text-slate-500 font-semibold tracking-wider flex items-center gap-2">
+                                    <td colSpan={isAdmin ? "6" : "4"} className="p-2 py-1 text-[10px]  text-slate-500 font-semibold tracking-wider flex items-center gap-2">
                                       <div className={`w-2 h-2 rounded  ${op.depth === 0 ? 'bg-indigo-500' : 'bg-amber-500'}`} />
                                       {op.item_name || op.item_code} {op.depth === 0 ? '(Finished Good)' : '(Sub-Assembly)'}
                                     </td>
@@ -1740,8 +1747,12 @@ Create Production Plan            </button>
                                   <td className="p-2  text-xs  text-gray-500">{op.workstation_type || op.workstation || '-'}</td>
                                   <td className="p-2  text-right text-xs  text-gray-400">{parseFloat(op.operation_time || op.time || 0).toFixed(2)}</td>
                                   <td className="p-2  text-right text-xs  text-indigo-600 font-medium">{parseFloat(op.total_hours || 0).toFixed(2)}</td>
-                                  <td className="p-2  text-right text-xs  text-gray-500">₹{(op.hourly_rate || 0).toLocaleString()}</td>
-                                  <td className="p-2  text-right text-xs  text-emerald-600 font-semibold">₹{(op.total_cost || 0).toLocaleString()}</td>
+                                  {isAdmin && (
+                                    <>
+                                      <td className="p-2  text-right text-xs  text-gray-500">₹{(op.hourly_rate || 0).toLocaleString()}</td>
+                                      <td className="p-2  text-right text-xs  text-emerald-600 font-semibold">₹{(op.total_cost || 0).toLocaleString()}</td>
+                                    </>
+                                  )}
                                 </tr>
                               </React.Fragment>
                             );
@@ -1754,10 +1765,19 @@ Create Production Plan            </button>
                           <td className="p-2 text-right text-xs text-indigo-600">
                             {(workOrderData.operations || []).reduce((sum, op) => sum + parseFloat(op.total_hours || 0), 0).toFixed(2)} Hrs
                           </td>
-                          <td className="p-2 text-right text-xs text-gray-500">Total Cost</td>
-                          <td className="p-2 text-right text-xs text-emerald-600">
-                            ₹{(workOrderData.operations || []).reduce((sum, op) => sum + (op.total_cost || 0), 0).toLocaleString()}
-                          </td>
+                          {isAdmin && (
+                            <>
+                              <td className="p-2 text-right text-xs text-gray-500">Total Cost</td>
+                              <td className="p-2 text-right text-xs text-emerald-600">
+                                ₹{(workOrderData.operations || []).reduce((sum, op) => sum + (op.total_cost || 0), 0).toLocaleString()}
+                              </td>
+                            </>
+                          )}
+                          {!isAdmin && (
+                            <>
+                              <td colSpan="0"></td>
+                            </>
+                          )}
                         </tr>
                       </tfoot>
                     </table>
