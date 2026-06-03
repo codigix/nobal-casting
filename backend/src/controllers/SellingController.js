@@ -135,6 +135,148 @@ export class SellingController {
   }
 
   // ============================================
+  // LEAD ENDPOINTS
+  // ============================================
+
+  static async createLead(req, res) {
+    const db = req.app.locals.db
+    const { first_name, last_name, email, phone, company_name, source, notes, assigned_to } = req.body
+
+    try {
+      if (!first_name) {
+        return res.status(400).json({ error: 'First name is required' })
+      }
+
+      const lead_id = `LEAD-${Date.now()}`
+
+      await db.execute(
+        `INSERT INTO selling_lead 
+         (lead_id, first_name, last_name, email, phone, company_name, source, notes, assigned_to, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`,
+        [lead_id, first_name, last_name || null, email || null, phone || null, company_name || null, source || null, notes || null, assigned_to || null]
+      )
+
+      res.status(201).json({ success: true, data: { lead_id, first_name, last_name, company_name, status: 'new' } })
+    } catch (error) {
+      console.error('Error creating lead:', error)
+      res.status(500).json({ error: 'Failed to create lead', details: error.message })
+    }
+  }
+
+  static async getLeads(req, res) {
+    const db = req.app.locals.db
+    const { status } = req.query
+
+    try {
+      let query = 'SELECT * FROM selling_lead WHERE deleted_at IS NULL'
+      const params = []
+
+      if (status) {
+        query += ' AND status = ?'
+        params.push(status)
+      }
+
+      query += ' ORDER BY created_at DESC'
+      const [leads] = await db.execute(query, params)
+      res.json({ success: true, data: leads })
+    } catch (error) {
+      console.error('Error fetching leads:', error)
+      res.status(500).json({ error: 'Failed to fetch leads', details: error.message })
+    }
+  }
+
+  static async scoreLead(req, res) {
+    const db = req.app.locals.db
+    const { id } = req.params
+    const config = req.app.locals.config
+
+    try {
+      // 1. Fetch lead data
+      const [leads] = await db.execute('SELECT * FROM selling_lead WHERE lead_id = ?', [id])
+      if (!leads.length) return res.status(404).json({ error: 'Lead not found' })
+      
+      const lead = leads[0]
+
+      // 2. Call AI Service
+      const aiUrl = `${config.ai.copilotUrl}/sales/score-lead`
+      console.log(`🤖 Calling AI Lead Scoring at ${aiUrl}...`)
+      
+      const response = await fetch(aiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lead)
+      })
+
+      if (!response.ok) throw new Error('AI Service request failed')
+      
+      const aiResult = await response.json()
+
+      // 3. Update DB with score and reasoning
+      await db.execute(
+        'UPDATE selling_lead SET lead_score = ?, score_reasoning = ?, updated_at = NOW() WHERE lead_id = ?',
+        [aiResult.score, aiResult.reasoning, id]
+      )
+
+      res.json({ 
+        success: true, 
+        data: { lead_id: id, score: aiResult.score, reasoning: aiResult.reasoning } 
+      })
+    } catch (error) {
+      console.error('Error scoring lead:', error)
+      res.status(500).json({ error: 'Failed to score lead', details: error.message })
+    }
+  }
+
+  // ============================================
+  // RFQ ENDPOINTS
+  // ============================================
+
+  static async createRFQ(req, res) {
+    const db = req.app.locals.db
+    const { lead_id, customer_id, title, description, received_date, due_date, estimated_value, document_url, items } = req.body
+
+    try {
+      if (!title) return res.status(400).json({ error: 'Title is required' })
+
+      const rfq_id = `RFQ-${Date.now()}`
+
+      await db.execute(
+        `INSERT INTO selling_rfq 
+         (rfq_id, lead_id, customer_id, title, description, received_date, due_date, estimated_value, document_url, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        [rfq_id, lead_id || null, customer_id || null, title, description || null, received_date || null, due_date || null, estimated_value || 0, document_url || null]
+      )
+
+      // Handle items if provided
+      if (items && Array.isArray(items)) {
+        for (const item of items) {
+          await db.execute(
+            `INSERT INTO selling_rfq_item (rfq_id, item_description, material_grade, quantity, uom, target_price)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [rfq_id, item.item_description, item.material_grade, item.quantity, item.uom, item.target_price]
+          )
+        }
+      }
+
+      res.status(201).json({ success: true, data: { rfq_id, title, status: 'pending' } })
+    } catch (error) {
+      console.error('Error creating RFQ:', error)
+      res.status(500).json({ error: 'Failed to create RFQ', details: error.message })
+    }
+  }
+
+  static async getRFQs(req, res) {
+    const db = req.app.locals.db
+    try {
+      const [rfqs] = await db.execute('SELECT * FROM selling_rfq ORDER BY created_at DESC')
+      res.json({ success: true, data: rfqs })
+    } catch (error) {
+      console.error('Error fetching RFQs:', error)
+      res.status(500).json({ error: 'Failed to fetch RFQs', details: error.message })
+    }
+  }
+
+  // ============================================
   // QUOTATION ENDPOINTS
   // ============================================
 

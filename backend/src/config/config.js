@@ -26,5 +26,9 @@ export const config = {
   jwt: {
     secret: process.env.JWT_SECRET || 'your-secret-key-change-this-in-production',
     expiresIn: '7d',
+  },
+  ai: {
+    copilotUrl: process.env.AI_COPILOT_URL || 'http://localhost:8002',
+    drawingUrl: process.env.AI_DRAWING_URL || 'http://localhost:8001',
   }
 }

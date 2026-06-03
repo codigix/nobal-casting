@@ -4,6 +4,19 @@ import { SellingController } from '../controllers/SellingController.js'
 const router = express.Router()
 
 // ============================================
+// LEAD ROUTES
+// ============================================
+router.post('/leads', SellingController.createLead)
+router.get('/leads', SellingController.getLeads)
+router.post('/leads/:id/score', SellingController.scoreLead)
+
+// ============================================
+// RFQ ROUTES
+// ============================================
+router.post('/rfqs', SellingController.createRFQ)
+router.get('/rfqs', SellingController.getRFQs)
+
+// ============================================
 // CUSTOMER ROUTES
 // ============================================
 router.post('/customers', SellingController.createCustomer)

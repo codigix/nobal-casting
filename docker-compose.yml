@@ -22,6 +22,57 @@ services:
       timeout: 5s
       retries: 5
 
+  postgres_ai:
+    image: timescale/timescaledb:latest-pg16
+    container_name: nobalcasting_postgres_ai
+    environment:
+      POSTGRES_USER: ai_user
+      POSTGRES_PASSWORD: ai_password
+      POSTGRES_DB: nobal_ai_iot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - erp_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_user -d nobal_ai_iot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: nobalcasting_qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - erp_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: nobalcasting_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - erp_network
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: nobalcasting_mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - erp_network
+
   backend:
     build:
       context: ./backend
@@ -33,6 +84,10 @@ services:
       DB_PASSWORD: erp_password
       DB_NAME: nobalcasting
       DB_PORT: 3306
+      POSTGRES_URL: postgresql://ai_user:ai_password@postgres_ai:5432/nobal_ai_iot
+      REDIS_URL: redis://redis:6379
+      MQTT_BROKER: mosquitto
+      QDRANT_URL: http://qdrant:6333
       NODE_ENV: development
       PORT: 5000
     ports:
@@ -40,9 +95,48 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      postgres_ai:
+        condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - ./backend:/app
       - /app/node_modules
+    networks:
+      - erp_network
+
+  drawing_intelligence:
+    build:
+      context: ./ai_services/drawing_intelligence
+      dockerfile: ../../Dockerfile.ai
+    container_name: nobalcasting_drawing_ai
+    environment:
+      DATABASE_URL: postgresql://ai_user:ai_password@postgres_ai:5432/nobal_ai_iot
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "8001:8000"
+    depends_on:
+      - postgres_ai
+      - qdrant
+    networks:
+      - erp_network
+
+  erp_copilot:
+    build:
+      context: ./ai_services/erp_copilot
+      dockerfile: ../../Dockerfile.ai
+    container_name: nobalcasting_erp_copilot
+    environment:
+      DATABASE_URL: postgresql://ai_user:ai_password@postgres_ai:5432/nobal_ai_iot
+      REDIS_URL: redis://redis:6379
+      ERP_API_URL: http://backend:5000
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    ports:
+      - "8002:8000"
+    depends_on:
+      - postgres_ai
+      - redis
+      - backend
     networks:
       - erp_network
 
@@ -53,6 +147,7 @@ services:
     container_name: nobalcasting_frontend
     environment:
       VITE_API_URL: http://localhost:5000
+      VITE_AI_COPILOT_URL: http://localhost:8002
     ports:
       - "5173:5173"
     depends_on:
@@ -65,6 +160,10 @@ services:
 
 volumes:
   mysql_data:
+    driver: local
+  postgres_data:
+    driver: local
+  qdrant_data:
     driver: local
 
 networks:
